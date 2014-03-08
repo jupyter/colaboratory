@@ -1644,6 +1644,8 @@ var IPython = (function (IPython) {
      * @method save_notebook
      */
     Notebook.prototype.save_notebook = function () {
+        var that = this;
+        
         // We may want to move the name/id/nbformat logic inside toJSON?
         var data = this.toJSON();
         data.metadata.name = this.notebook_name;
@@ -1691,23 +1693,6 @@ var IPython = (function (IPython) {
                 that.save_notebook_error();
             }
         });
-
-
-
-
-        // We do the call with settings so we can set cache to false.
-        var settings = {
-            processData : false,
-            cache : false,
-            type : "PUT",
-            data : JSON.stringify(data),
-            headers : {'Content-Type': 'application/json'},
-            success : $.proxy(this.save_notebook_success, this, start),
-            error : $.proxy(this.save_notebook_error, this)
-        };
-        $([IPython.events]).trigger('notebook_saving.Notebook');
-        var url = this.baseProjectUrl() + 'notebooks/' + this.notebook_id;
-        $.ajax(url, settings);
     };
     
     /**
