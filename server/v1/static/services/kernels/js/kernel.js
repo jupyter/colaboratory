@@ -5,6 +5,18 @@
 //  the file COPYING, distributed as part of this software.
 //----------------------------------------------------------------------------
 
+
+// Global variable to store address of parent window
+var parentWindow = null;
+var extensionId = 'dmaaimdkehikanjidckkheggnaecfgbg';
+var extensionOrigin = 'chrome-extension://' + extensionId;
+window.addEventListener('message', function(message) {
+    if (message.origin === extensionOrigin &&
+        message.data === 'initialization_message') {
+        parentWindow = message.source;
+    }
+});
+
 //============================================================================
 // Kernel
 //============================================================================
@@ -25,6 +37,7 @@ var IPython = (function (IPython) {
      * @Class Kernel
      */
     var Kernel = function (base_url) {
+        this.in_browser_kernel = false;
         this.kernel_id = null;
         this.shell_channel = null;
         this.iopub_channel = null;
@@ -75,6 +88,14 @@ var IPython = (function (IPython) {
     Kernel.prototype.start = function (params) {
         var that = this;
         if (!this.running) {
+            // Detect special URL indicating local kernel
+            if (this.base_url.indexOf('nacl') == 0) {
+                this.startInBrowserKernel();
+                return;
+            } else {
+                this.in_browser_kernel = false;
+            }
+
             var qs = $.param(params);
             var url = this.base_url + '?' + qs;
             $.post(url,
@@ -96,6 +117,11 @@ var IPython = (function (IPython) {
         $([IPython.events]).trigger('status_restarting.Kernel', {kernel: this});
         var that = this;
         if (this.running) {
+            if (this.embed) {
+              this.sendNacl(this._get_msg('restart'));
+              return;
+            }
+
             this.stop_channels();
             var url = this.kernel_url + "/restart";
             $.post(url,
@@ -214,6 +240,56 @@ var IPython = (function (IPython) {
             }
         };
         this.shell_channel = this.iopub_channel = this.stdin_channel = null;
+    };
+
+    /**
+     * Sends message to parent window to start in-browser kernel, and
+     * sets up callback functions.
+     */
+    Kernel.prototype.startInBrowserKernel = function() {
+        var that = this;
+        var tty_prefix = 'tty';
+        
+        parentWindow.postMessage('start_kernel', extensionOrigin);
+        
+        window.addEventListener('message', function(e) {
+            if (!e.data)
+                return;
+            var message = e.data;
+            if (message.type === 'message') {
+                var data = message.data;
+                if (typeof data == 'string' || data instanceof String) {
+                    console.log('nacl>' + data.substring(tty_prefix.length));
+                } else if (data.stream == 'iopub') {
+                    that._handle_iopub_reply({data: data.json});
+                } else if (data.stream == 'shell') {
+                    that._handle_shell_reply({data: data.json});
+                }
+            } else if (message.type === 'progress') {
+                if (!that.running) {
+                    var progress = Math.round(100 * message.loaded / message.total);
+                    if (isNaN(progress)) { progress = 0; }
+                    $([IPython.events]).trigger('status_loading.Kernel',
+                                      {kernel: that, progress: progress});
+                }
+            } else if (message.type === 'loadend') {
+                $([IPython.events]).trigger('websocket_open.Kernel',
+                                    {kernel: this});
+                $([IPython.events]).trigger('status_started.Kernel', {kernel: that});   
+            } else if (message.type === 'crash') {
+                that.embed = null;
+                that.running = false;
+                $([IPython.events]).trigger('status_dead.Kernel', {kernel: that});
+            }
+        });
+
+        this.in_browser_kernel = true;
+        this.shell_channel = {};
+        this.shell_channel.send = function(msg) {
+            parentWindow.postMessage({json: msg}, extensionOrigin);
+        }
+
+        $([IPython.events]).trigger('status_loading.Kernel', {kernel: this});
     };
 
     // Main public methods.
