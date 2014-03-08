@@ -25,8 +25,7 @@ var IPython = (function (IPython) {
      */
     var Notebook = function (selector, options) {
         var options = options || {};
-        this._baseProjectUrl = options.baseProjectUrl;
-
+        
         this.element = $(selector);
         this.element.scroll();
         this.element.data("notebook", this);
@@ -66,16 +65,6 @@ var IPython = (function (IPython) {
      */
     Notebook.prototype.style = function () {
         $('div#notebook').addClass('border-box-sizing');
-    };
-
-    /**
-     * Get the root URL of the notebook server.
-     * 
-     * @method baseProjectUrl
-     * @return {String} The base project URL
-     */
-    Notebook.prototype.baseProjectUrl = function(){
-        return this._baseProjectUrl || $('body').data('baseProjectUrl');
     };
 
     /**
@@ -1380,7 +1369,7 @@ var IPython = (function (IPython) {
      * @method start_kernel
      */
     Notebook.prototype.start_kernel = function () {
-        var base_url = $('body').data('baseKernelUrl') + "kernels";
+        var base_url = "nacl://";  // Special value used to indicated NaCl kernel
         this.kernel = new IPython.Kernel(base_url);
         this.kernel.start({notebook: this.notebook_id});
         // Now that the kernel has been created, tell the CodeCells about it.
@@ -1550,6 +1539,8 @@ var IPython = (function (IPython) {
      * @param {Object} data JSON representation of a notebook
      */
     Notebook.prototype.fromJSON = function (data) {
+        this.convertFromIpynbFormat(data);
+
         var ncells = this.ncells();
         var i;
         for (i=0; i<ncells; i++) {
@@ -1662,6 +1653,48 @@ var IPython = (function (IPython) {
         // time the ajax call for autosave tuning purposes.
         var start =  new Date().getTime();
 
+        // Save file to Google Drive
+        var boundary = '-------314159265358979323846';
+        var delimiter = "\r\n--" + boundary + "\r\n";
+        var close_delim = "\r\n--" + boundary + "--";
+
+        var contentType = 'application/ipynb';
+        // Updating the metadata is optional and you can instead use the value from drive.files.get.
+        var base64Data = btoa(JSON.stringify(data));
+        var fileMetadata = {
+          'title': data.metadata.name,
+          'mimeType': contentType
+        };
+        var multipartRequestBody =
+            delimiter +
+            'Content-Type: application/json\r\n\r\n' +
+            JSON.stringify(fileMetadata) +
+            delimiter +
+            'Content-Type: ' + contentType + '\r\n' +
+            'Content-Transfer-Encoding: base64\r\n' +
+            '\r\n' +
+            base64Data +
+            close_delim;
+
+        var request = gapi.client.request({
+            'path': '/upload/drive/v2/files/' + this.file_id,
+            'method': 'PUT',
+            'params': {'uploadType': 'multipart', 'alt': 'json'},
+            'headers': {
+                'Content-Type': 'multipart/mixed; boundary="' + boundary + '"'
+            },
+            'body': multipartRequestBody});
+        request.execute(function(response) {
+            if (!response.error) {
+                that.save_notebook_success(start);
+            } else {
+                that.save_notebook_error();
+            }
+        });
+
+
+
+
         // We do the call with settings so we can set cache to false.
         var settings = {
             processData : false,
@@ -1732,23 +1765,85 @@ var IPython = (function (IPython) {
      * Request a notebook's data from the server.
      * 
      * @method load_notebook
-     * @param {String} notebook_id A notebook to load
+     * @param {String} file_id A Google Drive file in notebook format to load
      */
-    Notebook.prototype.load_notebook = function (notebook_id) {
+     Notebook.prototype.load_notebook = function (file_id) {
         var that = this;
-        this.notebook_id = notebook_id;
-        // We do the call with settings so we can set cache to false.
-        var settings = {
-            processData : false,
-            cache : false,
-            type : "GET",
-            dataType : "json",
-            success : $.proxy(this.load_notebook_success,this),
-            error : $.proxy(this.load_notebook_error,this),
+        that.file_id = file_id;
+
+        console.log("Loading notebook: Google Drive fileId = " + file_id);
+
+        // Load Google Drive client API
+        gapi.client.load('drive', 'v2', function() {
+            // Get download link for file
+            gapi.client.drive.files.get({'fileId': file_id}).execute(function(response) {
+                // Download file
+                if (response.downloadUrl) {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('GET', response.downloadUrl);
+                    xhr.onload = function() {
+                        that.load_notebook_success(JSON.parse(xhr.responseText));
+                    };
+                    xhr.onerror = function() {
+                        that.load_notebook_error(xhr);
+                    };
+                    xhr.send();
+                } else {
+                    IPython.dialog.modal({
+                        title: "Error loading notebook",
+                        body : "The file did not exist in Google Drive",
+                        buttons : {
+                            "OK": {}
+                        }
+                    });
+                }
+            });
+        });
+    };
+
+    /**
+     * Convert Notebook json from file format to in memory format. Mutates the input
+     * argument.
+     *
+     * @param {Object} nb The json object read from the notebook file. Changed
+     *     by the function.
+     */
+     Notebook.prototype.convertFromIpynbFormat = function(nb) {
+        var multiline_outputs = {
+            'text': 0,
+            'html': 0,
+            'svg': 0,
+            'latex': 0,
+            'javascript': 0,
+            'json': 0
         };
-        $([IPython.events]).trigger('notebook_loading.Notebook');
-        var url = this.baseProjectUrl() + 'notebooks/' + this.notebook_id;
-        $.ajax(url, settings);
+
+        // Implements functionality of IPython.nbformat.v3.rwbase.rejoin_lines
+        for (var i = 0; i < nb.worksheets.length; i++) {
+            var ws = nb.worksheets[i];
+            for (var j = 0; j < ws.cells.length; j++) {
+                var cell = ws.cells[j];
+                if (cell.cell_type === 'code') {
+                    if ('input' in cell && Array.isArray(cell.input)) {
+                        cell.input = cell.input.join('');
+                    }
+                    for (var k = 0; k < cell.outputs.length; k++) {
+                        var output = cell.outputs[k];
+                        for (var key in multiline_outputs) {
+                            if (key in output && Array.isArray(output[key])) {
+                                output[key] = output[key].join('');
+                            }
+                        }
+                    }
+                } else {
+                    for (var key in {'source': 0, 'rendered': 0}) {
+                        if (key in cell && Array.isArray(cell[key])) {
+                            cell[key] =  cell[key].join('');
+                        }
+                    }
+                }
+            }
+        }
     };
 
     /**

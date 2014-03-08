@@ -26,8 +26,9 @@ window.onload = function() {
     };
     
     // Creates webview container for frontend UI.
+    var fileId = window.location.search.substr(1);
     var webview = document.createElement('webview');
-    webview.setAttribute('src', 'http://127.0.0.1:8000/static/notebook.html');
+    webview.setAttribute('src', 'http://127.0.0.1:8000/static/notebook.html?' + fileId);
     webview.setAttribute('style', 'width:100%; height:100%;');
     webview.setAttribute('autosize', 'on');
     document.body.appendChild(webview);
@@ -35,7 +36,8 @@ window.onload = function() {
     // Adds callback function to modify headers for calls from webview.
     webview.addEventListener('loadstop', function(m) {
 	    var urls = ['https://*.googleapis.com/*',
-			'https://*.google.com/*'];
+			'https://*.google.com/*',
+			'https://*.googleusercontent.com/*'];
 	    webview.request.onBeforeSendHeaders
 		.addListener(setAuthHeaders,
 			     {'urls': urls}, ['blocking', 'requestHeaders']);
