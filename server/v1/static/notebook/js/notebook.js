@@ -1789,6 +1789,7 @@ var IPython = (function (IPython) {
                     };
                     xhr.send();
                 } else {
+                    console.log(response);
                     IPython.dialog.modal({
                         title: "Error loading notebook",
                         body : "The file did not exist in Google Drive",
