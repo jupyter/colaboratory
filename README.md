@@ -16,7 +16,7 @@ For technical reasons, the app does not contain the front-end UI JavaScript/HTML
 
 During development, the developer should run a local server to serve the contents of the webview on localhost.  We provide a python script to serve at 127.0.0.1:8000.
 ```Shell
-server/serve.py
+server/v1/serve.py
 ```
 
 To install the extension during development, go to the Chrome Extensions manager, enable developer mode, and click "Load Unpacked Extension".  Then select the directory "app".
