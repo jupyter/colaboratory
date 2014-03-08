@@ -1,4 +1,6 @@
 var authToken;
+var serverAddress = 'http://127.0.0.1:8000';
+
 window.onload = function() {
     // Gets OAuth 2.0 token using the Identity API.
     chrome.identity.getAuthToken({interactive: true}, function(token) {
@@ -27,19 +29,23 @@ window.onload = function() {
     
     // Creates webview container for frontend UI.
     var fileId = window.location.search.substr(1);
-    var webview = document.createElement('webview');
-    webview.setAttribute('src', 'http://127.0.0.1:8000/static/notebook.html?' + fileId);
+    webview = document.createElement('webview');
+    webview.setAttribute('src', serverAddress + '/static/notebook.html?' + fileId);
     webview.setAttribute('style', 'width:100%; height:100%;');
     webview.setAttribute('autosize', 'on');
     document.body.appendChild(webview);
 
-    // Adds callback function to modify headers for calls from webview.
     webview.addEventListener('loadstop', function(m) {
+    	// Adds callback function to modify headers for calls from webview.
 	    var urls = ['https://*.googleapis.com/*',
 			'https://*.google.com/*',
 			'https://*.googleusercontent.com/*'];
 	    webview.request.onBeforeSendHeaders
 		.addListener(setAuthHeaders,
 			     {'urls': urls}, ['blocking', 'requestHeaders']);
+
+		// Sends message to webview so the webview knows where to send its
+		// messages to.
+		webview.contentWindow.postMessage('initialization_message', serverAddress);
 	});
 };

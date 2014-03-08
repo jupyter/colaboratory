@@ -17,3 +17,13 @@ chrome.app.runtime.onLaunched.addListener(function(intentData) {
 		}
 	}
 });
+
+// Get token in order to get user authorization.  This is needed because
+// we use the special scope drive.install, which installs the app on
+// Google Drive.  Without first obtaining this authorization, it is not
+// possible to load files from drive, and so we need to do this first.
+chrome.runtime.onStartup.addListener(function() {
+	chrome.identity.getAuthToken({'interactive': true }, function(){});
+});chrome.runtime.onInstalled.addListener(function() {
+	chrome.identity.getAuthToken({'interactive': true }, function(){});
+});
