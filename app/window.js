@@ -2,6 +2,9 @@ var authToken;
 var serverAddress = 'http://127.0.0.1:8000';
 
 window.onload = function() {
+    var refresh = document.getElementById('refresh');
+    refresh.addEventListener('click', function() { webview.reload(); });
+
     // Gets OAuth 2.0 token using the Identity API.
     chrome.identity.getAuthToken({interactive: true}, function(token) {
 	    authToken = token;
