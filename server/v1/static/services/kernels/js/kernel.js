@@ -117,9 +117,9 @@ var IPython = (function (IPython) {
         $([IPython.events]).trigger('status_restarting.Kernel', {kernel: this});
         var that = this;
         if (this.running) {
-            if (this.embed) {
-              this.sendNacl(this._get_msg('restart'));
-              return;
+            if (this.in_browser_kernel) {
+                parentWindow.postMessage('restart_kernel', extensionOrigin);
+                return;
             }
 
             this.stop_channels();
