@@ -1,7 +1,9 @@
 var authToken;
-var serverAddress = 'http://127.0.0.1:8000';
 
 window.onload = function() {
+    var refresh = document.getElementById('refresh');
+    refresh.addEventListener('click',  function() { webview.reload(); });
+
     // Gets OAuth 2.0 token using the Identity API.
     chrome.identity.getAuthToken({interactive: true}, function(token) {
 	    authToken = token;
@@ -14,23 +16,38 @@ window.onload = function() {
      * @returns {object} modifications to the details.
      */
     var setAuthHeaders = function(details) {
-	var headers;
-	if (details.requestHeaders) {
-	    headers = details.requestHeaders;
-	} else {
-	    headers = [];
+        if (!details.requestHeaders) {
+	    return;
+        }
+
+        var headers = details.requestHeaders;
+        var correctOrigin = false;
+        for (var i = 0; i < headers.length; i++) {
+	    if (headers[i].name === 'Origin') {
+	        if (headers[i].value === serverAddress) {
+	            correctOrigin = true;
+	        } else {
+	            // Don't sign if we encouter the wrong origin
+	            return;
+	        }
+	    }
 	}
+        if (!correctOrigin) {
+	    return;
+        }
+
 	headers.push({
 		'name': 'Authorization',
 		'value': 'Bearer ' + authToken
 	    });
 	return /** @type {!BlockingResponse} */ ({'requestHeaders': headers});
     };
-    
+
     // Creates webview container for frontend UI.
     var fileId = window.location.search.substr(1);
     webview = document.createElement('webview');
-    webview.setAttribute('src', serverAddress + '/static/notebook.html?' + fileId);
+    webview.setAttribute('src', serverAddress + serverPath + '#fileIds=' + fileId + '&mode=app');
+
     webview.setAttribute('style', 'width:100%; height:100%;');
     webview.setAttribute('autosize', 'on');
     document.body.appendChild(webview);
@@ -48,4 +65,6 @@ window.onload = function() {
 		// messages to.
 		webview.contentWindow.postMessage('initialization_message', serverAddress);
 	});
+
+  document.body.addEventListener('onresize', function(e){console.log(e);});
 };
