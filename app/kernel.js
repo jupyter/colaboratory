@@ -1,13 +1,20 @@
 var embed;
 var webview = null;
+var serverAddress = 'http://127.0.0.1:8000';
+var serverPath = '/static/index.html';
 
 window.addEventListener('message', function(message) {
-	console.log(message);
-	if (message.data === 'start_kernel') {
-		createNaclElement();
-	} else if (message.data && message.data.json) {
-    	embed.postMessage(message.data);
-  	}
+    console.log(message);
+
+    if (message.sender !== webview || message.origin !== serverAddress) {
+        return;
+    }
+
+    if (message.data === 'start_kernel') {
+        createNaclElement();
+    } else if (message.data && message.data.json) {
+        embed.postMessage(message.data);
+    }
 });
 
 var createNaclElement = function() {
@@ -47,8 +54,8 @@ var createNaclElement = function() {
         for(var i = 0; i < eventFields.length; i++) {
           var field = eventFields[i];
           message[field] = event[field];
-          webview.contentWindow.postMessage(message, 'http://127.0.0.1:8000');
         }
+      webview.contentWindow.postMessage(message, serverAddress);
     };
   }
 
