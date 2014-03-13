@@ -89,8 +89,12 @@ function (marked) {
 
     $([IPython.events]).on('notebook_loaded.Notebook', first_load);
     $([IPython.events]).trigger('app_initialized.NotebookApp');
-    IPython.notebook.load_notebook(window.location.search.substr(1));
-
+    // Hack to extract fileId from hash params, should really parse them
+    // properly.
+    // Also hack to ensure that request handlers in window.js are setup
+    setTimeout( function () {
+      IPython.notebook.load_notebook(window.location.hash.substr(9, 28));
+    }, 1000);
     if (marked) {
         marked.setOptions({
             gfm : true,
