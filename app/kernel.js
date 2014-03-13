@@ -6,7 +6,8 @@ var serverPath = '/static/index.html';
 window.addEventListener('message', function(message) {
     console.log(message);
 
-    if (message.sender !== webview || message.origin !== serverAddress) {
+    if (message.source !== webview.contentWindow ||
+	message.origin !== serverAddress) {
         return;
     }
 
