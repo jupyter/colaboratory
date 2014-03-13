@@ -20,6 +20,7 @@ window.onload = function() {
      * @returns {object} modifications to the details.
      */
     var setAuthHeaders = function(details) {
+        console.log(details);
         if (!details.requestHeaders) {
 	    return;
         }
@@ -28,7 +29,8 @@ window.onload = function() {
         var correctOrigin = false;
         for (var i = 0; i < headers.length; i++) {
 	    if (headers[i].name === 'Origin') {
-	        if (headers[i].value === serverAddress) {
+	        if (headers[i].value === serverAddress ||
+		    headers[i].value === 'https://content.googleapis.com') {
 	            correctOrigin = true;
 	        } else {
 	            // Don't sign if we encouter the wrong origin
