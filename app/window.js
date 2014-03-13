@@ -2,11 +2,7 @@ var authToken;
 
 window.onload = function() {
     var refresh = document.getElementById('refresh');
-<<<<<<< HEAD
-    refresh.addEventListener('click',  function() { webview.reload(); });
-=======
     refresh.addEventListener('click', function() { webview.reload(); });
->>>>>>> 762fe1454fa94330732281409554bd221f567c3a
 
     // Gets OAuth 2.0 token using the Identity API.
     chrome.identity.getAuthToken({interactive: true}, function(token) {
