@@ -28,18 +28,20 @@ window.onload = function() {
         var headers = details.requestHeaders;
         var correctOrigin = false;
         for (var i = 0; i < headers.length; i++) {
+	    // TODO: check this does what we want it to do, i.e. ensure
+	    // the request is only coming from a Google API and not
+	    // an output iframe.
 	    if (headers[i].name === 'Origin') {
-	        if (headers[i].value === serverAddress ||
-		    headers[i].value === 'https://content.googleapis.com') {
+	        if (headers[i].value === serverAddress) {
 	            correctOrigin = true;
 	        } else {
 	            // Don't sign if we encouter the wrong origin
-	            return;
+	            return ({'requestHeaders': headers});
 	        }
 	    }
 	}
         if (!correctOrigin) {
-	    return;
+            return ({'requestHeaders': headers});
         }
 
 	headers.push({
