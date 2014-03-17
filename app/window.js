@@ -57,7 +57,6 @@ window.onload = function() {
     webview.setAttribute('src', serverAddress + serverPath + '#fileIds=' + fileId + '&mode=app');
 
     webview.setAttribute('style', 'width:100%; height:100%;');
-    webview.setAttribute('autosize', 'on');
     document.body.appendChild(webview);
 
     webview.addEventListener('loadstop', function(m) {

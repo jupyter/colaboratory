@@ -1,6 +1,6 @@
 var embed;
 var webview = null;
-var serverAddress = 'http://127.0.0.1:8888';
+var serverAddress = 'https://127.0.0.1:8000';
 var serverPath = '/static/index.html';
 
 window.addEventListener('message', function(message) {
