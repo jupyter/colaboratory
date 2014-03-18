@@ -1,7 +1,7 @@
 var embed;
 var webview = null;
-var serverAddress = 'https://127.0.0.1:8000';
-var serverPath = '/static/index.html';
+var serverAddress = 'https://colab.corp.google.com';
+var serverPath = '/static/v2/index.html';
 
 window.addEventListener('message', function(message) {
     console.log(message);
