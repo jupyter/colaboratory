@@ -1,5 +1,17 @@
 var authToken;
 
+var authorize = function() {
+	// Gets OAuth 2.0 token using the Identity API.
+	chrome.identity.getAuthToken({interactive: true}, function(token) {
+		console.log('recieved token ' + token);
+		authToken = token;
+	    });
+};
+
+var tokenRefreshInterval = 10 * 60 * 1000;  // 10 minutes
+authorize();
+setInterval(authorize, tokenRefreshInterval);
+
 window.onload = function() {
     var refresh = document.getElementById('refresh');
     refresh.addEventListener('click', function() {
@@ -8,11 +20,6 @@ window.onload = function() {
       });
     });
 
-    // Gets OAuth 2.0 token using the Identity API.
-    chrome.identity.getAuthToken({interactive: true}, function(token) {
-	    authToken = token;
-	});
-
     /**
      * Callback function that adds authorization headers using the OAuth token.
      *
@@ -20,7 +27,6 @@ window.onload = function() {
      * @returns {object} modifications to the details.
      */
     var setAuthHeaders = function(details) {
-        console.log(details);
         if (!details.requestHeaders) {
 	    return;
         }
@@ -73,5 +79,4 @@ window.onload = function() {
 		webview.contentWindow.postMessage('initialization_message', serverAddress);
 	});
 
-  document.body.addEventListener('onresize', function(e){console.log(e);});
 };
