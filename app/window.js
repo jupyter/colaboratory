@@ -32,6 +32,7 @@ window.onload = function() {
         }
 
         var headers = details.requestHeaders;
+	/*
         var correctOrigin = false;
         for (var i = 0; i < headers.length; i++) {
 	    // TODO: check this does what we want it to do, i.e. ensure
@@ -49,7 +50,7 @@ window.onload = function() {
         if (!correctOrigin) {
             return ({'requestHeaders': headers});
         }
-
+	*/
 	headers.push({
 		'name': 'Authorization',
 		'value': 'Bearer ' + authToken
