@@ -1,0 +1,70 @@
+/**
+ * Pop-up Dialog
+ */
+
+.modal-dialog-bg {
+  z-index: 20;
+}
+
+.modal-dialog {
+  z-index: 20;
+}
+
+.modal-dialog > input {
+  margin: 10px;
+}
+
+#kernel-url-input {
+  margin: 10px;
+  font-family: monospace;
+  font-size: 12px;
+  /* border: solid black 1px; */
+  padding: 2px 5px;
+}
+
+/**
+ * Message and dialogs in content
+ */
+.content-message {
+  margin: 20px;
+  text-align: center;
+  width: 100%;
+}
+
+/**
+ * Page
+ */
+#content {
+  margin: 5px 60px;
+  padding: 30px 20px 200px 12px;
+  min-width: 600px;
+  background: white;
+  min-height: 800px;
+  border: 1px solid #dadada;
+  box-shadow: 0 0 4px rgba(0,0,0,0.1);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Open Sans', sans-serif;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+p, ul {
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+
+pre {
+  margin-top: 0px;
+  margin-bottom: 0px;
+
+}
+
+body {
+  margin: 0px;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 10pt;
+  font-weight: 300;
+  background: #eeeeee;
+}

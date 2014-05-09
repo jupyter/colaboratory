@@ -1,0 +1,271 @@
+.dragged {
+  background: white;
+  z-index: 10;
+}
+
+.inputarea {
+  display: flex;
+}
+
+.editor {
+  width: 100%;
+}
+
+.formview {
+  border: 1px solid lightgrey;
+  background-color: #eee;
+  padding: 5px 7px;
+  width: 50%;
+}
+
+.formview-full {
+  width: 100%;
+}
+
+.dragitem {
+  visibility: hidden;
+  height: 20px;
+}
+
+pre {
+  margin-top: 2px;
+  margin-bottom: 2px;
+  white-space: pre-wrap;
+}
+
+.cell {
+  margin: 2px 0px;
+  position: relative;
+  display: flex;
+  align-content: flex-start;
+}
+
+.completions {
+  position: absolute;
+  z-index: 10;
+  overflow: hidden;
+  border: 1px solid #ababab;
+  border-radius: 4px;
+  -webkit-box-shadow: 0px 6px 10px -1px #adadad;
+  -moz-box-shadow: 0px 6px 10px -1px #adadad;
+  box-shadow: 0px 6px 10px -1px #adadad;
+}
+
+.cell-handle {
+  flex-basis: 20px;
+  display: block;
+  background: transparent;
+  padding: 3px 0px 2px;
+  align-self: flex-start;
+  height: 16px;
+}
+
+.cell-toolbar {
+  display: none;
+  left: -58px;
+  top: 4px;
+  z-index: 12; /* make sure the toolbar stays behind the header */
+  width: auto;
+  position: absolute;
+}
+
+.cell-toolbar > .goog-toolbar {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: solid 2px #3F80C0;
+  bottom: 4px;
+  margin-left: 3px;
+  /* border-radius: 3px; */
+  padding: 0px;
+}
+
+/* .cell:hover > div > .cell-toolbar */
+.cell-toolbar-visible,
+.cell.selected * .cell-toolbar
+{
+  display: block;
+}
+
+.cell-handle > .line {
+  display: none;
+  border-radius:3px;
+  background: rgba(255, 255, 255, 0.71);
+  height: 1px;
+  border: solid 1px rgba(255, 255, 255, 0.71);
+  margin: 1px 2px 2px;
+  pointer-events: none;
+}
+
+.cell:hover > .cell-handle {
+  background: #B3B1B1;
+}
+
+.cell.selected > .cell-handle {
+  background: #3F80C0;
+}
+
+.cell:hover > .cell-handle > .line ,
+.cell.selected > .cell-handle > .line {
+  display: block;
+}
+
+.cell.readonly:hover > .cell-handle {
+  background: transparent;
+}
+
+
+.text * .editor {
+  display: none;
+}
+
+.text.edit * .editor {
+  border-top: 1px dashed grey;
+  display: block;
+}
+
+.code {
+  margin: 7px 0px;
+  background: transparent;
+}
+
+.selection-wrapper {
+  width: 100%;
+  align-self: flex-start;
+  padding-left: 10px;
+  border-left: 8px solid transparent;
+}
+
+.code > .selection-wrapper {
+  padding-left: 30px;
+  background: white;
+}
+
+.cell:hover > .selection-wrapper{
+  border-left-color: #B3B1B1;
+}
+
+.cell.selected:hover > .selection-wrapper{
+  border-left-color: transparent;
+}
+
+.code * .main-content {
+  border: 1px solid grey;
+}
+
+.code * .editor.non-trusted * .CodeMirror-gutters {
+  background: #ECC4C4;
+}
+
+.code * .editor.non-trusted * .CodeMirror-linenumber {
+  color: black;
+  pointer-events: none;
+}
+
+.output {
+  font-family: monospace;
+  font-size: 10pt;
+  border-top: 1px dashed grey;
+}
+
+.output-header {
+  background: #efefef;
+  padding: 2px 0px;
+  font-size: 10pt;
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 600;
+  width: 100%;
+  display: inline-flex;
+  color: rgb(90, 90, 90);
+}
+
+.output-image {
+  width: 16px;
+  height: 16px;
+  margin: 1px 2px 0px 0px;
+}
+
+.goog-zippy-expanded > .output-image {
+  background-image: url('../img/minus.png');
+}
+
+.goog-zippy-collapsed > .output-image {
+  background-image: url('../img/plus.png');
+}
+
+.output-content {
+  padding: 3px 5px;
+}
+
+.output-content > iframe {
+  width: 100%;
+  border: 0px;
+}
+
+.CodeMirror {
+  height: auto;
+}
+
+.CodeMirror-scroll {
+  height: auto;
+  overflow-y: hidden;
+  overflow-x: auto;
+}
+
+
+.running-status {
+  color: white;
+  font-weight: 600;
+  padding: 2px 5px;
+  background: #3F80C0;
+}
+
+.cell-collaborators {
+  position: absolute;
+  right: -30px;
+  z-index: 12; /* make sure the collaborators stays behind the header */
+}
+
+.cell-comments {
+  width: 130px;
+  height: 50px;
+  position: relative;
+  display: inline-block;
+
+  background: #fff;
+  border: solid 1px #cbcbcb;
+  box-shadow: 0 2px 4px rgba(0,0,0,.2);
+  padding: 0 10px 0 10px;
+}
+
+.cell-spacer{
+  display: inline-block;
+  width: 10px;
+  position: relative;
+}
+
+.cell-comments-area {
+  display: none;
+  position: absolute;
+  top: 30px;
+  right: -200px;
+  z-index: 12; /* make sure the collaborators stays behind the header */
+}
+
+.selected > .cell-comments-area {
+  display: block;
+}
+
+span.output-header-content-dateuser {
+    font-weight: 100;
+    margin-right: 6px;
+}
+div.output-header-content {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+}
+span.output-header-content-time {
+    margin-left: 6px;
+    color: rgb(53, 53, 53);
+}
