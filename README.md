@@ -27,4 +27,16 @@ chmod +x closure-library/closure/bin/build/*
 chmod +x colaboratory/*.py
 ```
 
+Install files in build directory
+```
+cd colaboratory
+./install
+```
+
+Start server
+```
+cd build
+python -m SimpleHTTPServer
+```
+
 TODO: remmove all references to colab/colaboratory from codebase, including this file.
