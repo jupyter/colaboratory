@@ -60,41 +60,6 @@ colab.appKernelDetails = new goog.Promise(function(resolve, reject) {
 });
 
 /**
- * Records custom analytics about this request
- * @param {gapi.drive.realtime.Document} document
- * @param {Error|Object} opt_error an exception object, if available.
- */
-colab.recordAnalytics = function(document, opt_error) {
-  if (colab.params.getHashParams().mode == 'app') { return; }
-  var finishedLoading = new Date();
-  window.setTimeout(function() {
-    var user = document ? document.getCollaborators().filter(
-        function(d) { return d.isMe }) : '';
-    var email = 'unknown';
-    if (colab.drive.myInfo && colab.drive.myInfo.emails &&
-        colab.drive.myInfo.emails.length) {
-      email = colab.drive.myInfo.emails[0].value;
-    }
-    if (user) user = user[0];
-    var params = { 'loadingTime': finishedLoading - window['pageLoadStart'],
-                   'user': user ? user.displayName : 'unknown',
-                   'userId': user ? user.userId : 'unknown',
-                   'email': email,
-                   'title': document ? colab.drive.getTitle() : ''
-                 };
-    if (opt_error) {
-      params['errormessage'] = 'Error' +
-          (opt_error.message || JSON.stringify(opt_error));
-    }
-    var analyticsQuery = colab.params.encodeParamString(params);
-    var xhrRequest = new XMLHttpRequest();
-    xhrRequest.open('GET', '/analytics?' + analyticsQuery, true);
-    xhrRequest.send();
-  }, 1000);
-};
-
-
-/**
  * Main notebook object.
  *
  * @type {Object}
@@ -250,14 +215,12 @@ window.addEventListener('load', function() {
       colab.setupHeader(null, null);
       console.log(err);
     }
-    colab.recordAnalytics(document, error);
 
   }, function(reason) {
     // Displays error to user on failure
     colab.dialog.displayError('Error creating/loading document.', reason);
     colab.setupHeader(null, null);
     loading.clear();
-    colab.recordAnalytics(null, /** @type {Object} */ (reason));
   });
 });
 
