@@ -66,8 +66,9 @@ colab.drive.FILE_SCOPE = 'https://www.googleapis.com/auth/drive';
  * This client is from the same project that is used by chromeapp
  * https://console.developers.google.com/project/apps~windy-ellipse-510/apiui/credential
  */
-colab.drive.NEW_CLIENT_ID = '911569945122-hpps2slo3mri3uk7lpc032vfudausme9' +
+colab.drive.NEW_CLIENT_ID = '564937920753-ebggkpsjlubsstgfrnfbnrbv3egsbhur'
     '.apps.googleusercontent.com';
+
 
 /**
  * Google cloud services client id. Found in the project console for CoLab
