@@ -1,3 +1,12 @@
 #!/bin/bash
 # Builds and installs the web app
-../closure-library/closure/bin/build/depswriter.py --root=static/frontend/ > static/frontend/deps.js
+
+# copy static files to build directory
+cp -r static build/
+
+# copy Google Closure library to build directory
+cp -r ../closure-library/closure/goog/* build/static/frontend/js/
+
+# Create deps.js
+../closure-library/closure/bin/build/depswriter.py --root=../closure-library/closure/goog --root=static/frontend/js/ > build/static/frontend/js/deps.js
+
