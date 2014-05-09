@@ -1,0 +1,16 @@
+.dataTables_paginate {
+  float: right;
+  text-align: right;
+  clear: right;
+  display: inline-block;
+}
+
+.dataTables_info {
+  float: none;
+  display:inline-block;
+}
+
+.number_range_filter {
+  width: 80px;
+  min-width: 80px;
+}
