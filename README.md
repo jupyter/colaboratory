@@ -21,3 +21,10 @@ then clone the Google Closure library repo,
 git clone https://code.google.com/p/closure-library/
 ```
  
+Set build tools to executable
+```
+chmod +x closure-library/closure/bin/build/*
+chmod +x colaboratory/*.py
+```
+
+TODO: remmove all references to colab/colaboratory from codebase, including this file.
