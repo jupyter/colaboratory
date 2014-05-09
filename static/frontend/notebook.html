@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>coLaboratory</title>
+    <script type="text/javascript">
+       var pageLoadStart = new Date().getTime();
+    </script>
+    <!-- Google Fonts -->
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Open+Sans:300,600"/>
+
+     <!-- Fav icon -->
+    <link rel="shortcut icon" href="img/colab-black.png" />
+
+    <link rel="stylesheet" href="css/codemirror-css.css"/>
+  </head>
+  <body>
+
+    <!-- load closure if raw -->
+    <!--%raw%
+      <script src="js/raw/base.js"></script>
+     %raw%-->
+
+    <!-- Load the CodeMirror libraries. -->
+    <script src="js/modules/lib_codemirror.js"></script>
+
+    <!--%raw%
+    <script src="js/modules/lib_userfeedback.js"></script>
+    %raw%-->
+
+    <!-- Load the notebook libraries. -->
+    <script type="text/javascript">
+      // Initializes IPython
+      var IPython = {};
+      IPython.namespace = function(x) { };
+      IPython.events = {} // initiliaze object for event handling
+    </script>
+    <script type="text/javascript"
+            src="/static/mathjax/MathJax.js?config=TeX-AMS_HTML-full&delayStartupUntil=configured"
+            charset="utf-8">
+    </script>
+    <script src="/static/components/jquery/jquery.min.js"></script>
+    <script src="/static/base/js/utils.js"></script>
+    <script src="/static/services/kernels/js/kernel.js"></script>
+    <script src="/static/notebook/js/mathjaxutils.js"
+            type="text/javascript"
+            charset="utf-8">
+    </script>
+
+    <!-- This is a hack, the %> annotations will be removed
+         and the line below will become a comment.
+         Note the annotations are white space sensitive.
+         There should be no space betwen % and -.
+
+    %raw%-->
+    <script src="js/modules/js_compiled.js"></script>
+    <!--%raw%
+
+     -->
+
+    <!--%raw%
+     <script src="js/raw/undo.js"></script>
+     <script src="js/raw/dialog.js"></script>
+     <script src="js/raw/colabdeps.js"></script>
+     <script src="js/raw/params.js"></script>
+     <script src="js/raw/app.js"></script>
+     <script src="js/raw/drive.js"></script>
+     <script src="js/raw/sharingstate.js"></script>
+     <script src="js/raw/services.js"></script>
+     <script src="js/raw/presence.js"></script>
+     <script src="js/raw/cell/cell.js"></script>
+     <script src="js/raw/cell/tooltip.js"></script>
+     <script src="js/raw/cell/editor.js"></script>
+     <script src="js/raw/cell/formview.js"></script>
+     <script src="js/raw/cell/outputarea.js"></script>
+     <script src="js/raw/cell/codecell.js"></script>
+     <script src="js/raw/cell/textcell.js"></script>
+     <script src="js/raw/cell/cellfactory.js"></script>
+     <script src="js/raw/comments.js"></script>
+     <script src="js/raw/notification.js"></script>
+     <script src="js/raw/notebook.js"></script>
+     <script src="js/raw/filepicker.js"></script>
+     <script src="js/raw/header.js"></script>
+     <script src="js/raw/main.js"></script>
+    %raw%-->
+
+    <!-- Load the Markdown libraries. -->
+    <script type="text/javascript" src="js/pagedown/Markdown.Converter.js"></script><style type="text/css"></style>
+    <script type="text/javascript" src="js/pagedown/Markdown.Sanitizer.js"></script>
+    <script type="text/javascript" src="js/pagedown/Markdown.Editor.js"></script>
+
+    <!-- Load bootstrapping code for interactive notebooks -->
+    <script src="/static/custom/colabtools.js"></script>
+    <!-- google analytics -->
+    <script src='/static/js/ga.js'> </script>
+    <link rel="stylesheet" href="css/raw/common.css">
+    <link rel="stylesheet" href="css/raw/menu.css">
+    <link rel="stylesheet" href="css/raw/menubar.css">
+    <link rel="stylesheet" href="css/raw/menubutton.css">
+    <link rel="stylesheet" href="css/raw/menuitem.css">
+    <link rel="stylesheet" href="css/raw/menuseparator.css">
+    <link rel="stylesheet" href="css/raw/toolbar.css">
+    <link rel="stylesheet" href="css/raw/combobox.css">
+    <link rel="stylesheet" href="css/raw/dialog.css">
+    <link rel="stylesheet" href="css/main.css"/>
+    <link rel="stylesheet" href="css/cell.css"/>
+    <link rel="stylesheet" href="css/ansi.css"/>
+    <link rel="stylesheet" href="css/header.css"/>
+    <link rel="stylesheet" href="css/form.css"/>
+    <link rel="stylesheet" href="css/comments.css"/>
+    <link rel="stylesheet" href="css/ipython.css"/>
+
+    <div id="top-floater">
+      <div id="header">
+        <div id="header-left">
+          <div id="header-logo">
+            <img src="img/colab-white.svg">
+          </div>
+          <div id="header-doc-toolbar">
+            <input id="doc-name" disabled>
+            <span id="message-area"> </span>
+            <div id="top-menubar" class="goog-menubar format-lightborder" style="display: none;">
+              <div id="file-button" class="goog-menu-button" title="File">
+                File
+                <div id="file-menu-button" class="goog-menu">
+                  <div class="goog-menuitem goog-menuitem" id="open-menuitem">Open...</div>
+                  <div class="goog-menuitem goog-menuitem" id="new-menuitem">New Notebook</div>
+                  <div class="goog-menuseparator goog-menuitem-disabled"></div>
+                  <div class="goog-menuitem" id="share-menuitem">Share...</div>
+                  <div class="goog-menuitem" id="save-menuitem">Save and Checkpoint</div>
+                  <div class="goog-menuitem" id="viewindrive-menuitem">View in Drive...</div>
+                  <div class="goog-menuitem" id="clone-menuitem">Clone</div>
+                  <div class="goog-menuseparator goog-menuitem-disabled"></div>
+
+                  <div class="goog-menuitem" id="download-ipynb-menuitem">Download Ipynb</div>
+                </div>
+              </div>
+              <div id="edit-menu-button" class="goog-menu-button" title="Edit">
+                Edit
+                <div id="edit-menu" class="goog-menu">
+                  <div class="goog-menuitem" id="undo-menuitem">Undo</div>
+                  <div class="goog-menuitem" id="redo-menuitem">Redo</div>
+                  <div class="goog-menuseparator"></div>
+                  <div class="goog-menuitem" id="clear-outputs-menuitem">Clear Outputs</div>
+                  <div class="goog-menuitem" id="clear-notebook-menuitem">Clear Notebook</div>
+                </div>
+              </div>
+              <div id="run-menu-button" class="goog-menu-button" title="Edit">
+                Run
+                <div id="run-menu" class="goog-menu">
+                  <div class="goog-menuitem" id="runall-menuitem">Run All</div>
+                  <div class="goog-menuitem" id="runbefore-menuitem">Run Before</div>
+                  <div class="goog-menuitem" id="runafter-menuitem">Run After</div>
+                </div>
+              </div>
+              <div id="backend-menu-button" class="goog-menu-button" title="Backend">
+                Python
+                <div id="backend-menu" class="goog-menu">
+                  <div class="goog-menuitem goog-menuitem" id="connect-menuitem">Connect...</div>
+                  <div class="goog-menuseparator"></div>
+                  <div class="goog-menuitem" id="interrupt-menuitem">Interrupt</div>
+                  <div class="goog-menuitem" id="restart-menuitem">Restart</div>
+                  <div class="goog-menuitem" id="kill-menuitem">Kill</div>
+                </div>
+              </div>
+              <div id="feedback-menu-button" class="goog-menu-button" title="Feedback">
+                Feedback
+                <div id="feedback-menu" class="goog-menu">
+                  <div class="goog-menuitem" id="report-bug-menuitem">Report Bug</div>
+                  <div class="goog-menuitem" id="send-feedback-menuitem">Send Feedback...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="header-right">
+          <div id="collaborators"></div>
+          <button id="comments" style="display: none;"
+                  class="realtime-button comments-button">Comments</button>
+          <button id="share" style="display: none;"
+                  class="realtime-button">Share</button>
+          <div id="comments-box" class="comments-activitybox" style="display: none">
+          </div>
+        </div>
+      </div>
+
+      <div id="top-toolbar" class="goog-toolbar" style="display: none;">
+        <div id='add-text-toolbar-button' class="goog-toolbar-button">Add Text</div>
+        <div id='add-code-toolbar-button' class="goog-toolbar-button">Add Code</div>
+        <div class="goog-toolbar-separator"></div>
+        <div id='cell-up-toolbar-button' class="goog-toolbar-button">Cell Up</div>
+        <div id='cell-down-toolbar-button' class="goog-toolbar-button">Cell Down</div>
+        <div class="goog-toolbar-separator"></div>
+        <div id='backend-connect-toolbar-button' class="goog-toolbar-button disconnected">Connect to Python</div>
+      </div>
+    </div>
+
+    <div id="content"></div>
+    <!-- Load the Realtime libraries.  This must come after loading js/raw/main.js -->
+    <script type="text/javascript"
+               src="https://apis.google.com/js/api.js?onload=onClientLoad"></script>
+
+
+  </body>
+</html>

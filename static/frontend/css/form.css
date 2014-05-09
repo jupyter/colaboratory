@@ -1,0 +1,44 @@
+
+
+.formview-textfield,
+.formview-combobox,
+.formview-slider {
+  margin: 5px 0px 3px 10px;
+  display: block;
+}
+
+.formview-namelabel,
+.formview-valuelabel,
+.formview-input,
+.formview-content,
+.formview-combobox > .goog-combobox {
+  display: inline-block;
+}
+
+.formview-combobox > span > input[type="text"] {
+  width: 100px;
+}
+
+.goog-slider-vertical, .goog-slider-horizontal {
+  background-color: ThreeDFace;
+  position: relative;
+  overflow: hidden;
+  height: 12px;
+  width: 125px;
+  margin: -1px 5px;
+  display: inline-block;
+}
+
+.goog-slider-thumb {
+  position: absolute;
+  background-color: ThreeDShadow;
+  overflow: hidden;
+}
+.goog-slider-horizontal .goog-slider-thumb {
+  top: 0;
+  width: 20px;
+  height: 100%;
+}
+.goog-slider-disabled {
+  background-color: lightgray
+}

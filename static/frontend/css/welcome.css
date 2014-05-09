@@ -1,0 +1,114 @@
+#content {
+  padding: 30px;
+}
+
+.large-button {
+  font-size: 12pt;
+  margin-left: 10px;
+  padding: 10px 12px;
+  border-width: 2px;
+  border-radius: 4px;
+}
+
+div.message {
+  margin: 10px 0px;
+  font-size: 11pt;
+  text-align: justify;
+}
+
+div.buttons {
+  text-align: center;
+  margin-top: 15px;
+}
+
+body {
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 300;
+  background: white;
+  margin: 50px 80px;
+  display: flex;
+  justify-content: space-around;
+}
+
+img#logo {
+  height: 35px;
+}
+
+div#welcome-title {
+  text-align: center;
+  font-weight: 600;
+  font-size: 28pt;
+  margin-bottom: 40px;
+}
+
+div#welcome-content {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap-reverse;
+}
+
+div#main-content {
+  max-width: 760px;
+}
+
+div.column {
+  width: 300px;
+  display: inline-block;
+  vertical-align: top;
+}
+
+div#welcome-logo {
+  border-bottom: 2px solid black;
+}
+
+div#left {
+  margin-right: 100px;
+}
+
+div.subtitle {
+  font-weight: 600;
+  font-size: 14pt;
+  text-align: center;
+}
+
+div.subsection {
+  margin-bottom: 30px;
+  color: rgb(107, 106, 106);
+}
+
+div#left > .subsection > .message {
+  text-align: center;
+  margin-top: 0px;
+}
+
+button.realtime-button:disabled,
+button.realtime-button:disabled
+{
+  background: rgb(168, 167, 167);
+  border: rgb(143, 139, 139) 2px solid;
+  opacity: 1;
+}
+
+a:link {text-decoration:none;}
+
+.subsection > img {
+  text-align: center;
+  width: 280px;
+}
+
+.done .subtitle {
+  color: green;
+}
+
+.if-done {
+  display: none
+}
+
+.done  .if-done {
+  display: initial
+}
+
+.done  .if-not-done {
+  display: none
+}
+
