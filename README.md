@@ -13,7 +13,7 @@ cd ~/experimental_frontend
 
 then clone this repo
 ```
-git clone https://github.com/google/colaboratory/tree/v2
+git clone -b v2 https://github.com/google/colaboratory
 ```
 
 then clone the Google Closure library repo,
