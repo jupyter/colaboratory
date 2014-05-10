@@ -411,12 +411,13 @@ colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
   // Never authorize if using in-browser kernel
   opt_forceAuthorization = opt_forceAuthorization &&
       !(url === colab.IN_BROWSER_KERNEL_URL || url === colab.NACL_KERNEL_URL);
-
+  /*
   if (opt_forceAuthorization) {
     colab.authorizeKernel(
         url, goog.partial(colab.loadKernelFromUrl, url, false));
     return;
   }
+  */
   goog.net.cookies.set('kernelUrl', url, 10000);
   if (colab.globalKernel) {
     colab.globalKernel.kill();
