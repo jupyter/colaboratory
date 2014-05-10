@@ -1,3 +1,6 @@
 #!/bin/bash
 # Runs IPython notebook with custom profile
-IPYTHONDIR=`pwd`/build ipython notebook
+export FRONTENDMODULES=`pwd`/modules
+export PYTHONPATH=$FRONTENDMODULES:$PYTHONPATH
+export IPYTHONDIR=`pwd`/build
+ipython notebook

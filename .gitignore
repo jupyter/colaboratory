@@ -1,5 +1,7 @@
 .DS_Store
 *~
+modules/*.pyc
 build/**
 !build/**/
 !build/profile_default/ipython_config.py
+!build/profile_default/startup/startup.py
