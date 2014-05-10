@@ -27,9 +27,8 @@ chmod +x closure-library/closure/bin/build/*
 chmod +x colaboratory/*.sh
 ```
 
-Install files in build directory.  If using virtualenv, you may need to set
-the environment variable ```IPYTHON_PROFILE_PATH``` to point to the profile that will have
-v2 installed in.  By default, this is ```~/.ipython/profile_default```.
+Install files in build directory. (NOTE: both the install and run scripts
+must be run from the colaboratory directory)
 ```
 cd colaboratory
 ./install
@@ -37,7 +36,7 @@ cd colaboratory
 
 Start IPython notebook.
 ```
-ipython notebook
+/.run
 ```
 
 TODO: fix startup page so it goes to welcome.
