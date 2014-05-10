@@ -39,8 +39,5 @@ Start IPython notebook.
 ./run
 ```
 
-TODO: fix startup page so it goes to welcome.
-
-TODO: fix redirects if needed.
-
-TODO: remmove all references to colab/colaboratory from codebase, including this file.
+Navigate to ```http://127.0.0.1:8888/static/frontend/welcome/html``` in
+browser.
