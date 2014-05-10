@@ -28,7 +28,7 @@ chmod +x colaboratory/*.sh
 ```
 
 Install files in build directory.  If using virtualenv, you may need to set
-the environment IPYTHON_PROFILE_PATH to point to the profile that will have
+the environment variable ```IPYTHON_PROFILE_PATH``` to point to the profile that will have
 v2 installed in.  By default, this is ```~/.ipython/profile_default```.
 ```
 cd colaboratory
