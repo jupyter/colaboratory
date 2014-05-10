@@ -36,7 +36,7 @@ cd colaboratory
 
 Start IPython notebook.
 ```
-/.run
+./run
 ```
 
 TODO: fix startup page so it goes to welcome.
