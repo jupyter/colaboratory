@@ -1,2 +1,5 @@
 .DS_Store
-static/frontend/deps.js
+
+build/*
+!build/*/
+!build/profile_default/ipython_config.py
