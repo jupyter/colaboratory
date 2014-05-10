@@ -20,7 +20,7 @@ cp -r ../closure-library/closure/goog/* $STATIC_CONTENT_DIR/frontend/js/
 ../closure-library/closure/bin/build/depswriter.py --root=../closure-library/closure/goog --root=static/frontend/js/ > $STATIC_CONTENT_DIR/frontend/js/deps.js
 
 # copy Google Closure css
-mkdir -p build/static/frontend/css
+mkdir -p $STATIC_CONTENT_DIR/frontend/css
 cp -r ../closure-library/closure/goog/css/* $STATIC_CONTENT_DIR/frontend/css/
 
 # copy extern files into build directory
