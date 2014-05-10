@@ -1,5 +1,0 @@
-.DS_Store
-
-build/*
-!build/**/
-!build/profile_default/ipython_config.py
