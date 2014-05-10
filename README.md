@@ -46,8 +46,7 @@ browser.
 To add custom python libraries, do the following prior to running ```./install```.
 
 First, add custom python libraries to the ```colaboratory/modules/```
-directory.  Then, modify the file 
-```colaboratory/build/profile_default/startup/startup.py```
+directory.  Then, modify the file  ```colaboratory/build/profile_default/startup/startup.py```
 to import these modules.  E.g. add the module ```myModule.py```
 to ```colaboratory/modules/```, then add ```import myModule```
 to ```startup.py```.
