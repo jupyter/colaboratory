@@ -1,6 +1,11 @@
 #!/bin/bash
 # Builds and installs the web app
 
+if [ -z "$IPYTHON_PROFILE_PATH" ]; then
+    echo "IPYTHON_PROFILE_PATH not set, using ~/.ipython/profile_default"
+    IPYTHON_PROFILE_PATH=~/.ipython/profile_default
+fi 
+
 # copy static files to build directory
 cp -r static build/
 
@@ -22,3 +27,7 @@ cp -r extern/* build/static/
 # directly from source.
 cp -r built_js/* build/static/frontend/js
 cp -r built_css/* build/static/frontend/css
+
+# copy build subdirectories to IPython directories
+mkdir -p $IPYTHON_PROFILE_PATH/static
+cp -r build/static $IPYTHON_PROFILE_PATH/

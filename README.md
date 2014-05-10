@@ -27,16 +27,21 @@ chmod +x closure-library/closure/bin/build/*
 chmod +x colaboratory/*.sh
 ```
 
-Install files in build directory
+Install files in build directory.  If using virtualenv, you may need to set
+the environment IPYTHON_PROFILE_PATH to point to the profile that will have
+v2 installed in.  By default, this is ```~/.ipython/profile_default```.
 ```
 cd colaboratory
 ./install
 ```
 
-Start server
+Start IPython notebook.
 ```
-cd build
-python -m SimpleHTTPServer
+ipython notebook
 ```
+
+TODO: fix startup page so it goes to welcome.
+
+TODO: fix redirects if needed.
 
 TODO: remmove all references to colab/colaboratory from codebase, including this file.
