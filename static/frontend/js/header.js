@@ -21,6 +21,7 @@ goog.require('goog.ui.MenuItem');
 goog.require('goog.ui.Option');
 goog.require('goog.ui.SelectionModel');
 goog.require('goog.ui.Separator');
+goog.require('goog.ui.SubMenu');
 goog.require('goog.ui.Toolbar');
 goog.require('goog.ui.ToolbarButton');
 goog.require('goog.ui.ToolbarMenuButton');
@@ -64,6 +65,12 @@ colab.setupHeader = function(document, permissions) {
 };
 
 /**
+ * The main menu UI component
+ * @type {Object}
+ */
+ colab.Header.mainMenu = goog.Promise.withResolver();
+
+/**
  * Create the main menu menubar.
  * @param {Object} document the current realtime document.
  * @param {colab.drive.Permissions} permissions
@@ -72,6 +79,7 @@ colab.createMenubar = function(document, permissions) {
   var menubarElement = goog.dom.getElement('top-menubar');
   goog.style.setElementShown(menubarElement, true);
   var menubar = goog.ui.decorate(menubarElement);
+  colab.Header.mainMenu.resolve(menubar);
   if (!document || (permissions && !permissions.isEditable())) {
     menubar.getChild('edit-menu-button').setEnabled(false);
     menubar.getChild('run-menu-button').setEnabled(false);
@@ -191,7 +199,8 @@ colab.createMenubar = function(document, permissions) {
       case 'shortcuts-menuitem':
         colab.globalNotebook.displayShortcutHelp();
       default:
-        console.error('Unknown menu item ' + e.target.getContent());
+// Removed as other menu items may be added by custom code
+//        console.error('Unknown menu item ' + e.target.getContent());
     }
   });
 };
