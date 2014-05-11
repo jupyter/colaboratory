@@ -128,13 +128,14 @@ colab.Notebook.ANIMATION_DURATION_ = 400;
  *
  * @param {string} type Type of the cell.
  * @param {number} opt_position Position of the cell
+ * @param {string} opt_content Content of the cell
  */
-colab.Notebook.prototype.addNewCell = function(type, opt_position) {
+colab.Notebook.prototype.addNewCell = function(type, opt_position, opt_content) {
   if (!this.permissions_.isEditable()) {
     return;
   }
 
-  var realtimeCell = colab.cell.newRealtimeCell(this.model, type);
+  var realtimeCell = colab.cell.newRealtimeCell(this.model, type, opt_content);
 
   var position = opt_position === undefined ?
       this.realtimeCells_.length : opt_position;
