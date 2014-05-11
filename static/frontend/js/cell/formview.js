@@ -14,8 +14,8 @@ goog.require('goog.array');
 goog.require('goog.dom');
 goog.require('goog.dom.classes');
 goog.require('goog.ui.ComboBox');
+goog.require('goog.ui.ComboBoxItem');
 goog.require('goog.ui.Component');
-goog.require('goog.ui.MenuItem');
 goog.require('goog.ui.Select');
 goog.require('goog.ui.Slider');
 
@@ -105,8 +105,7 @@ colab.cell.FormView.prototype.parseCode = function(code) {
  */
 colab.cell.FormView.prototype.parseParams_ = function(paramsString) {
   try {
-    return /** @type {?Object} */ (JSON.parse(
-        paramsString.replace(/([\S]+)\:/g, '"$1":').replace(/'/g, '"')));
+    return /** @type {?Object} */ (JSON.parse(paramsString));
   } catch (e) {
     return null;
   }
@@ -166,10 +165,10 @@ colab.cell.newFormWidget = function(name, value, params, callback) {
     case colab.cell.FormView.WidgetType.COMBOBOX:
       return new colab.cell.ComboBoxFormWidget(name, value, params, callback);
     case colab.cell.FormView.WidgetType.TEXT:
-      return new colab.cell.TextFieldFormWidget(name, value, callback);
+      return new colab.cell.TextFieldFormWidget(name, value, params, callback);
     default:
       console.error('Can not load unknown form view: ', params['type']);
-      return new colab.cell.TextFieldFormWidget(name, value, callback);
+      return new colab.cell.TextFieldFormWidget(name, value, {}, callback);
   }
 };
 
@@ -181,12 +180,14 @@ colab.cell.newFormWidget = function(name, value, params, callback) {
  * @constructor
  * @param {string} name Parameter name
  * @param {string} value Value of the Text Field
+ * @param {Object} params Supported keys: type: colab.cell.FormView.WidgetType,
+ *     description: string. description of field
  * @param {function(string, string)} callback Callback to the editor on text
  *   field change. First parameter will be 'name' the second 'value'.
  *
  * @extends {goog.ui.Component}
  */
-colab.cell.TextFieldFormWidget = function(name, value, callback) {
+colab.cell.TextFieldFormWidget = function(name, value, params, callback) {
   goog.base(this);
 
   this.name_ = name;
@@ -196,6 +197,8 @@ colab.cell.TextFieldFormWidget = function(name, value, callback) {
    */
   this.value_ = value;
   this.callback_ = callback;
+
+  this.description_ = params['description'];
 };
 goog.inherits(colab.cell.TextFieldFormWidget, goog.ui.Component);
 
@@ -213,6 +216,12 @@ colab.cell.TextFieldFormWidget.prototype.createDom = function() {
     'value': this.value_
   });
   goog.dom.appendChild(element, text);
+
+  if (this.description_) {
+    var description = goog.dom.createDom('div', 'formview-namelabel',
+      this.description_);
+    goog.dom.appendChild(element, description);
+  }
 
   this.setElementInternal(element);
 };
@@ -239,7 +248,9 @@ colab.cell.TextFieldFormWidget.prototype.enterDocument = function() {
  * @param {string} name Parameter name
  * @param {string} value Current value of the combobox
  * @param {Object} params Supported keys: type: colab.cell.FormView.WidgetType,
- *     domain: Array. widget creation parameters(contains combo box domain)
+ *     domain: Array. array of choices
+ *     data: Array. array of value-label pairs
+ *     selectedValue: string. the value currently selected
  * @param {function(string, string)} callback Callback to the editor on
  *   combobox change.
  * @extends {goog.ui.Component}
@@ -249,7 +260,10 @@ colab.cell.ComboBoxFormWidget = function(name, value, params, callback) {
 
   this.name_ = name;
   this.value_ = value;
-  this.domain_ = params['domain'] || [];
+  this.domain_ = params['domain'];
+  this.data_ = params['data'];
+  this.selectedValue_ = params['selectedValue'];
+  if (!this.data_ && !this.domain_) { this.domain_ = []; }
   this.callback_ = callback;
 };
 goog.inherits(colab.cell.ComboBoxFormWidget, goog.ui.Component);
@@ -271,17 +285,33 @@ colab.cell.ComboBoxFormWidget.prototype.enterDocument = function() {
 
   // create combobox
   var combobox = new goog.ui.ComboBox();
-  goog.array.forEach(this.domain_, function(v) {
-    this.addItem(new goog.ui.MenuItem(v));
-  }, combobox);
+  if (this.domain_) {
+    goog.array.forEach(this.domain_, function(v) {
+      this.addItem(new goog.ui.ComboBoxItem(v));
+    }, combobox);
+  } else if (this.data_) {
+    goog.array.forEach(this.data_, function(d) {
+      this.addItem(new goog.ui.ComboBoxItem(d[1], d[0]));
+    }, combobox);
+  }
 
   // add to widget
   this.addChild(combobox, true);
-  combobox.setValue(this.value_.replace(/\"/g, ''));
+  if (this.data_) {
+    var label = 'Not found';
+    for (var i = 0; i < this.data_.length; i++) {
+      if (this.data_[i][0] == this.selectedValue_) {
+        label = this.data_[i][1];
+      }
+    }
+    combobox.setValue(label);
+  } else {
+    combobox.setValue(this.value_.replace(/\"/g, ''));
+  }
   var widget = this;
-  this.getHandler().listen(combobox, goog.ui.Component.EventType.CHANGE,
+  this.getHandler().listen(combobox, goog.ui.Component.EventType.ACTION,
       function(e) {
-        widget.callback_(this.name_, '"' + e.target.getValue() + '"');
+        widget.callback_(this.name_, '"' + e.item.getValue() + '"');
       }, false);
 };
 
