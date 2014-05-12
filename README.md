@@ -18,7 +18,7 @@ git clone -b v2 https://github.com/google/colaboratory
 
 then clone the Google Closure library repo,
 ```
-git clone https://code.google.com/p/closure-library
+git clone https://github.com/google/closure-library
 ```
  
 Set build tools to executable
