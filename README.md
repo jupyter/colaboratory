@@ -39,7 +39,7 @@ Start IPython notebook.
 ./run
 ```
 
-Navigate to ```http://127.0.0.1:8888/static/frontend/welcome/html``` in
+Navigate to ```http://127.0.0.1:8888/static/frontend/welcome.html``` in
 browser.
 
 ## Custom Python libraries
