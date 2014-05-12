@@ -43,7 +43,7 @@ Navigate to ```http://127.0.0.1:8888/static/frontend/welcome.html``` in
 browser.
 
 ## Custom Python libraries
-To add custom python libraries, do the following prior to running ```./install```.
+To add custom python libraries, do the following prior to running ```./install.sh```.
 
 First, add custom python libraries to the ```colaboratory/modules/```
 directory.  Then, modify the file  ```colaboratory/build/profile_default/startup/startup.py```
