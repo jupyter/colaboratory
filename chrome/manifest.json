@@ -1,0 +1,49 @@
+{
+  "name": "Colaboratory Notebook",
+  "version": "6",
+  "manifest_version": 2,
+  "description": "A Chrome App for running a port of IPython to PNaCl, in a notebook environment with Google Drive Integration.",
+  "app": {
+    "background": {
+      "scripts": [
+        "launch.js",
+        "main.js"
+      ]
+    }
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2rQs+fa7vejgdPUjAA8mLJCgPL7lsRj4AumBwlREKfhN2NgufHxNNp2ruUBt/CcHaNWHA2zn8rVyoTmmUazN8FpDqCCuZeZqvf5sdiMgAXI3Ls/wyMbL2S6gSUx3Kfu5+mSpd2DCFGuDWdZ7K6AMOVwIAfvRiKbdq6be7aNnesiHjKvgYq3PxceqPADOdD5JDy7Tym81pf1NYD2EQyh2xFswrIosxfDNp1wdkuNClE/u8mFvgvLmrre0Q7cRFRcCkRJf87SEugAF+vKAQIg358hmAWBuTjoJw4b1chKRZ3ww1x+GCaC2W8dKlzWwkKF2A3L1ufqF3YuT1CnLdHJueQIDAQAB",
+  "oauth2": {
+    "client_id": "564937920753-2t209pu2ig5eh6f5fk7bb8mteole78b6.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive",
+      "https://www.googleapis.com/auth/drive.install"
+    ]
+  },
+  "permissions": [
+    "identity",
+    {"socket": [
+        "tcp-listen:*:*",
+        "tcp-connect",
+        "resolve-host",
+        "udp-bind:*:*",
+        "udp-send-to:*:*"]
+    },
+    "webview",
+    "storage",
+    "clipboardRead",
+    "clipboardWrite"],
+  "url_handlers": {
+    "handle_drive_action": {
+      "matches": [ "http://iteractivenb.appspot.com/drive*" ],
+      "title": "Drive Action"
+    }
+  },
+  "webview": {
+    "partitions" :[
+      {
+        "name": "frontend",
+        "accessible_resources": ["static/*"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,3 @@
+This directory contains the build products from the naclports
+package ipython-ppapi, which is a port of IPython to nacl.
+This port uses Pepper messaging instead of ZMQ.
