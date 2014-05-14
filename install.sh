@@ -29,5 +29,4 @@ cp -r extern/* $STATIC_CONTENT_DIR/
 # copy files built by the Google build system to build directory
 # (note, this files should be replaced with files that are built
 # directly from source.
-cp -r built_js/* $STATIC_CONTENT_DIR/frontend/js
 cp -r built_css/* $STATIC_CONTENT_DIR/frontend/css
