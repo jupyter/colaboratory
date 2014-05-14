@@ -1,0 +1,33 @@
+<html>
+  <head>
+    <title>CoLaboratory Notebook</title>
+  </head>
+  <body>
+    <link rel="stylesheet" href="main.css">
+    <h1>Welcome to CoLaboratory Notebook</h1>
+    <div id="pre-install-div" style="display: none;">
+      <button id="install-button" class="realtime-button">
+        Install App on Drive
+      </button>
+    </div>
+    <div id="post-install-div" style="display: none;">
+      <button id="create-button" class="realtime-button">
+        Create New Notebook
+      </button>
+      <button id="refresh-token-button" class="realtime-button">
+        Force Token Refresh [Debug]
+      </button>
+      <h2>Sample Notebooks</h2>
+      <div id="sample-notebooks-div">
+      </div>
+      <h2>My Notebooks</h2>
+      <div id="my-notebooks-div">
+      </div>
+      <p>
+        You can also open and create notebooks from the Google Drive website.
+      </p>
+    </div>
+    <script type="text/javascript" src="launch.js"></script>
+    <script type="text/javascript" src="welcome.js"></script>
+  </body>
+</html>

@@ -1,0 +1,194 @@
+/**
+ * Pop-up Dialog
+ */
+
+.modal-dialog-bg {
+  z-index: 20;
+}
+
+.modal-dialog {
+  z-index: 20;
+}
+
+.modal-dialog > input {
+  margin: 10px;
+}
+
+#kernel-url-input {
+margin: 10px;
+font-family: monospace;
+font-size: 12px;
+/* border: solid black 1px; */
+padding: 2px 5px;
+}
+
+/**
+ * Message and dialogs in content
+ */
+.content-message {
+  margin: 20px;
+  text-align: center;
+  width: 100%;
+}
+
+/**
+ * Page
+ */
+
+#content {
+  margin: 5px;
+  padding-top: 30px;
+  padding-bottom: 200px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Open Sans', sans-serif;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+p, ul {
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+
+body {
+  margin: 20px;
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 300;
+}
+
+
+#top-floater
+{
+  z-index: 20;
+  background: white;
+}
+
+#top-toolbar.goog-toolbar {
+  background: white;
+  border-bottom: 2px solid black;
+}
+#top-toolbar.goog-toolbar > .goog-toolbar-separator {
+  height: 16px;
+}
+
+#header-left {
+    display: inline-flex;
+}
+
+#header-logo {
+    height: 60px;
+    width: 40px;
+    background: darkslategrey;
+    text-align: center;
+}
+
+#header-logo > img {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  padding-top: 15px;
+  vertical-align: middle;
+}
+
+#header-doc-toolbar {
+    margin-left: 15px;
+    height: 60px;
+}
+
+#header {
+    width: 100%;
+    text-align: left;
+    border-bottom: 2px solid darkslategrey;
+    display: inline-flex;
+    justify-content: space-between;
+    font: normal 13px arial,sans-serif;
+}
+
+.realtime-button:hover
+{
+  opacity: 1;
+}
+
+/** not being used right now cause i can't figure
+ out how to do it */
+#colab-logo {
+    width: 30px;
+    vertical-align: middle;
+    height: 30px;
+    background-size: 100% 100%;
+    background: blue url(../img/white-icon.svg) center no-repeat;
+}
+
+#doc-name {
+  border: none;
+  margin-top: 3px;
+  padding: 2px 5px 0px 4px;
+  height: 27px; width: auto;
+  font: normal 18px arial,sans-serif;
+  min-width: 300px;
+}
+
+#doc-name:focus {
+  outline: 1px solid blue;
+}
+
+/** realtime buttons */
+#header-right {
+    margin-top: 24px;
+    margin-right: 20px;
+}
+
+#collaborators > img {
+  margin-right: 5px;
+  height: 25px;
+  padding-bottom: 5px;
+  margin-top: 0px;
+  vertical-align: middle;
+}
+
+#collaborators {
+  display:inline-block;
+}
+
+.realtime-button:hover {
+  opacity: 1;
+}
+
+.realtime-button {
+  opacity: 0.8;
+  border: 1px solid #3079ed;
+  color: #FFF;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 7px 8px;
+  vertical-align: middle;
+  border-radius: 2px;
+  background-color: #4d90fe;
+}
+
+.large-button {
+  font-size: 24pt;
+  margin-left: 10px;
+  padding: 10px 12px;
+  border-width: 2px;
+  border-radius: 4px;
+}
+
+
+#kernel-connect-toolbar-button {
+  font-weight: bold;
+}
+
+#kernel-connect-toolbar-button.disconnected {
+  color: #EA6464;
+}
+
+#kernel-connect-toolbar-button.connected {
+  color: #397D02;
+}
+
+#kernel-connect-toolbar-button.connecting {
+  color: #ECCD34;
+}
