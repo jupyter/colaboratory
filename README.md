@@ -66,13 +66,3 @@ naclports to ```chrome/pnacl/```.
 To install this app in Chrome, follow the instructions for installing an unpacked extension
 (extensions are apps for these purposes), at https://developer.chrome.com/extensions/getstarted#unpacked.
 The extension is located in ```colaboratory/build_chrome/```.
-
-
-## Custom Python libraries
-To add custom python libraries, do the following prior to running ```./install```.
-
-First, add custom python libraries to the ```colaboratory/modules/```
-directory.  Then, modify the file  ```colaboratory/build/profile_default/startup/startup.py```
-to import these modules.  E.g. add the module ```myModule.py```
-to ```colaboratory/modules/```, then add ```import myModule```
-to ```startup.py```.
