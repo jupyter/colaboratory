@@ -4,7 +4,7 @@ integrates Google Drive's realtime API, and also features in-browser
 execution using Chrome's Native Client technology.  It also features
 a number of other new experimental features.
 
-## Installation
+## Setup
 First create a directory to install this repo, e.g.
 ```
 mkdir ~/experimental_frontend
@@ -27,20 +27,46 @@ chmod +x closure-library/closure/bin/build/*
 chmod +x colaboratory/*.sh
 ```
 
-Install files in build directory. (NOTE: both the install and run scripts
-must be run from the colaboratory directory)
+## Installing the Web App
+Run
 ```
 cd colaboratory
 ./install
 ```
+to install the Web App (this creates an IPython profile which uses
+IPython to serve the static web content for the new front end)
 
-Start IPython notebook.
+NOTE: both the install and run scripts
+must be run from the colaboratory directory, e.g. running ```colaboratory/install.sh```
+will not work.
+
+Start IPython notebook:
 ```
 ./run
 ```
+This launches IPython using the profile created in the install step.
 
 Navigate to ```http://127.0.0.1:8888/static/frontend/welcome.html``` in
 browser.
+
+## Installing the Chrome App
+Run
+```
+cd colaboratory
+./install_chrome.sh
+```
+This creates an unpacked Chrome App, in the ```build_chrome/``` directory.
+
+NOTE: this script must be run from the colaboratory directory, e.g. running ```colaboratory/install.sh```
+will not work.
+
+NOTE: The file ```pydata_pnacl.tar``` is too big for GitHub, and must be manually copied from
+naclports to ```chrome/pnacl/```.
+
+To install this app in Chrome, follow the instructions for installing an unpacked extension
+(extensions are apps for these purposes), at https://developer.chrome.com/extensions/getstarted#unpacked.
+The extension is located in ```colaboratory/build_chrome/```.
+
 
 ## Custom Python libraries
 To add custom python libraries, do the following prior to running ```./install```.
