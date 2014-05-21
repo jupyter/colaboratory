@@ -30,6 +30,7 @@ goog.require('goog.ui.ToolbarSeparator');
 goog.require('goog.ui.ToolbarToggleButton');
 goog.require('goog.ui.menuBar');
 goog.require('goog.ui.menuBarDecorator');
+goog.require('userfeedback.api');
 
 /**
  * Setup coLaboratory header.
@@ -56,7 +57,7 @@ colab.setupHeader = function(document, permissions) {
       colab.drive.shareDocument();
     };
 
-    // activate commetns button
+    // activate comments button
     var commentsButton = goog.dom.getElement('comments');
     goog.style.setElementShown(commentsButton, true);
   }
@@ -83,16 +84,7 @@ colab.createMenubar = function(document, permissions) {
   goog.events.listen(menubar, goog.ui.Component.EventType.ACTION, function(e) {
     switch (e.target.getId()) {
       case 'save-menuitem':
-        var n = colab.notification.showNotification(
-            'Saving...', '', -1);
-        colab.drive.saveDocument(
-            colab.globalRealtimeDoc,
-            function() { n.change('Saved successfully!', 5000); },
-            function(err) {
-              n.clear();
-              colab.dialog.displayError('Failed to save', err);
-            },
-            {'pinned': true });
+        colab.globalNotebook.saveNotebook();
         return;
 
       case 'share-menuitem':
@@ -193,9 +185,11 @@ colab.createMenubar = function(document, permissions) {
             'Colab Bugs');
         break;
       case 'send-feedback-menuitem':
-      //  userfeedback.api.startFeedback({productId: 101049});
+        userfeedback.api.startFeedback({productId: 101049});
         break;
 
+      case 'shortcuts-menuitem':
+        colab.globalNotebook.displayShortcutHelp();
       default:
         console.error('Unknown menu item ' + e.target.getContent());
     }
@@ -241,20 +235,26 @@ colab.createToolbar = function(permissions) {
     }
   });
 
-
+  var buttonElement = jQuery('#backend-connect-toolbar-button')
+      .children().children();
   // TODO(kayur): The code below is horrible. Make it less horrible.
   // jQuery command for listening to kernel messages
   jQuery([IPython.events]).on('websocket_open.Kernel', function() {
-    jQuery('#backend-connect-toolbar-button').children().children().text(
-        'Connected');
+    buttonElement.text('Connected');
     goog.dom.classes.addRemove(
         goog.dom.getElement('backend-connect-toolbar-button'),
         ['connecting', 'disconnected'], 'connected');
   });
 
+  jQuery([IPython.events]).on('status_restarting.Kernel', function() {
+    buttonElement.text('Restarting');
+    goog.dom.classes.addRemove(
+        goog.dom.getElement('backend-connect-toolbar-button'),
+        ['connected', 'disconnected'], 'connecting');
+  });
+
   jQuery([IPython.events]).on('websocket_closed.Kernel', function() {
-    jQuery('#backend-connect-toolbar-button').children().children().text(
-        'Connect to Python');
+    buttonElement.text('Connect to Python');
     goog.dom.classes.addRemove(
         goog.dom.getElement('backend-connect-toolbar-button'),
         ['connected', 'connecting'], 'disconnected');
@@ -262,28 +262,37 @@ colab.createToolbar = function(permissions) {
 
   // TODO(kayur): add distinct behavior for start failed
   jQuery([IPython.events]).on('start_failed.Kernel', function(ev, data) {
-    jQuery('#backend-connect-toolbar-button').children().children().text(
-        'Connect to Python');
+    buttonElement.text('Connect to Python');
     goog.dom.classes.addRemove(
         goog.dom.getElement('backend-connect-toolbar-button'),
         ['connected', 'connecting'], 'disconnected');
   });
 
   jQuery([IPython.events]).on('starting.Kernel', function(ev, data) {
-    jQuery('#backend-connect-toolbar-button').children().children().text(
-        'Connecting');
+    buttonElement.text('Connecting');
     goog.dom.classes.addRemove(
         goog.dom.getElement('backend-connect-toolbar-button'),
         ['connected', 'disconnected'], 'connecting');
   });
 
   jQuery([IPython.events]).on('pnacl_loadend.Kernel', function(ev, data) {
-    jQuery('#backend-connect-toolbar-button').children().children().text(
-        'PNaCl Initializing');
+    buttonElement.text('PNaCl Initializing');
     goog.dom.classes.addRemove(
         goog.dom.getElement('backend-connect-toolbar-button'),
         ['connected', 'disconnected'], 'connecting');
   });
+
+
+  // on autorestart or restart clear
+  jQuery([IPython.events]).on('status_autorestarting.Kernel', function() {
+    colab.globalNotebook.reset();
+  });
+
+  // on autorestart or restart clear
+  jQuery([IPython.events]).on('status_restarting.Kernel', function() {
+    colab.globalNotebook.reset();
+  });
+
 };
 
 /**

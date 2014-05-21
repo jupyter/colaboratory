@@ -143,6 +143,18 @@ window.addEventListener('unload', function() {
   colab.close();
 });
 
+/**
+ * Close the connection to drive on unload
+ */
+window.addEventListener('beforeunload', function(ev) {
+  if (colab.saveState && (
+      colab.saveState.isSaving || colab.saveState.isPending)) {
+    ev.returnValue = 'This page has pending changes, are you' +
+         ' sure you want to navigate away from this page.';
+  }
+});
+
+
 
 /**
  * Closes everything
@@ -150,12 +162,17 @@ window.addEventListener('unload', function() {
  */
 colab.close = function(cb) {
   // close the notebook
+  // NOTE: Don't put any asynchronous code here, unless
+  // it is of fire-and-forget variety.
+  // BE careful if it might interefere with document closing.
   if (colab.globalNotebook) {
-    colab.globalNotebook.close();
     colab.globalNotebook = null;
   }
   colab.drive.close(cb);
 };
+
+/** @type {colab.Preferences} */
+colab.preferences = null;
 /** gapi.drive.realtime.Document
  * Callback for window load.  Loads UI.
  */
@@ -171,7 +188,8 @@ window.addEventListener('load', function() {
           gapi.drive.realtime.EventType.COLLABORATOR_JOINED,
           colab.updateCollaborators);
       document.addEventListener(gapi.drive.realtime.EventType.COLLABORATOR_LEFT,
-                                colab.updateCollaborators);
+                                colab.collaboratorLeft);
+
 
       document.addEventListener(
           gapi.drive.realtime.EventType.DOCUMENT_SAVE_STATE_CHANGED,
@@ -190,6 +208,8 @@ window.addEventListener('load', function() {
       // set permissions
       var permissions = new colab.drive.Permissions(!model.isReadOnly);
 
+      colab.preferences = new colab.Preferences();
+
       // get sharing state
       colab.globalSharingState = new colab.sharing.SharingState(
           colab.drive.fileIdIfAvailable);
@@ -206,7 +226,7 @@ window.addEventListener('load', function() {
 
       // load kernel (default to localhost, and store in cookie 'kernelUrl')
       if (!goog.net.cookies.containsKey('kernelUrl')) {
-        var kernelUrl = 'http://127.0.0.1:8888/kernels';
+        var kernelUrl = 'https://127.0.0.1:8888/kernels';
         if (colab.app.appMode) {
           // If in app mode, connect to in-browser kernel by default
           kernelUrl = colab.IN_BROWSER_KERNEL_URL;
@@ -418,6 +438,9 @@ colab.authorizeKernel = function(url, callback) {
  *  of not being authorized.
  */
 colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
+  url = url.replace(/^http:\/\//, 'https://');
+  // Adds /kernel suffix.
+  url = url.replace(/\/kernels$/, '') + '/kernels';
   // Never authorize if in app mode (as all authorization is handled
   // by the parent window).
   opt_forceAuthorization = opt_forceAuthorization && !colab.app.appMode;
@@ -538,6 +561,7 @@ colab.realtimeSaveFailureNote = colab.notification.createEmptyNotification();
  */
 colab.monitorSaveState = function(ev) {
   if (!ev.isSaving && !ev.isPending) {
+    colab.saveState = ev;
     colab.notSavedSince = null;
     colab.realtimeSaveFailureNote.clear();
     clearInterval(colab.userAlarmTimer);

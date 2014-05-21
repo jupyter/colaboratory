@@ -4,6 +4,7 @@ goog.require('colab.install');
 goog.require('colab.params');
 
 goog.require('goog.dom');
+goog.require('goog.dom.classes');
 goog.require('goog.dom.forms');
 goog.require('goog.style');
 

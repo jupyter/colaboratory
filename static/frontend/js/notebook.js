@@ -7,6 +7,7 @@ goog.provide('colab.CellDragger');
 goog.provide('colab.Notebook');
 
 goog.require('colab.CommentsWidget');
+goog.require('colab.Preferences');
 goog.require('colab.Undo');
 goog.require('colab.cell');
 goog.require('colab.cell.Cell');
@@ -19,6 +20,7 @@ goog.require('goog.fx.DragListGroup');
 goog.require('goog.fx.dom.FadeInAndShow');
 goog.require('goog.fx.dom.FadeOutAndHide');
 goog.require('goog.json');
+
 
 /**
  * Creates a new Notebook object. A Notebook is a collection of Cell objects.
@@ -329,10 +331,36 @@ colab.Notebook.prototype.recordCellMove = function(realtimeCell, newIndex) {
 };
 
 /**
- * @param {gapi.drive.realtime.CollaborativeObject} realtimeCell
+ * @param {gapi.drive.realtime.CollaborativeObject=} opt_realtimeCell
+ * if not provided, uses selected cell.
  */
-colab.Notebook.prototype.removeCell = function(realtimeCell) {
+colab.Notebook.prototype.removeCell = function(opt_realtimeCell) {
+  var selected = this.getSelectedCell();
+  if (!opt_realtimeCell && !selected) return;
+  var realtimeCell = opt_realtimeCell || selected.realtimeCell;
+  if (selected && realtimeCell != selected.realtimeCell) {
+    this.history_.recordDelete(realtimeCell);
+    return;
+  }
+  var index = this.getCellIndex(this.selectedCellId_);
+  if (index >= this.cells_.length - 1) { index--; }
   this.history_.recordDelete(realtimeCell);
+  if (index >= this.cells_.length) { index--; }
+  this.selectCell(this.realtimeCells_.get(index).id);
+};
+
+/**
+ * Changes selected cell 'delta' cells up or down
+ * @param {number} delta
+ */
+colab.Notebook.prototype.changeSelectedCell = function(delta) {
+  var index = this.getCellIndex(this.selectedCellId_);
+  var newIndex = index + delta;
+  if (newIndex < 0) newIndex = 0;
+  if (newIndex >= this.realtimeCells_.length) {
+    newIndex = this.realtimeCells_.length - 1;
+  }
+  this.selectCell(this.realtimeCells_.get(newIndex).id);
 };
 
 /**
@@ -349,14 +377,261 @@ colab.Notebook.prototype.redo = function() {
   this.history_.redo();
 };
 
+/**
+ * Saves notebook with notification on the screen
+ */
+colab.Notebook.prototype.saveNotebook = function() {
+  var n = colab.notification.showNotification(
+      'Saving...', '', -1);
+  colab.drive.saveDocument(
+      colab.globalRealtimeDoc,
+      function() { n.change('Saved successfully!', 5000); },
+      function(err) {
+        n.clear();
+        colab.dialog.displayError('Failed to save', err);
+      },
+      {'pinned': true });
+};
+
+/**
+ * @type {Object}
+ */
+colab.Notebook.prototype.magicCommands = null;
+
+/**
+ * @param {boolean} after
+ */
+colab.Notebook.prototype.insertCellAtSelection = function(after) {
+  this.insertCellAt(this.selectedCellId_, colab.cell.CellType.CODE, after);
+};
+
+/**
+ * @param {string} realtimeId
+ * @param {colab.cell.CellType} cellType
+ * @param {boolean} after
+ */
+colab.Notebook.prototype.insertCellAt = function(realtimeId, cellType, after) {
+  var index = this.getCellIndex(realtimeId);
+  if (after) { index++; }
+  this.addNewCell(cellType, index);
+};
+
+/**
+ * Setups magic commands for this notebook
+ */
+colab.Notebook.prototype.setupMagicCommands = function() {
+  var notebook = this;
+
+  /**
+   * @param {number} sc keyboard keycode
+   * @param {function(?)} f
+   * @param {string} help
+   * @return {colab.KeyboardShortcut}
+   */
+  var shortcut = function(sc, f, help) {
+    return { shortcut: sc, help: help,
+             func: goog.bind(f, notebook),
+             notimplemented: f == notebook.NotImplemented
+           };
+  };
+
+  var codes = goog.events.KeyCodes;
+  /**
+   * Object
+   */
+  var commands = [
+    shortcut(codes.X, this.NotImplemented, 'Cut Cell'),
+    shortcut(codes.C, this.NotImplemented, 'Copy Cell'),
+    shortcut(codes.V, this.NotImplemented, 'Paste Cell'),
+
+    shortcut(codes.D, function() { this.removeCell(); }, 'Delete Cell'),
+
+    shortcut(codes.Z, this.undo, 'Undo Last Cell Op'),
+
+    shortcut(codes.DASH, this.splitSelectedCellAtCursor, 'Split At Cursor'),
+
+    shortcut(codes.A, goog.bind(this.insertCellAtSelection,
+        this, false /* before */), 'Insert Cell Above'),
+
+    shortcut(codes.B, goog.bind(this.insertCellAtSelection,
+        this, true /* after */), 'Insert Cell Below'),
+
+    shortcut(codes.O, this.toggleOutput, 'Toggle output'),
+
+    shortcut(codes.L, this.toggleLineNumbers, 'Toggle line numbers'),
+
+    shortcut(codes.NINE,
+       goog.bind(this.changeEditorFontSize, this, -1),
+       'Editor Font Size++'),
+
+    shortcut(codes.ZERO,
+       goog.bind(this.changeEditorFontSize, this, 1),
+       'Editor Font Size--'),
+
+    shortcut(codes.S, this.saveNotebook, 'Save and Checkpoint'),
+
+    shortcut(codes.J, this.moveCellDown, 'Move Cell Down'),
+    shortcut(codes.K, this.moveCellUp, 'Move Cell Up'),
+
+    shortcut(codes.P, goog.bind(this.changeSelectedCell, this, -1),
+             'Previous Cell'),
+    shortcut(codes.N, goog.bind(this.changeSelectedCell, this, 1),
+             'Next Cell'),
+    shortcut(codes.I, function() { colab.globalKernel.interrupt(); },
+             'Interrupt Kernel'),
+    shortcut(codes.PERIOD, function() { colab.globalKernel.restart(); },
+             'Restart Kernel'),
+    shortcut(codes.H, this.displayShortcutHelp,
+             'Show Keyboard Shortcuts'),
+
+    shortcut(codes.Y, this.NotImplemented, 'Convert to Code Cell'),
+
+    shortcut(codes.M, this.NotImplemented, 'Convert to Markdown Cell')
+
+  ];
+  this.magicCommands = {};
+  for (var i = 0; i < commands.length; i++) {
+    this.magicCommands[commands[i].shortcut] = commands[i];
+  }
+};
+
+/**
+ * Toggles output of currently selected cell, if it has output
+ */
+colab.Notebook.prototype.toggleOutput = function() {
+  var cell = this.getSelectedCell();
+  if (!cell || cell.getType() != colab.cell.CellType.CODE) return;
+  cell.toggleOutput();
+};
+
+/**
+ * Shows help on shortcuts
+ */
+colab.Notebook.prototype.displayShortcutHelp = function() {
+  var dialog = new goog.ui.Dialog();
+  var msg = '<h3>Notebook</h3><br/><table>';
+  var c = 0;
+  var toChar = function(code) {
+     switch (code) {
+       case goog.events.KeyCodes.PERIOD: return '.';
+       case goog.events.KeyCodes.DASH: return '-';
+       default: return String.fromCharCode(code);
+     }
+  };
+
+  /**
+   * @param {string} shortcut
+   * @param {string} help
+   * @param {boolean=} notimplemented
+   * @return {string}
+   */
+  var shortcutText = function(shortcut, help, notimplemented) {
+    var status = '';
+    if (notimplemented) {
+      status = 'style="color:gray" title="Not implemented"';
+    }
+    return '<td>' + shortcut + '</td><td ' + status + '> ' + help + '</td> ';
+  };
+
+  for (var i in this.magicCommands) {
+    var sc = this.magicCommands[i];
+    if (c % 2 == 0) msg += '<tr>';
+    msg += shortcutText('Ctrl-M ' + toChar(sc.shortcut),
+        sc.help, sc.notimplemented);
+    if (c % 2 == 1) {msg += '</tr>'} else { msg += '<td>&nbsp;</td>' }
+    c++;
+  }
+  msg += '<tr><td> <div></div>  </td> </tr>';
+  msg += '<tr><td colspan=4><h3>Code Cell</h3> </tr>';
+  msg += '<tr>' + shortcutText('Ctrl-/', 'Toggle Comment') + '</tr>';
+
+  msg += '</table>';
+  dialog.setContent(msg);
+  dialog.setTitle('Keyboard shortcuts');
+  dialog.setButtonSet(goog.ui.Dialog.ButtonSet.createOk());
+  dialog.setModal(true);
+  dialog.setDisposeOnHide(true);
+
+  dialog.setVisible(true);
+};
+
+/**
+ * Splits cell at cursor
+ */
+colab.Notebook.prototype.splitSelectedCellAtCursor = function() {
+  var cell = this.getSelectedCell();
+  var index = this.getCellIndex(this.selectedCellId_);
+
+  if (!cell) return;
+  var realtimeCells = cell.splitAtCursor();
+  if (!realtimeCells || realtimeCells.length < 2) return;
+  this.history_.recordSplit(index, realtimeCells[0], realtimeCells[1]);
+};
+
+/**
+ * @typedef  {{
+ *   shortcut: number,
+ *   help: string,
+ *   func: (function(colab.KeyboardShortcut, KeyboardEvent): boolean)
+ * }}
+ */
+colab.KeyboardShortcut;
+
+/**
+ * @param {KeyboardEvent} ev
+ * @return {boolean}
+ */
+colab.Notebook.prototype.handleMagicKey = function(ev) {
+  /**
+   * @type {colab.KeyboardShortcut}
+   */
+  var sc = this.magicCommands[ev.keyCode];
+  if (sc && sc.func) {
+    sc.func(sc, ev);
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Toggles line numbers
+ */
+colab.Notebook.prototype.toggleLineNumbers = function() {
+  colab.preferences.showLineNumbers ^= true;
+  for (var i = 0; i < this.cells_.length; i++) {
+    this.cells_[i].refresh();
+  }
+};
+
+/**
+ * Changes font size by delta
+ *
+ * @param {number} delta
+ */
+colab.Notebook.prototype.changeEditorFontSize = function(delta) {
+  colab.preferences.fontSize += delta;
+  for (var i = 0; i < this.cells_.length; i++) {
+    setTimeout(goog.bind(this.cells_[i].refresh, this.cells_[i]), 1);
+  }
+};
+/**
+ * @param {colab.KeyboardShortcut} shortcut
+ */
+colab.Notebook.prototype.NotImplemented = function(shortcut) {
+  colab.notification.showPrimary('Shortcut for "' + shortcut.help + '"' +
+      ' is not implemented yet.');
+};
 
 /**
  * Sets up document keyhandler, which handles global key presses.
  * TODO(kayur): look into browser events for undo and redo.
  */
 colab.Notebook.prototype.setupKeyHandler = function() {
+  this.setupMagicCommands();
   var notebook = this;
   var docKh = new goog.events.KeyHandler(document);
+  var magicMode = false;
+
   goog.events.listen(docKh, 'key', function(e) {
     if ((e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) &&
          e.keyCode == goog.events.KeyCodes.ENTER) {
@@ -367,6 +642,24 @@ colab.Notebook.prototype.setupKeyHandler = function() {
       e.preventDefault();
       return;
     }
+    if (magicMode && notebook.handleMagicKey(e)) {
+      e.stopPropagation();
+      e.preventDefault();
+      // Keep magic mode, so we can do more than one command at a time
+      // (e.g. for font changes)
+      magicMode = false;
+      return;
+    }
+    magicMode = false;
+    if (e.ctrlKey && e.keyCode == goog.events.KeyCodes.M) {
+      e.preventDefault();
+      magicMode = true;
+      return;
+    }
+
+
+
+
 
     // For whatever reason these get triggered whether in capture
     // or in bubble mode. It might have something to do with codemirror
@@ -783,13 +1076,15 @@ colab.Notebook.prototype.clear = function() {
 };
 
 /**
- * Close the notebook.
+ * removes the collaborator
+ * @param {gapi.drive.realtime.Collaborator} c
  */
-colab.Notebook.prototype.close = function() {
+colab.Notebook.prototype.removeCollaborator = function(c) {
   goog.array.forEach(this.cells_, function(cell) {
-    cell.close();
+    cell.removeCollaborator(c);
   });
 };
+
 
 /**
  * Clears outputs of the code cells.
@@ -803,5 +1098,15 @@ colab.Notebook.prototype.clearOutputs = function() {
     if (cell.getType() === colab.cell.CellType.CODE) {
       cell.clearOutput();
     }
+  });
+};
+
+
+/**
+ * Clear notebook state. Used when kernel is reset.
+ */
+colab.Notebook.prototype.reset = function() {
+  goog.array.forEach(this.cells_, function(cell) {
+    cell.reset();
   });
 };

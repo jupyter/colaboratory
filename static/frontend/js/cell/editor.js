@@ -7,6 +7,7 @@ goog.provide('colab.cell.Editor');
 goog.require('colab.tooltip');
 
 goog.require('goog.dom');
+goog.require('goog.dom.classes');
 goog.require('goog.events');
 goog.require('goog.events.EventType');
 goog.require('goog.ui.Component');
@@ -402,7 +403,6 @@ colab.cell.Editor.prototype.addOnChangeHandler = function(f) {
   this.editor_.on(goog.events.EventType.CHANGE, f);
 };
 
-
 /**
  * Add handler for focus on editor.
  * @param {Function} f Callback function
@@ -419,11 +419,36 @@ colab.cell.Editor.prototype.focus = function() {
 };
 
 /**
+ * If either not provided, assume begin or end respectively
+ * @param {CodeMirror.CursorPosition=} opt_begin
+ * @param {CodeMirror.CursorPosition=} opt_end
+ * @return {string}
+ */
+colab.cell.Editor.prototype.getRange = function(opt_begin, opt_end) {
+  var begin = opt_begin || {'line': 0, 'ch': 0};
+  // 1 past the last line, so ch=0;
+  var end = opt_end || {'line': this.editor_.lineCount(), 'ch': 0};
+  return this.editor_.getRange(begin, end);
+};
+
+/**
+ * Returns cursor position
+ * @return {CodeMirror.CursorPosition}
+ */
+colab.cell.Editor.prototype.getCursor = function() {
+  return this.editor_.getCursor();
+};
+
+/**
  * Refresh editor dom. Needed because CodeMirror doesn't know how
  * to size itself unless it's in the document. We can potentially
  * Render a CodeMirror object without it being in the document.
  */
 colab.cell.Editor.prototype.refresh = function() {
+//  goog.style.setStyle(this.getElement(),
+  //    'fontSize', colab.preferences.fontSize);
+
+  jQuery(this.getElement()).css('fontSize', colab.preferences.fontSize);
   // Hack to workaround bug in code mirror where we wouldn't size
   // editor properly on initial focus.
   this.editor_.setSize('100%');
@@ -485,7 +510,7 @@ colab.cell.Editor.prototype.enterDocument = function() {
   this.indentSize = 2;
   // set up editor parameters
   var editorParams =  /** @type {!CodeMirror.EditorConfig}*/ ({
-      lineNumbers: true,
+      lineNumbers: colab.preferences.showLineNumbers,
       mode: 'text/x-python',
       matchBrackets: true,
       viewportMargin: 10,
@@ -493,7 +518,8 @@ colab.cell.Editor.prototype.enterDocument = function() {
       extraKeys: {
         // Do our own tab handling. Use for code completion and replace
         // tabs with spaces.
-        Tab: goog.bind(this.tabHandler, this)
+        Tab: goog.bind(this.tabHandler, this),
+        'Ctrl-/': 'toggleComment'
       }
   });
 
