@@ -4,8 +4,8 @@
  */
 
 
- /***/
- var gapi = {};
+/***/
+var gapi = {};
 
 
 /***/
@@ -127,6 +127,16 @@ gapi.drive.realtime.ValueChangedEvent = function() {
   this.isLocal = false;
 };
 
+/**
+ * @constructor
+ * @struct
+ */
+gapi.drive.realtime.CollaboratorLeftEvent = function() {
+  /** @type {gapi.drive.realtime.Collaborator} */
+  this.collaborator = null;
+  /** @type {gapi.drive.realtime.Document} */
+  this.document = null;
+};
 /***/
 gapi.drive.realtime.EventType = {};
 

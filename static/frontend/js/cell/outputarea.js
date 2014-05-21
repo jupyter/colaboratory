@@ -95,6 +95,13 @@ colab.cell.OutputArea.prototype.getContentElement = function() {
   return goog.dom.getElementByClass('output-content', this.getElement());
 };
 
+/**
+ * Toggles output
+ */
+colab.cell.OutputArea.prototype.toggle = function() {
+  this.zippy_.toggle();
+};
+
 /** @inheritDoc */
 colab.cell.OutputArea.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
@@ -250,7 +257,8 @@ colab.cell.OutputArea.prototype.resizeOutput = function(desiredHeight) {
   // Find scrolling point that we want to keep still, if selected cell is
   // on the screen and visible, use its top, otherwise, use window.topY
   var refScroll = window.scrollY;
-  var scrollCell = colab.globalNotebook.getSelectedCell();
+  var scrollCell = colab.globalNotebook ?
+      colab.globalNotebook.getSelectedCell() : null;
   var resizingCurrentCell = false;
   if (scrollCell && scrollCell.isVisible()) {
     // Use selected cell as reference.

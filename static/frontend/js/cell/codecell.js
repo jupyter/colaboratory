@@ -65,12 +65,17 @@ colab.cell.CodeCell.prototype.createToolbar = function() {
   this.toolbar.addChildAt(clearButton, 0, true);
 
   // create edit button to toggle edit state
-  var runButton = new goog.ui.ToolbarButton('Run');
-  goog.events.listen(runButton,
+  /** @private {goog.ui.ToolbarButton} */
+  this.runInterruptButton_ = new goog.ui.ToolbarButton('Run');
+  goog.events.listen(this.runInterruptButton_,
       goog.ui.Component.EventType.ACTION, function(e) {
-        this.execute(true);
+        if (this.isRunning_) {
+          colab.globalKernel.interrupt();
+        } else {
+          this.execute(true);
+        }
       }, false /* Don't fire on capture */, this);
-  this.toolbar.addChildAt(runButton, 0, true);
+  this.toolbar.addChildAt(this.runInterruptButton_, 0, true);
 
   /** @private {goog.ui.ToolbarSelect} add select for toolbar */
   this.formViewSelect_ = new goog.ui.ToolbarSelect('');
@@ -79,13 +84,7 @@ colab.cell.CodeCell.prototype.createToolbar = function() {
     this.addItem(new goog.ui.MenuItem(value));
   }, this.formViewSelect_);
 
-  // set selected item
-  if (this.realtimeCell.has('cellView')) {
-    var viewIdx = viewTypes.indexOf(this.realtimeCell.get('cellView'));
-    this.formViewSelect_.setSelectedIndex(viewIdx);
-  } else {
-    this.formViewSelect_.setSelectedIndex(0);
-  }
+  this.formViewSelect_.setSelectedIndex(0);
 
   var events = [goog.ui.Component.EventType.SHOW,
       goog.ui.Component.EventType.HIDE, goog.ui.Component.EventType.ACTION];
@@ -98,8 +97,8 @@ colab.cell.CodeCell.prototype.createToolbar = function() {
         goog.dom.classes.remove(this.toolbarDiv, 'cell-toolbar-visible');
         break;
       case goog.ui.Component.EventType.ACTION:
-        this.setView_(/** @type {string} */(this.formViewSelect_.getValue()),
-            true);
+        this.setView_(/** @type {colab.cell.CodeCell.ViewType} */
+            (this.formViewSelect_.getValue()), true);
         break;
     }
   }, false /* Don't fire on capture */, this);
@@ -113,22 +112,24 @@ colab.cell.CodeCell.prototype.viewType_ = colab.cell.CodeCell.ViewType.BOTH;
 
 /**
  * Set the view of the cell based combo box selection.
- * @param {colab.cell.CodeCell.ViewType|string|undefined} viewType The view
- * we are setting the code to.
+ * @param {colab.cell.CodeCell.ViewType} viewType View we are setting to.
  * @param {boolean} update Update Realtime cell.
  * @private
  */
 colab.cell.CodeCell.prototype.setView_ = function(viewType, update) {
-  if (viewType) {
-    colab.cell.CodeCell.prototype.viewType_ =
-        /** @type {colab.cell.CodeCell.ViewType} */ (viewType);
+  if (viewType != this.viewType_) {
+    if (update) {
+      this.realtimeCell.set('cellView', viewType);
+    }
+    var viewTypes = goog.object.getValues(colab.cell.CodeCell.ViewType);
+    this.formViewSelect_.setSelectedIndex(viewTypes.indexOf(viewType));
   }
-  if (update && viewType) {
-    this.realtimeCell.set('cellView', viewType);
-  }
-  /* only for the scope of this function */
-  viewType = this.formView_.hasChildren() ?
-      colab.cell.CodeCell.prototype.viewType_ :
+
+  // set cell viewtype
+  this.viewType_ = viewType;
+
+  // only for the scope of this function
+  var realViewType = this.formView_.hasChildren() ? this.viewType_ :
       colab.cell.CodeCell.ViewType.CODE;
 
   // if the form has widgets show menu item in the toolbar.
@@ -137,7 +138,7 @@ colab.cell.CodeCell.prototype.setView_ = function(viewType, update) {
       this.formView_.hasChildren());
   }
 
-  switch (viewType) {
+  switch (realViewType) {
     case colab.cell.CodeCell.ViewType.BOTH:
       this.formView_.show(true);
       this.formView_.setExpanded(false);
@@ -240,6 +241,7 @@ colab.cell.CodeCell.prototype.enterDocument = function() {
   this.addChild(this.formView_);
   this.formView_.render(this.inputDiv_);
 
+  // if the cell view exists
   if (this.realtimeCell.has('cellView')) {
     this.setView_(this.realtimeCell.get('cellView'), false);
   } else {
@@ -284,6 +286,13 @@ colab.cell.CodeCell.prototype.enterDocument = function() {
 };
 
 /**
+ * Toggles output visibility
+ */
+colab.cell.CodeCell.prototype.toggleOutput = function() {
+  this.outputArea_.toggle();
+};
+
+/**
  * Updates state based on changes to the realtime cell
  * @param {gapi.drive.realtime.ValueChangedEvent} e Change event
  * @private
@@ -292,7 +301,8 @@ colab.cell.CodeCell.prototype.realtimeUpdate_ = function(e) {
   if (e.property == 'executionInfo') {
     this.outputArea_.setHeaderContent(/** @type {Object} */ (e.newValue));
   } else if (e.property == 'cellView') {
-    this.setView_(/** @type {string} */ (e.newValue), false);
+    this.setView_(/** @type {colab.cell.CodeCell.ViewType} */ (e.newValue),
+        false);
   }
 };
 
@@ -304,7 +314,12 @@ colab.cell.CodeCell.prototype.updateFormView_ = function() {
   // parse code to generate form
   this.formView_.parseCode(this.editor_.getText());
 
-  this.setView_(undefined /* use current */, false /* don't update rt */);
+  this.setView_(this.viewType_, false /* don't update rt */);
+};
+
+/** @inheritDoc */
+colab.cell.CodeCell.prototype.reset = function() {
+  this.setRunning_(false);
 };
 
 /**
@@ -317,6 +332,7 @@ colab.cell.CodeCell.prototype.setRunning_ = function(value) {
       this.getElement());
   goog.style.setElementShown(runningElem, value);
   this.isRunning_ = value;
+  this.runInterruptButton_.setCaption(value ? 'Interrupt' : 'Run');
   this.refresh();
 };
 
@@ -437,6 +453,8 @@ colab.cell.CodeCell.prototype.execute = function(opt_isManual) {
  */
 colab.cell.CodeCell.prototype.refresh = function() {
   goog.base(this, 'refresh');
+  this.editor_.setOption('lineNumbers',
+      colab.preferences.showLineNumbers);
   this.editor_.refresh();
 };
 

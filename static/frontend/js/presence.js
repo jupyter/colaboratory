@@ -21,6 +21,15 @@ colab.updateCollaborators = function() {
 };
 
 /**
+ * Update collaborators list.
+ * @param {gapi.drive.realtime.CollaboratorLeftEvent} ev
+ */
+colab.collaboratorLeft = function(ev) {
+  colab.updateCollaborators();
+  colab.globalNotebook.removeCollaborator(ev.collaborator);
+};
+
+/**
  * Create the portrait for a collaborator.
  * @param {gapi.drive.realtime.Collaborator} collaborator Collaborator info
  * @return {Element} Img element for the collaborator

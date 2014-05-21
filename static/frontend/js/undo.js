@@ -116,6 +116,37 @@ colab.Undo.prototype.recordMove = function(insertAfterRemovePosition, cell) {
 };
 
 /**
+ * Records cell split, where cell in position, is replaced
+ * by 2 cells, splitCell1 and splitCell2.
+ * User is responsible for populating splitCell1 and splitCell2
+ * @param {number} position
+ * @param {Object} splitCell1
+ * @param {Object} splitCell2
+ */
+colab.Undo.prototype.recordSplit = function(position, splitCell1, splitCell2) {
+  this.record(colab.Undo.OpType.DELETE,
+      /** @type {Object} */ (this.cells.get(position)));
+  this.record(colab.Undo.OpType.INSERT, splitCell2, position);
+  this.record(colab.Undo.OpType.INSERT, splitCell1, position);
+  this.compound(3);
+};
+
+/**
+ * Records cell merge, where cell's at position/position+1
+ * are merged into mergeCell
+ * @param {number} position
+ * @param {Object} mergeCell
+ */
+colab.Undo.prototype.recordMerge = function(position, mergeCell) {
+  this.record(colab.Undo.OpType.DELETE,
+      /** @type {Object} */ (this.cells.get(position)));
+  this.record(colab.Undo.OpType.DELETE,
+       /** @type {Object} */ (this.cells.get(position)));
+  this.record(colab.Undo.OpType.INSERT, mergeCell, position);
+  this.compound(3);
+};
+
+/**
  * Records  insertion operation
  * @param {number} insertPosition
  * @param {Object} cell

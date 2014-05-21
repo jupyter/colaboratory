@@ -36,11 +36,12 @@ colab.cell.cellFromRealtime = function(realtimeCell, permissions) {
  *
  * @param {gapi.drive.realtime.Model} model Realtime model.
  * @param {string} type Type of the cell.
+ * @param {string=} opt_text initial value of the cell.
  * @return {gapi.drive.realtime.CollaborativeMap} A realtime cell
  */
-colab.cell.newRealtimeCell = function(model, type) {
+colab.cell.newRealtimeCell = function(model, type, opt_text) {
   var realtimeCell = model.createMap();
-  realtimeCell.set('text', model.createString());
+  realtimeCell.set('text', model.createString(opt_text));
   realtimeCell.set('type', type);
   realtimeCell.set('collaborators', model.createList());
 

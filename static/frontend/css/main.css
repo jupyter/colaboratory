@@ -8,6 +8,7 @@
 
 .modal-dialog {
   z-index: 20;
+  box-shadow: 10px 20px 30px #888888
 }
 
 .modal-dialog > input {
@@ -67,4 +68,9 @@ body {
   font-size: 10pt;
   font-weight: 300;
   background: #eeeeee;
+}
+
+/* for interacrtive tables */
+input.text_filter.search_init {
+    width: 95%;
 }

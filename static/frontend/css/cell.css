@@ -114,6 +114,9 @@ pre {
   background: transparent;
 }
 
+.cell.readonly:hover > .cell-handle > .line {
+  display: none
+}
 
 .text * .editor {
   display: none;
@@ -145,7 +148,8 @@ pre {
   border-left-color: #B3B1B1;
 }
 
-.cell.selected:hover > .selection-wrapper{
+.cell.readonly:hover > .selection-wrapper,
+.cell.selected:hover > .selection-wrapper {
   border-left-color: transparent;
 }
 
@@ -204,14 +208,18 @@ pre {
 
 .CodeMirror {
   height: auto;
+  overflow-x: hidden
 }
 
 .CodeMirror-scroll {
   height: auto;
   overflow-y: hidden;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
+.CodeMirror-hscrollbar {
+  overflow-x:hidden
+}
 
 .running-status {
   color: white;

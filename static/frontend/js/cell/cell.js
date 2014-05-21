@@ -66,6 +66,12 @@ goog.inherits(colab.cell.Cell, goog.ui.Component);
  */
 colab.cell.Cell.idToCellMap = {};
 
+
+/**
+ * Reset state
+ */
+colab.cell.Cell.prototype.reset = function() { };
+
 /**
  * Scroll cell to view. If the cell is fully visible, don't scroll. If the
  * Cell is obstructed from the top scroll down. If the cell is obstructed
@@ -134,9 +140,7 @@ colab.cell.Cell.prototype.createToolbar = function() {
     insertMenu.addItem(menuItem);
     this.getHandler().listenWithScope(menuItem,
       goog.ui.Component.EventType.ACTION, function(e) {
-        var index = colab.globalNotebook.getCellIndex(this.realtimeCell.id);
-        if (after) { index++; }
-        colab.globalNotebook.addNewCell(cellType, index);
+      colab.globalNotebook.insertCellAt(this.realtimeCell.id, cellType, after);
     }, false, this);
   }, this);
 
@@ -178,6 +182,30 @@ colab.cell.Cell.prototype.getType = function() {
 
 /** @private {string} Selected class css name */
 colab.cell.Cell.SELECTED_CSS_NAME_ = 'selected';
+
+/**
+ * @return {?colab.cell.Editor|undefined}
+ */
+colab.cell.Cell.prototype.getEditor = function() {
+  return this.editor_;
+};
+
+/**
+ * @return {?Array.<gapi.drive.realtime.CollaborativeMap>}
+ */
+colab.cell.Cell.prototype.splitAtCursor = function() {
+  var editor = this.getEditor();
+
+  if (!editor) return null;
+  var first = editor.getRange(undefined, editor.getCursor());
+  var second = editor.getRange(editor.getCursor());
+  if (!first || !second) return null;
+  var cell1 = colab.cell.newRealtimeCell(colab.globalRealtimeDoc.getModel(),
+      this.getType(), first);
+  var cell2 = colab.cell.newRealtimeCell(colab.globalRealtimeDoc.getModel(),
+      this.getType(), second);
+  return [cell1, cell2];
+};
 
 /**
  * Toggles cell selection.
@@ -325,15 +353,16 @@ colab.cell.Cell.prototype.selectCellHandler = function(e) {
 };
 
 /**
- * Close cell. Remove self from collaborator list.
+ * Remove collaborator from collaborator list.
+ * @param {gapi.drive.realtime.Collaborator} collaborator
  */
-colab.cell.Cell.prototype.close = function() {
+colab.cell.Cell.prototype.removeCollaborator = function(collaborator) {
   var collabList = this.realtimeCell.get('collaborators');
 
   // remove all instances of the user from the collaborators list
   goog.array.forEach(collabList.asArray(), function(c, index) {
-    if (c.sessionId === colab.globalMe.sessionId &&
-        c.userId === colab.globalMe.userId) {
+    if (c.sessionId === collaborator.sessionId &&
+        c.userId === collaborator.userId) {
       collabList.remove(index);
     }
   });
@@ -351,7 +380,8 @@ colab.cell.Cell.prototype.enterDocument = function() {
       goog.bind(this.updateCollaborators_, this));
   collabList.addEventListener(gapi.drive.realtime.EventType.VALUES_SET,
       goog.bind(this.updateCollaborators_, this));
-
+  // Consider making these functions more efficient.
+  this.updateCollaborators_();
 
   if (this.permissions.isEditable()) {
     this.createToolbar();
