@@ -13,7 +13,7 @@ cd ~/experimental_frontend
 
 then clone this repo
 ```
-git clone -b v2 https://github.com/google/colaboratory
+git clone -b v2_IPython20 https://github.com/google/colaboratory
 ```
 
 then clone the Google Closure library repo,
@@ -31,13 +31,13 @@ chmod +x colaboratory/*.sh
 Run
 ```
 cd colaboratory
-./install
+./install_v2.sh
 ```
 to install the Web App (this creates an IPython profile which uses
 IPython to serve the static web content for the new front end)
 
 NOTE: both the install and run scripts
-must be run from the colaboratory directory, e.g. running ```colaboratory/install.sh```
+must be run from the colaboratory directory, e.g. running ```colaboratory/install_v2.sh```
 will not work.
 
 Start IPython notebook:
@@ -57,7 +57,7 @@ cd colaboratory
 ```
 This creates an unpacked Chrome App, in the ```build_chrome/``` directory.
 
-NOTE: this script must be run from the colaboratory directory, e.g. running ```colaboratory/install.sh```
+NOTE: this script must be run from the colaboratory directory, e.g. running ```colaboratory/install_chrome.sh```
 will not work.
 
 NOTE: The file ```pydata_pnacl.tar``` is too big for GitHub, and must be manually copied from
