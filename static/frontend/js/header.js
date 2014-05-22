@@ -31,7 +31,6 @@ goog.require('goog.ui.ToolbarSeparator');
 goog.require('goog.ui.ToolbarToggleButton');
 goog.require('goog.ui.menuBar');
 goog.require('goog.ui.menuBarDecorator');
-goog.require('userfeedback.api');
 
 /**
  * Setup coLaboratory header.
@@ -193,7 +192,7 @@ colab.createMenubar = function(document, permissions) {
             'Colab Bugs');
         break;
       case 'send-feedback-menuitem':
-        userfeedback.api.startFeedback({productId: 101049});
+      //userfeedback.api.startFeedback({productId: 101049});
         break;
 
       case 'shortcuts-menuitem':
