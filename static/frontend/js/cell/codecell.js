@@ -391,9 +391,12 @@ colab.cell.CodeCell.prototype.execute = function(opt_isManual) {
 
   // these callbacks handle kernel events
   // TODO(kayur): handle set_next_input, input_request
-  var callbacks = /** @type {IPython.KernelCallbacks} */ ({
+  var callbacks = {}
+  callbacks.shell = {};
+  callbacks.shell.payload = {};
+  callbacks.iopub = {};
 
-    'execute_reply': goog.bind(function(content) {
+  callbacks.shell.reply = goog.bind(function(content) {
       this.setRunning_(false);
 
       // update header
@@ -411,20 +414,22 @@ colab.cell.CodeCell.prototype.execute = function(opt_isManual) {
 
     }, this),
 
-    'set_next_input': goog.bind(function(content) {
+  callbacks.shell.payload.set_next_input = goog.bind(function(content) {
        console.log('set_next_input not implemented: ', content); }, this),
 
-    'input_request': goog.bind(function(content) {
+  callbacks.input = goog.bind(function(content) {
        console.log('input_request not implemented: ', content); }, this),
 
-    'clear_output': goog.bind(function() {
+  callbacks.iopub.clear_output = goog.bind(function() {
       this.outputArea_.clear();
     }, this),
 
-    'output': goog.bind(function(msgType, content) {
+  callbacks.iopub.output = goog.bind(function(msg) {
+      var msgType = msg['msg_type'];
+      var content = msg['content'];
       // Handle special requests by the kernel.  These are answered on the stdin
       // channel.
-      var metadata = content['metadata'];
+      var metadata = msg['metadata'];
       if (metadata && metadata[colab.services.REQUEST_TYPE_KEY]) {
         colab.services.handleKernelRequest(metadata);
         return;
@@ -432,8 +437,7 @@ colab.cell.CodeCell.prototype.execute = function(opt_isManual) {
 
       // create output object and add it to outputs list
       this.outputArea_.handleKernelOutputMessage(msgType, content);
-    }, this)
-  });
+  }, this);
 
   try {
     colab.globalKernel.execute(this.editor_.getText(), callbacks,

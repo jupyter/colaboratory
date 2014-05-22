@@ -191,7 +191,7 @@ window.addEventListener('load', function() {
 
       // load kernel (default to localhost, and store in cookie 'kernelUrl')
       if (!goog.net.cookies.containsKey('kernelUrl')) {
-        var kernelUrl = 'https://127.0.0.1:8888/kernels';
+        var kernelUrl = '/api/kernels';
         if (colab.app.appMode) {
           // If in app mode, connect to in-browser kernel by default
           kernelUrl = colab.IN_BROWSER_KERNEL_URL;
@@ -214,6 +214,7 @@ window.addEventListener('load', function() {
       colab.dialog.displayError('Unable to load the framework.', err);
       colab.setupHeader(null, null);
       console.log(err);
+      console.log(err.stack);
     }
 
   }, function(reason) {
@@ -401,6 +402,10 @@ colab.authorizeKernel = function(url, callback) {
  *  of not being authorized.
  */
 colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
+  // NOTE - Authororization in Google version hasn't been ported
+  // yet, so set forceAuthorization to false
+  opt_forceAuthorization = false;
+
   if (url != colab.IN_BROWSER_KERNEL_URL && url != colab.NACL_KERNEL_URL) {
     url = url.replace(/^http:\/\//, 'https://');
     // Adds /kernel suffix.
@@ -436,7 +441,11 @@ colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
         kernel_window: details.source
       });
       colab.globalKernel = new IPython.Kernel(url, options);
-      colab.globalKernel.start(colab.globalNotebook.getId());
+      // NOTE: we should be using a kernel ID that is related
+      // to the notebook ID.  Right now, we generate a new
+      // kernel ID every time we call start, so a new kernel is
+      // created.  This is not how IPython should work.
+      colab.globalKernel.start();
     });
   } else {
     colab.globalKernel = new IPython.Kernel(url);
@@ -463,7 +472,7 @@ colab.openKernelDialogBox = function() {
   var urlInput = goog.dom.createDom('input', {'id': 'backend-url-input'});
 
   goog.style.setWidth(urlInput, 300);
-  urlInput.value = colab.globalKernel.base_url;
+  urlInput.value = colab.globalKernel.kernel_service_url;
   goog.dom.appendChild(contentDiv, urlInput);
 
   dialog.setTitle('Connect to Kernel');
