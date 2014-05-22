@@ -401,12 +401,14 @@ colab.authorizeKernel = function(url, callback) {
  *  of not being authorized.
  */
 colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
-  url = url.replace(/^http:\/\//, 'https://');
-  // Adds /kernel suffix.
-  url = url.replace(/\/kernels$/, '') + '/kernels';
-  // Never authorize if in app mode (as all authorization is handled
-  // by the parent window).
-  opt_forceAuthorization = opt_forceAuthorization && !colab.app.appMode;
+  if (url != colab.IN_BROWSER_KERNEL_URL && url != colab.NACL_KERNEL_URL) {
+    url = url.replace(/^http:\/\//, 'https://');
+    // Adds /kernel suffix.
+    url = url.replace(/\/kernels$/, '') + '/kernels';
+    // Never authorize if in app mode (as all authorization is handled
+    // by the parent window).
+    opt_forceAuthorization = opt_forceAuthorization && !colab.app.appMode;
+  }
 
   // Never authorize if using in-browser kernel
   opt_forceAuthorization = opt_forceAuthorization &&
