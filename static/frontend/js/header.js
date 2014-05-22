@@ -247,7 +247,7 @@ colab.createToolbar = function(permissions) {
       .children().children();
   // TODO(kayur): The code below is horrible. Make it less horrible.
   // jQuery command for listening to kernel messages
-  jQuery([IPython.events]).on('websocket_open.Kernel', function() {
+  jQuery([IPython.events]).on('status_started.Kernel', function() {
     buttonElement.text('Connected');
     goog.dom.classes.addRemove(
         goog.dom.getElement('backend-connect-toolbar-button'),
