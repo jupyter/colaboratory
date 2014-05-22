@@ -42,7 +42,7 @@ will not work.
 
 Start IPython notebook:
 ```
-./run
+./run.sh
 ```
 This launches IPython using the profile created in the install step.
 
