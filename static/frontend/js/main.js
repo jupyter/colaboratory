@@ -191,7 +191,13 @@ window.addEventListener('load', function() {
 
       // load kernel (default to localhost, and store in cookie 'kernelUrl')
       if (!goog.net.cookies.containsKey('kernelUrl')) {
-        var kernelUrl = '/api/kernels';
+	if (IPythonInterface.version == '1.1') {
+          var kernelUrl = '/api/kernels';
+        } else if (IPythonInterface.version == '2.0') {
+          var kernelUrl = 'https://127.0.0.1:8888/kernels';
+	} else {
+          console.error('Unknown version of IPython');
+	}
         if (colab.app.appMode) {
           // If in app mode, connect to in-browser kernel by default
           kernelUrl = colab.IN_BROWSER_KERNEL_URL;
@@ -445,10 +451,6 @@ colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
     });
   } else {
     colab.globalKernel = new IPython.Kernel(url);
-    // NOTE: we should be using a kernel ID that is related
-    // to the notebook ID.  Right now, we generate a new
-    // kernel ID every time we call start, so a new kernel is
-    // created.  This is not how IPython should work.
     colab.globalKernel.start();
   }
 };
@@ -472,7 +474,7 @@ colab.openKernelDialogBox = function() {
   var urlInput = goog.dom.createDom('input', {'id': 'backend-url-input'});
 
   goog.style.setWidth(urlInput, 300);
-  urlInput.value = colab.globalKernel.kernel_service_url;
+  urlInput.value = colab.globalKernel[IPythonInterface.KERNEL_URL_KEY];
   goog.dom.appendChild(contentDiv, urlInput);
 
   dialog.setTitle('Connect to Kernel');

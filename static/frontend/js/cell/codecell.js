@@ -391,12 +391,7 @@ colab.cell.CodeCell.prototype.execute = function(opt_isManual) {
 
   // these callbacks handle kernel events
   // TODO(kayur): handle set_next_input, input_request
-  var callbacks = {}
-  callbacks.shell = {};
-  callbacks.shell.payload = {};
-  callbacks.iopub = {};
-
-  callbacks.shell.reply = goog.bind(function(content) {
+  var reply = goog.bind(function(content) {
       this.setRunning_(false);
 
       // update header
@@ -412,32 +407,54 @@ colab.cell.CodeCell.prototype.execute = function(opt_isManual) {
         'user': colab.globalMe.displayName
       });
 
-    }, this),
-
-  callbacks.shell.payload.set_next_input = goog.bind(function(content) {
-       console.log('set_next_input not implemented: ', content); }, this),
-
-  callbacks.input = goog.bind(function(content) {
-       console.log('input_request not implemented: ', content); }, this),
-
-  callbacks.iopub.clear_output = goog.bind(function() {
-      this.outputArea_.clear();
-    }, this),
-
-  callbacks.iopub.output = goog.bind(function(msg) {
-      var msgType = msg['msg_type'];
-      var content = msg['content'];
-      // Handle special requests by the kernel.  These are answered on the stdin
-      // channel.
-      var metadata = msg['metadata'];
-      if (metadata && metadata[colab.services.REQUEST_TYPE_KEY]) {
-        colab.services.handleKernelRequest(metadata);
-        return;
-      }
-
-      // create output object and add it to outputs list
-      this.outputArea_.handleKernelOutputMessage(msgType, content);
   }, this);
+
+  var set_next_input = goog.bind(function(content) {
+      console.log('set_next_input not implemented: ', content);
+  }, this);
+
+  var input = goog.bind(function(content) {
+      console.log('input_request not implemented: ', content);
+  }, this);
+
+  var clear_output = goog.bind(function() {
+      this.outputArea_.clear();
+  }, this);
+
+  if (IPythonInterface.version == '2.0') {
+      var output = goog.bind(function(msg) {
+	  var msgType = msg['msg_type'];
+	  var content = msg['content'];
+	  // Handle special requests by the kernel.  These are answered on the stdin
+	  // channel.
+	  var metadata = msg['metadata'];
+	  if (metadata && metadata[colab.services.REQUEST_TYPE_KEY]) {
+              colab.services.handleKernelRequest(metadata);
+              return;
+	  }
+
+	  // create output object and add it to outputs list
+	  this.outputArea_.handleKernelOutputMessage(msgType, content);
+      }, this);
+  } else if (IPythonInterface.version == '1.1') {
+      var output = goog.bind(function(msgType, content) {
+	  // Handle special requests by the kernel.  These are answered on the stdin
+	  // channel.
+	  var metadata = content['metadata'];
+	  if (metadata && metadata[colab.services.REQUEST_TYPE_KEY]) {
+              colab.services.handleKernelRequest(metadata);
+              return;
+	  }
+
+	  // create output object and add it to outputs list
+	  this.outputArea_.handleKernelOutputMessage(msgType, content);
+      }, this);
+  } else {
+      console.error('Unknown version of IPyton');
+  }
+
+  var callbacks = IPythonInterface.createCallbacks(
+      reply, set_next_input, input, clear_output, output);
 
   try {
     colab.globalKernel.execute(this.editor_.getText(), callbacks,
