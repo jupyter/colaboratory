@@ -441,15 +441,15 @@ colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
         kernel_window: details.source
       });
       colab.globalKernel = new IPython.Kernel(url, options);
-      // NOTE: we should be using a kernel ID that is related
-      // to the notebook ID.  Right now, we generate a new
-      // kernel ID every time we call start, so a new kernel is
-      // created.  This is not how IPython should work.
       colab.globalKernel.start();
     });
   } else {
     colab.globalKernel = new IPython.Kernel(url);
-    colab.globalKernel.start(colab.globalNotebook.getId());
+    // NOTE: we should be using a kernel ID that is related
+    // to the notebook ID.  Right now, we generate a new
+    // kernel ID every time we call start, so a new kernel is
+    // created.  This is not how IPython should work.
+    colab.globalKernel.start();
   }
 };
 
