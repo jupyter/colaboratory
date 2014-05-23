@@ -31,7 +31,13 @@
     "webview",
     "storage",
     "clipboardRead",
-    "clipboardWrite"],
+    "clipboardWrite",
+    {"fileSystem": [
+        "write",
+        "retainEntries",
+        "directory"]
+    }
+    ],
   "url_handlers": {
     "handle_drive_action": {
       "matches": [ "http://iteractivenb.appspot.com/drive*" ],
