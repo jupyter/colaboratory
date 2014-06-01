@@ -7,5 +7,5 @@ BUILD_DIR=build/profile_default
 STATIC_CONTENT_DIR=$BUILD_DIR/static
 
 # copy IPython 2.0 override files
-cp -r extern_2_0/* $STATIC_CONTENT_DIR/
+cp -r extern_2_1/* $STATIC_CONTENT_DIR/
 
