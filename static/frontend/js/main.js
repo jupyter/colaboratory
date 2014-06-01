@@ -191,9 +191,9 @@ window.addEventListener('load', function() {
 
       // load kernel (default to localhost, and store in cookie 'kernelUrl')
       if (!goog.net.cookies.containsKey('kernelUrl')) {
-	if (IPythonInterface.version == '1.1') {
+	if (IPythonInterface.version == '2.1') {
           var kernelUrl = '/api/kernels';
-        } else if (IPythonInterface.version == '2.0') {
+        } else if (IPythonInterface.version == '1.1') {
           var kernelUrl = 'https://127.0.0.1:8888/kernels';
 	} else {
           console.error('Unknown version of IPython');

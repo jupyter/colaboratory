@@ -421,7 +421,7 @@ colab.cell.CodeCell.prototype.execute = function(opt_isManual) {
       this.outputArea_.clear();
   }, this);
 
-  if (IPythonInterface.version == '2.0') {
+  if (IPythonInterface.version == '2.1') {
       var output = goog.bind(function(msg) {
 	  var msgType = msg['msg_type'];
 	  var content = msg['content'];
