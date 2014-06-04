@@ -16,17 +16,6 @@ then clone this repo
 git clone https://github.com/google/colaboratory
 ```
 
-then clone the Google Closure library repo,
-```
-git clone https://github.com/google/closure-library
-```
- 
-Set build tools to executable
-```
-chmod +x closure-library/closure/bin/build/*
-chmod +x colaboratory/*.sh
-```
-
 ## Installing the Web App
 Run
 ```
