@@ -13,7 +13,7 @@ cd ~/experimental_frontend
 
 then clone this repo
 ```
-git clone -b v2_IPython20 https://github.com/google/colaboratory
+git clone https://github.com/google/colaboratory
 ```
 
 then clone the Google Closure library repo,
