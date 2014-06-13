@@ -3,4 +3,4 @@
 export FRONTENDMODULES=`pwd`/modules
 export PYTHONPATH=$FRONTENDMODULES:$PYTHONPATH
 export IPYTHONDIR=`pwd`/build
-ipython notebook
+ipython notebook $*
