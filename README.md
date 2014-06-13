@@ -13,7 +13,7 @@ cd ~/experimental_frontend
 
 then clone this repo
 ```
-git clone https://github.com/ipython/colaboratory
+git clone --recursive https://github.com/ipython/colaboratory
 ```
 
 ## Installing the Web App
