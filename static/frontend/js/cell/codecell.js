@@ -15,6 +15,7 @@ goog.require('goog.date.DateTime');
 goog.require('goog.dom');
 goog.require('goog.dom.classes');
 goog.require('goog.ui.MenuItem');
+goog.require('goog.ui.Prompt');
 goog.require('goog.ui.ToolbarSelect');
 
 /**
@@ -414,7 +415,14 @@ colab.cell.CodeCell.prototype.execute = function(opt_isManual) {
   }, this);
 
   var input = goog.bind(function(content) {
-      console.log('input_request not implemented: ', content);
+      var dialog = new goog.ui.Prompt('User Input Requested',
+                                      content['content']['prompt'],
+                                      function(input) {
+                                          colab.globalKernel.send_input_reply(
+                                              input || '');
+                                      });
+      dialog.setDisposeOnHide(true);
+      dialog.setVisible(true);
   }, this);
 
   var clear_output = goog.bind(function() {
