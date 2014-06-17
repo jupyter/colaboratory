@@ -65,7 +65,7 @@ colab.params.getHashParams = function() {
  */
 colab.params.getNotebookUrl = function(params) {
   // NOTE: temporarily changed to point directly to .html file
-  return '/static/frontend/notebook.html#' + colab.params.encodeParamString(params);
+  return '/static/v2/notebook.html#' + colab.params.encodeParamString(params);
 };
 
 /**
