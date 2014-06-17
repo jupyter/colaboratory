@@ -35,8 +35,8 @@ Start IPython notebook:
 ```
 This launches IPython using the profile created in the install step.
 
-Navigate to ```http://127.0.0.1:8888/static/frontend/welcome.html``` in
-browser.
+Navigate to ```http://127.0.0.1:8888/static/v2/welcome.html``` in
+browser
 
 ## Installing the Chrome App
 Run
