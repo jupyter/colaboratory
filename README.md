@@ -5,13 +5,7 @@ execution using Chrome's Native Client technology.  It also features
 a number of other new experimental features.
 
 ## Setup
-First create a directory to install this repo, e.g.
-```
-mkdir ~/experimental_frontend
-cd ~/experimental_frontend
-```
-
-then clone this repo
+First clone this repo:
 ```
 git clone --recursive https://github.com/ipython/colaboratory
 ```
