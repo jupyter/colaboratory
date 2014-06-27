@@ -93,11 +93,9 @@ var IPython = (function (IPython) {
         params = params || {};
         if (!this.running) {
             var qs = $.param(params);
-            // v2 NOTE: had to convert this to an absolute URL as window.location is 127.0.0.1:8888/static/frontend/...
-            $.post( 'http://127.0.0.1:8888' + utils.url_join_encode(this.kernel_service_url) + '?' + qs,
-                $.proxy(this._kernel_started, this),
-                'json'
-            );
+
+            $.post(utils.url_join_encode('/', this.kernel_service_url) + '?'
+                   + qs, $.proxy(this._kernel_started, this), 'json');
         }
     };
 
