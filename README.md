@@ -29,6 +29,12 @@ NOTE: both the install and run scripts
 must be run from the colaboratory directory, e.g. running ```colaboratory/install_v2.sh```
 will not work.
 
+If you did not use the `--recursive` flag when cloning, you will  get errors like:
+```
+cp: cannot stat ‘closure-library/closure/goog/css/*’: No such file or directory
+```
+To fix this, run `git submodule update`.
+
 Start IPython notebook:
 ```
 ./run.sh
