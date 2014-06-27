@@ -189,22 +189,20 @@ window.addEventListener('load', function() {
         colab.globalNotebook.selectCell(realtimeCells.get(0).id);
       }
 
+      // KERNEL(outside)
+
       // load kernel (default to localhost, and store in cookie 'kernelUrl')
       if (!goog.net.cookies.containsKey('kernelUrl')) {
-	if (IPythonInterface.version == '2.1') {
-          var kernelUrl = '/api/kernels';
-        } else if (IPythonInterface.version == '1.1') {
-          var kernelUrl = 'https://127.0.0.1:8888/kernels';
-	} else {
-          console.error('Unknown version of IPython');
-	}
+        var kernelUrl = 'http://127.0.0.1:8888/';
+
         if (colab.app.appMode) {
           // If in app mode, connect to in-browser kernel by default
           kernelUrl = colab.IN_BROWSER_KERNEL_URL;
         }
         goog.net.cookies.set('kernelUrl', kernelUrl, 10000);
       }
-      colab.loadKernelFromUrl(goog.net.cookies.get('kernelUrl') || '');
+
+      colab.loadKernelFromSessionUrl(goog.net.cookies.get('kernelUrl') || '');
 
       // set up the header: docname input, menubar, toolbar, share button
       colab.setupHeader(document, permissions);
@@ -399,6 +397,38 @@ colab.authorizeKernel = function(url, callback) {
 };
 
 /**
+ * Create a session and launches a kernel for IPython 2.0. This class is
+ * light-weight.
+ *
+ * @param {string} url The location of the backend.
+ */
+colab.loadKernelFromSessionUrl = function(url) {
+  goog.net.cookies.set('kernelUrl', url, 10000);
+  if (colab.globalKernel) {
+    colab.globalKernel.kill();
+    colab.globalKernel.stop_channels();
+  }
+
+  var notebook_id = colab.globalNotebook && colab.globalNotebook.getId();
+  if (!notebook_id) {
+    console.error('Can not connect to kernel. No unique id for notebook.');
+    return;
+  }
+
+  var session = new IPython.Session({
+    notebook_name: notebook_id || '',
+    notebook_path: 'n/a',
+    base_url: '/'
+  }, {
+    kernel_host: url
+  });
+
+  session.start(function() {
+    colab.globalKernel = session.kernel;
+  });
+};
+
+/**
  * Launch a new IPython kernel.
  *
  * @param {string} url The location of the kernel.
@@ -424,13 +454,13 @@ colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
   // Never authorize if using in-browser kernel
   opt_forceAuthorization = opt_forceAuthorization &&
       !(url === colab.IN_BROWSER_KERNEL_URL || url === colab.NACL_KERNEL_URL);
-  /*
+
   if (opt_forceAuthorization) {
     colab.authorizeKernel(
         url, goog.partial(colab.loadKernelFromUrl, url, false));
     return;
   }
-  */
+
   goog.net.cookies.set('kernelUrl', url, 10000);
   if (colab.globalKernel) {
     colab.globalKernel.kill();
@@ -474,7 +504,9 @@ colab.openKernelDialogBox = function() {
   var urlInput = goog.dom.createDom('input', {'id': 'backend-url-input'});
 
   goog.style.setWidth(urlInput, 300);
-  urlInput.value = colab.globalKernel[IPythonInterface.KERNEL_URL_KEY];
+  if (colab.globalKernel) {
+    urlInput.value = colab.globalKernel[IPythonInterface.KERNEL_URL_KEY];
+  }
   goog.dom.appendChild(contentDiv, urlInput);
 
   dialog.setTitle('Connect to Kernel');
@@ -483,7 +515,7 @@ colab.openKernelDialogBox = function() {
     // TODO(kayur): find right event type.
     if (e.key == 'ok') {
       var url = goog.dom.getElement('backend-url-input').value;
-      colab.loadKernelFromUrl(url, true /* authorize */);
+      colab.loadKernelFromSessionUrl(url, true /* authorize */);
     }
   });
 
