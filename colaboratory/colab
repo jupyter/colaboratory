@@ -6,6 +6,6 @@ Usage:
   colab
 """
 
-from colaboratory import ColaboratoryApp
+from colaboratory import launch_new_instance
 
-ColaboratoryApp.main()
+launch_new_instance()

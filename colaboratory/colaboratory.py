@@ -21,7 +21,6 @@ import threading
 import time
 import webbrowser
 
-
 # check for pyzmq 2.1.11
 from IPython.utils.zmqrelated import check_for_zmq
 check_for_zmq('2.1.11', 'IPython.html')
@@ -51,14 +50,13 @@ from tornado import web
 from tornado.log import LogFormatter
 
 from IPython.html import DEFAULT_STATIC_FILES_PATH
-from .base.handlers import Template404
-from .log import log_request
-from .services.kernels.kernelmanager import MappingKernelManager
-from .services.notebooks.nbmanager import NotebookManager
-from .services.notebooks.filenbmanager import FileNotebookManager
-from .services.sessions.sessionmanager import SessionManager
+from IPython.html.base.handlers import Template404
+from IPython.html.log import log_request
+from IPython.html.services.kernels.kernelmanager import MappingKernelManager
+from IPython.html.services.notebooks.nbmanager import NotebookManager
+from IPython.html.services.sessions.sessionmanager import SessionManager
 
-from .base.handlers import AuthenticatedFileHandler, FileFindHandler
+from IPython.html.base.handlers import AuthenticatedFileHandler, FileFindHandler
 
 from IPython.config import Config
 from IPython.config.application import catch_config_error, boolean_flag
@@ -79,7 +77,7 @@ from IPython.utils.traitlets import (
 from IPython.utils import py3compat
 from IPython.utils.path import filefind, get_ipython_dir
 
-from .utils import url_path_join
+from IPython.html.utils import url_path_join
 
 #-----------------------------------------------------------------------------
 # Module globals
@@ -238,11 +236,11 @@ class NbserverListApp(BaseIPythonApplication):
 
 flags = dict(base_flags)
 flags['no-browser']=(
-    {'NotebookApp' : {'open_browser' : False}},
+    {'ColaboratoryApp' : {'open_browser' : False}},
     "Don't open the notebook in a browser after startup."
 )
 flags['no-mathjax']=(
-    {'NotebookApp' : {'enable_mathjax' : False}},
+    {'ColaboratoryApp' : {'enable_mathjax' : False}},
     """Disable MathJax
 
     MathJax is the javascript library IPython uses to render math/LaTeX. It is
@@ -257,21 +255,21 @@ flags['no-mathjax']=(
 aliases = dict(base_aliases)
 
 aliases.update({
-    'ip': 'NotebookApp.ip',
-    'port': 'NotebookApp.port',
-    'port-retries': 'NotebookApp.port_retries',
+    'ip': 'ColaboratoryApp.ip',
+    'port': 'ColaboratoryApp.port',
+    'port-retries': 'ColaboratoryApp.port_retries',
     'transport': 'KernelManager.transport',
-    'keyfile': 'NotebookApp.keyfile',
-    'certfile': 'NotebookApp.certfile',
-    'notebook-dir': 'NotebookApp.notebook_dir',
-    'browser': 'NotebookApp.browser',
+    'keyfile': 'ColaboratoryApp.keyfile',
+    'certfile': 'ColaboratoryApp.certfile',
+    'notebook-dir': 'ColaboratoryApp.notebook_dir',
+    'browser': 'ColaboratoryApp.browser',
 })
 
 #-----------------------------------------------------------------------------
-# NotebookApp
+# ColaboratoryApp
 #-----------------------------------------------------------------------------
 
-class NotebookApp(BaseIPythonApplication):
+class ColaboratoryApp(BaseIPythonApplication):
 
     name = 'jupyter-colaboratory'
 
@@ -288,7 +286,7 @@ class NotebookApp(BaseIPythonApplication):
 
     classes = [
         KernelManager, ProfileDir, Session, MappingKernelManager,
-        NotebookManager, FileNotebookManager, NotebookNotary,
+        NotebookManager, NotebookNotary,
     ]
     flags = Dict(flags)
     aliases = Dict(aliases)
@@ -375,7 +373,7 @@ class NotebookApp(BaseIPythonApplication):
                         The specific browser used is platform dependent and
                         determined by the python standard library `webbrowser`
                         module, unless it is overridden using the --browser
-                        (NotebookApp.browser) configuration option.
+                        (ColaboratoryApp.browser) configuration option.
                         """)
 
     browser = Unicode(u'', config=True,
@@ -554,7 +552,7 @@ class NotebookApp(BaseIPythonApplication):
 
 
     def parse_command_line(self, argv=None):
-        super(NotebookApp, self).parse_command_line(argv)
+        super(ColaboratoryApp, self).parse_command_line(argv)
 
         if self.extra_args:
             arg0 = self.extra_args[0]
@@ -568,9 +566,9 @@ class NotebookApp(BaseIPythonApplication):
             # anything that comes from the profile.
             c = Config()
             if os.path.isdir(f):
-                c.NotebookApp.notebook_dir = f
+                c.ColaboratoryApp.notebook_dir = f
             elif os.path.isfile(f):
-                c.NotebookApp.file_to_run = f
+                c.ColaboratoryApp.file_to_run = f
             self.update_config(c)
 
     def init_kernel_argv(self):
@@ -739,7 +737,7 @@ class NotebookApp(BaseIPythonApplication):
 
     @catch_config_error
     def initialize(self, argv=None):
-        super(NotebookApp, self).initialize(argv)
+        super(ColaboratoryApp, self).initialize(argv)
         self.init_logging()
         self.init_kernel_argv()
         self.init_configurables()
@@ -849,4 +847,4 @@ def list_running_servers(profile='default'):
 # Main entry point
 #-----------------------------------------------------------------------------
 
-launch_new_instance = NotebookApp.launch_instance
+launch_new_instance = ColaboratoryApp.launch_instance
