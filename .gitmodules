@@ -1,3 +1,6 @@
 [submodule "closure-library"]
 	path = closure-library
 	url = git://github.com/google/closure-library.git
+[submodule "extern/components"]
+	path = extern/components
+	url = https://github.com/ipython/ipython-components.git
