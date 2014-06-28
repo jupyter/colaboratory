@@ -174,15 +174,16 @@ colab.cell.Editor.prototype.handleTooltip = function(opt_keepOnInsideFunction) {
     // true however, since we handled it.
     return true;
   }
-  var callbacks = /*** @type {IPython.KernelCallbacks} */ ({});
 
   if (!colab.globalKernel || !colab.globalKernel.running) {
     colab.notification.showPrimary('Context help requires ' +
         'a live connection to python');
     return false;
   }
-  /** @param {IPython.ObjectInfoReply=} r */
-  callbacks.object_info_reply = function(r) {
+
+  /** @param {IPython.ObjectInfoReply=} message */
+  var callback = function(message) {
+    var r = message.content;
     var doc = 'Unrecognized request';
     if (r) {
       doc = '';
@@ -212,8 +213,8 @@ colab.cell.Editor.prototype.handleTooltip = function(opt_keepOnInsideFunction) {
     tooltip.startFollowingCursor(editor);
     that.tooltipFunc = functionToHelpWith;
   };
-  colab.globalKernel.object_info_request(
-      functionToHelpWith, callbacks);
+  colab.globalKernel.object_info(
+      functionToHelpWith, callback);
   return true;
 };
 
@@ -302,9 +303,10 @@ colab.cell.Editor.prototype.handleCodeCompletion = function() {
       return;
     }
     /**
-     * @param {IPython.CompleterReply} result
+     * @param {IPython.CompleterReply} message
      */
-    var finishResponse = function(result) {
+    var finishResponse = function(message) {
+      var result = message.content;
       if (cursorPos != cm.getCursor().ch) {
         console.log('Ignoring stale response');
         return;
@@ -359,9 +361,7 @@ colab.cell.Editor.prototype.handleCodeCompletion = function() {
     colab.globalKernel.complete(
         cm.getLine(cm.getCursor().line) || '',
         cm.getCursor().ch || 0,
-        /** @type {IPython.KernelCallbacks} */ ({
-            complete_reply: finishResponse
-        }));
+        finishResponse);
   };
   CodeMirror.showHint(cm, hintFunc,
       /** @type {CodeMirror.HintsConfig} */ ({ async: true }));
