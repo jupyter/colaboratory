@@ -1,8 +1,18 @@
-# Experimental IPython Frontend
-This project contains an experimental IPython front end, which
-integrates Google Drive's realtime API, and also features in-browser
-execution using Chrome's Native Client technology.  It also features
-a number of other new experimental features.
+# Colaboratory
+
+This repo contains two related tools:
+
+1. The Colaboratory Chrome App.
+
+2. Colaboratory with Classic Jupyter Kernels.
+
+Both of these create and store notebooks in Google Drive and allow for
+colaborative editing of notebooks.  The difference is that the Chrome
+App executes all code inside the Chrome browser using the
+[PNaCl Sandbox](https://developer.chrome.com/native-client/nacl-and-pnacl)),
+while Colaboratory Classic executes code via local Jupyter kernels
+(such as the IPython kernel) that have complete access to the host
+system and files.
 
 ## Setup
 First clone this repo:
@@ -10,7 +20,7 @@ First clone this repo:
 git clone --recursive https://github.com/ipython/colaboratory
 ```
 
-## Installing the Web App
+## Installing Colaboratory Classic frontend for local IPython Kernels
 Run
 ```
 cd colaboratory
@@ -37,7 +47,7 @@ This launches IPython using the profile created in the install step.
 Navigate to ```http://127.0.0.1:8888/static/v2/welcome.html``` in
 browser
 
-## Installing the Chrome App
+## Installing the Colaboratory Chrome App
 Run
 ```
 cd colaboratory
@@ -54,3 +64,10 @@ naclports to ```chrome/pnacl/```.
 To install this app in Chrome, follow the instructions for installing an unpacked extension
 (extensions are apps for these purposes), at https://developer.chrome.com/extensions/getstarted#unpacked.
 The extension is located in ```colaboratory/build_chrome/```.
+
+## Caveats/Requirements
+### Chrome Browser Version
+The Chrome App requires Chrome Beta (or Dev, Unstable or Canary), as it relies of bug fixes that are not available in the Stable channel yet.
+
+### Loading Python Libraries
+Currently there is no way to install new apps in the PNaCl kernel.
