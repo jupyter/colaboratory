@@ -6,7 +6,7 @@
 STATIC_CONTENT_DIR=build/profile_default/static
 
 # copy static files to build directory
-echo [coLaboratory Install] Copying coLaboratory frontend 
+echo [coLaboratory Install] Copying coLaboratory frontend
 COLAB_HTML_DIR=$STATIC_CONTENT_DIR/v2
 mkdir -p $COLAB_HTML_DIR
 cp static/frontend/* $COLAB_HTML_DIR
@@ -42,3 +42,7 @@ cp -r closure-library/closure/goog/css/* $RAW_CLOSURE_CSS_DIR
 # copy extern files into build directory
 echo [coLaboratory Install] Copying external libraries
 cp -r extern/* $STATIC_CONTENT_DIR/
+
+# patch IPython code
+echo [coLaboratory Install] Patching IPython files
+cp -r -f ipython_patch/* $STATIC_CONTENT_DIR/

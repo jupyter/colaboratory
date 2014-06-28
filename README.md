@@ -14,14 +14,13 @@ git clone --recursive https://github.com/ipython/colaboratory
 Run
 ```
 cd colaboratory
-./install_v2.sh
+./install.sh
 ```
 to install the Web App (this creates an IPython profile which uses
 IPython to serve the static web content for the new front end)
 
-NOTE: both the install and run scripts
-must be run from the colaboratory directory, e.g. running ```colaboratory/install_v2.sh```
-will not work.
+NOTE: both the install and run scripts must be run from the colaboratory directory,
+e.g. running ```colaboratory/install.sh``` will not work.
 
 If you did not use the `--recursive` flag when cloning, you will  get errors like:
 ```
