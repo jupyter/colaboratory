@@ -29,6 +29,8 @@
         "udp-send-to:*:*"]
     },
     "webview",
+    {"fileSystem" : ["write", "directory", "retainEntries"]},
+    "unlimitedStorage",
     "storage",
     "clipboardRead",
     "clipboardWrite",
