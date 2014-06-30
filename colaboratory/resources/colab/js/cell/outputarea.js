@@ -168,12 +168,12 @@ colab.cell.OutputArea.html = '<head>' +
     '   IPython.keyboard_manager = {};' +
     '   IPython.keyboard_manager.register_events = function(x) {};' +
     '</script>' +
-    '<script src="/static/components/jquery/jquery.min.js"></script>' +
-    '<script src="js/raw/colab/cell/outputframe.js"></script>' +
-    '<script src="/static/base/js/utils.js"></script>' +
-    '<script src="/static/custom/colabtools.js"></script>' +
-    '<script src="/static/js/interactive_widgets.js"></script>' +
-    '<script src="/static/notebook/js/outputarea.js"></script>' +
+    '<script src="/static/ipython/components/jquery/jquery.min.js"></script>' +
+    '<script src="/static/colab/js/cell/outputframe.js"></script>' +
+    '<script src="/static/ipython/base/js/utils.js"></script>' +
+    '<script src="/static/colab/js/colabtools.js"></script>' +
+    '<script src="/static/colab/js/interactive_widgets.js"></script>' +
+    '<script src="/static/ipython/notebook/js/outputarea.js"></script>' +
     '<script>' +
     '    if (!window[\'colab\']) {' +
     '        window.parent.postMessage({target:\'notebook\',' +
@@ -206,7 +206,7 @@ colab.cell.OutputArea.prototype.createOutput = function() {
     // support sandbox at all, we should be serving this from a
     // different domain, otherwise it is a security hole if browser
     // ignores sandbox attribute.
-    //  src: '/static/v2/outputframe.html',
+    //  src: '/static/ipython/v2/outputframe.html',
     height: '20px',
     srcdoc: colab.cell.OutputArea.html,
     sandbox: 'allow-forms allow-scripts'
