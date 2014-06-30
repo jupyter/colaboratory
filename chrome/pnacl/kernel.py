@@ -4,9 +4,16 @@
 
 """A simple shell that uses the IPython messaging system."""
 
+import time
 import json
 import logging
 import sys
+sys_stdout = sys.stdout
+sys_stderr = sys.stderr
+
+def emit(s):
+    print >> sys_stderr, "EMITTING: %s" % (s)
+    time.sleep(1)
 
 import IPython
 from IPython.core.interactiveshell import InteractiveShell, InteractiveShellABC
@@ -59,11 +66,8 @@ class MsgOutStream(object):
 # override sys.stdout and sys.stderr to broadcast on iopub
 stdout_stream = MsgOutStream('stdout')
 stderr_stream = MsgOutStream('stderr')
-sys_stdout = sys.stdout
-sys_stderr = sys.stderr
 sys.stdout = stdout_stream
 sys.stderr = stderr_stream
-
 
 
 class PepperShellDisplayHook(DisplayHook):

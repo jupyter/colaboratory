@@ -90,7 +90,7 @@ colab.PNaClKernel.prototype.handleMessage_ = function (message) {
     if (typeof data == 'string' || data instanceof String) {
       console.log('nacl>' + data.substring(tty_prefix.length));
     } else if (data.stream == 'iopub') {
-      that._handle_iopub_reply({data: data.json});
+      that._handle_iopub_message({data: data.json});
     } else if (data.stream == 'shell') {
       that._handle_shell_reply({data: data.json});
     }
