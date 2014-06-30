@@ -1110,7 +1110,7 @@ colab.drive.document = new goog.Promise(function(resolve, reject) {
       // NOTE: this doesn't cause reload because we stay on same page
       delete params['create'];
       delete params['folderId'];
-      params['fileId'] = params.fileIds;
+      params['fileId'] = fileId;
       window.location.hash = '#' + colab.params.encodeParamString(params);
       load(fileId);
     }, reject, params.folderId);
