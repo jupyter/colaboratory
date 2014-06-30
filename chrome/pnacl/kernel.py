@@ -34,7 +34,8 @@ def sendMessage(socket_name, msg_type, parent_header=None, content=None):
   msg = {
       'header': {'msg_type': msg_type},
       'parent_header': parent_header,
-      'content': content
+      'content': content,
+      'msg_type': msg_type,
       }
   nacl_instance.send_raw_object({'stream': socket_name,
                               'json': json.dumps(msg)})
