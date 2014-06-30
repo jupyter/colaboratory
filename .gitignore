@@ -1,6 +1,6 @@
 .DS_Store
 *~
-modules/*.pyc
+*.py[co]
 build/**
 build_chrome/**
 chrome/pnacl/pydata_pnacl.tar
