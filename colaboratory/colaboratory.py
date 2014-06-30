@@ -81,6 +81,10 @@ from IPython.html.utils import url_path_join
 #-----------------------------------------------------------------------------
 # Module globals
 #-----------------------------------------------------------------------------
+pjoin = os.path.join
+
+here = os.path.dirname(__file__)
+RESOURCES = pjoin(here, 'resources')
 
 _examples = """
 colab                       # start the server
@@ -119,7 +123,6 @@ class RootHandler(IPythonHandler):
     @web.authenticated
     def get(self):
         # FIXME: get rid of disk-relative paths here!
-        here = os.path.dirname(__file__)
         with open(os.path.join(here, '../static/frontend/welcome.html')) as f:
             self.write(f.read())
 
@@ -158,9 +161,6 @@ class ColaboratoryWebApplication(web.Application):
             log_function=log_request,
             base_url=base_url,
             template_path=template_path,
-            static_path=ipython_app.static_file_path,
-            static_handler_class = FileFindHandler,
-            static_url_prefix = url_path_join(base_url,'/static/'),
 
             # authentication
             cookie_secret=ipython_app.cookie_secret,
@@ -186,38 +186,38 @@ class ColaboratoryWebApplication(web.Application):
     def init_handlers(self, settings):
         # Load the (URL pattern, handler) tuples for each component.
         here = os.path.dirname(__file__)
-        handlers = [(r'/', web.RedirectHandler, {'url':'/colab/welcome.html'}),
-                    (r'/colab/(.*)', web.StaticFileHandler,
-                     {'path': os.path.join(here, '../static/v2/')})]
-        handlers.extend(load_handlers('base.handlers'))
+        handlers = [(r'/', web.RedirectHandler, {'url':'/static/colab/welcome.html'}),
+                    (r'/static/colab/(.*)', web.StaticFileHandler,
+                        {'path': pjoin(RESOURCES, 'colab')}),
+                    (r'/static/extern/(.*)', web.StaticFileHandler,
+                        {'path': pjoin(RESOURCES, 'extern')}),
+                    (r'/static/closure/(.*)', web.StaticFileHandler,
+                        {'path': pjoin(RESOURCES, 'closure-library', 'closure', 'goog')}),
+                    (r'/static/ipython/(.*)', FileFindHandler,
+                        {'path': [pjoin(RESOURCES, 'ipython_patch'), DEFAULT_STATIC_FILES_PATH]}),
+        ]
+        ipython_handlers = []
+        ipython_handlers.extend(load_handlers('base.handlers'))
         #handlers.extend(load_handlers('tree.handlers'))
         #handlers.extend(load_handlers('auth.login'))
         #handlers.extend(load_handlers('auth.logout'))
         #handlers.extend(load_handlers('notebook.handlers'))
         #handlers.extend(load_handlers('nbconvert.handlers'))
         #handlers.extend(load_handlers('kernelspecs.handlers'))
-        handlers.extend(load_handlers('services.kernels.handlers'))
+        ipython_handlers.extend(load_handlers('services.kernels.handlers'))
         #handlers.extend(load_handlers('services.notebooks.handlers'))
-        handlers.extend(load_handlers('services.sessions.handlers'))
+        ipython_handlers.extend(load_handlers('services.sessions.handlers'))
         #handlers.extend(load_handlers('services.nbconvert.handlers'))
         #handlers.extend(load_handlers('services.kernelspecs.handlers'))
 
-        # FIXME: /files/ should be handled by the Contents service when it exists
-        nbm = settings['notebook_manager']
-        if hasattr(nbm, 'notebook_dir'):
-            handlers.extend([
-            (r"/files/(.*)", AuthenticatedFileHandler, {'path' : nbm.notebook_dir}),
-            (r"/nbextensions/(.*)", FileFindHandler, {'path' : settings['nbextensions_path']}),
-        ])
-        # prepend base_url onto the patterns that we match
-        new_handlers = []
-        for handler in handlers:
+        # prepend base_url onto the IPython patterns that we match
+        for handler in ipython_handlers:
             pattern = url_path_join(settings['base_url'], handler[0])
             new_handler = tuple([pattern] + list(handler[1:]))
-            new_handlers.append(new_handler)
+            handlers.append(new_handler)
         # add 404 on the end, which will catch everything that falls through
-        new_handlers.append((r'(.*)', Template404))
-        return new_handlers
+        # new_handlers.append((r'(.*)', Template404))
+        return handlers
 
 
 class NbserverListApp(BaseIPythonApplication):
@@ -451,7 +451,7 @@ class ColaboratoryApp(BaseIPythonApplication):
         if not self.enable_mathjax:
             return u''
         static_url_prefix = self.webapp_settings.get("static_url_prefix",
-                         url_path_join(self.base_url, "static")
+                         self.base_url
         )
 
         # try local mathjax, either in nbextensions/mathjax or static/mathjax
@@ -653,7 +653,7 @@ class ColaboratoryApp(BaseIPythonApplication):
 
     def _url(self, ip):
         proto = 'https' if self.certfile else 'http'
-        return "%s://%s:%i%s" % (proto, ip, self.port, self.base_url)
+        return "%s://%s:%i" % (proto, ip, self.port)
 
     def init_signal(self):
         if not sys.platform.startswith('win'):
@@ -798,11 +798,8 @@ class ColaboratoryApp(BaseIPythonApplication):
             except webbrowser.Error as e:
                 self.log.warn('No web browser found: %s.' % e)
                 browser = None
-                uri = 'notebooks'
-            else:
-                uri = 'tree'
             if browser:
-                b = lambda : browser.open(url_path_join(self.connection_url, uri),
+                b = lambda : browser.open(self.connection_url,
                                           new=2)
                 threading.Thread(target=b).start()
         try:
