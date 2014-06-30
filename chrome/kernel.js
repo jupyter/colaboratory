@@ -42,6 +42,7 @@ Kernel.prototype.start = function() {
   addParam('PS_EXIT_MESSAGE', 'exited');
   addParam('TERM', 'xterm-256color');
   addParam('NACL_DATA_URL', '/');
+  addParam('ZEROPY_PACKAGE', 'zeropy_20140520.tar.gz')
 
   var eventTypes = {'message': ['data'],
                     'progress': ['loaded', 'total'],
