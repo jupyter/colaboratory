@@ -65,7 +65,6 @@ from IPython.core.application import (
 )
 from IPython.core.profiledir import ProfileDir
 from IPython.kernel import KernelManager
-from IPython.kernel.kernelspec import KernelSpecManager
 from IPython.kernel.zmq.session import default_secure, Session
 from IPython.nbformat.sign import NotebookNotary
 from IPython.utils.importstring import import_item
@@ -112,23 +111,34 @@ def load_handlers(name):
 #-----------------------------------------------------------------------------
 # The Tornado web application
 #-----------------------------------------------------------------------------
+from IPython.html.base.handlers import IPythonHandler
 
-class NotebookWebApplication(web.Application):
+class RootHandler(IPythonHandler):
+    """Redirect a request to the corresponding tree URL"""
+
+    @web.authenticated
+    def get(self):
+        # FIXME: get rid of disk-relative paths here!
+        here = os.path.dirname(__file__)
+        with open(os.path.join(here, '../static/frontend/welcome.html')) as f:
+            self.write(f.read())
+
+class ColaboratoryWebApplication(web.Application):
 
     def __init__(self, ipython_app, kernel_manager, notebook_manager,
-                 session_manager, kernel_spec_manager, log,
+                 session_manager, log,
                  base_url, settings_overrides, jinja_env_options):
 
         settings = self.init_settings(
             ipython_app, kernel_manager, notebook_manager,
-            session_manager, kernel_spec_manager, log, base_url,
+            session_manager, log, base_url,
             settings_overrides, jinja_env_options)
         handlers = self.init_handlers(settings)
 
-        super(NotebookWebApplication, self).__init__(handlers, **settings)
+        super(ColaboratoryWebApplication, self).__init__(handlers, **settings)
 
     def init_settings(self, ipython_app, kernel_manager, notebook_manager,
-                      session_manager, kernel_spec_manager,
+                      session_manager,
                       log, base_url, settings_overrides,
                       jinja_env_options=None):
         # Python < 2.6.5 doesn't accept unicode keys in f(**kwargs), and
@@ -161,7 +171,6 @@ class NotebookWebApplication(web.Application):
             kernel_manager=kernel_manager,
             notebook_manager=notebook_manager,
             session_manager=session_manager,
-            kernel_spec_manager=kernel_spec_manager,
 
             # IPython stuff
             nbextensions_path = ipython_app.nbextensions_path,
@@ -176,7 +185,10 @@ class NotebookWebApplication(web.Application):
 
     def init_handlers(self, settings):
         # Load the (URL pattern, handler) tuples for each component.
-        handlers = []
+        here = os.path.dirname(__file__)
+        handlers = [(r'/', web.RedirectHandler, {'url':'/colab/welcome.html'}),
+                    (r'/colab/(.*)', web.StaticFileHandler,
+                     {'path': os.path.join(here, '../static/v2/')})]
         handlers.extend(load_handlers('base.handlers'))
         #handlers.extend(load_handlers('tree.handlers'))
         #handlers.extend(load_handlers('auth.login'))
@@ -306,20 +318,8 @@ class ColaboratoryApp(BaseIPythonApplication):
         """Exclude date from default date format"""
         return "%H:%M:%S"
 
-    def _log_format_default(self):
-        """override default log format to include time"""
-        return u"%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s]%(end_color)s %(message)s"
-
     # create requested profiles by default, if they don't exist:
     auto_create = Bool(True)
-
-    # file to be opened in the notebook server
-    file_to_run = Unicode('', config=True)
-    def _file_to_run_changed(self, name, old, new):
-        path, base = os.path.split(new)
-        if path:
-            self.file_to_run = base
-            self.notebook_dir = path
 
     # Network related information.
 
@@ -500,11 +500,6 @@ class ColaboratoryApp(BaseIPythonApplication):
         help='The session manager class to use.'
     )
 
-    kernel_spec_manager = Instance(KernelSpecManager)
-
-    def _kernel_spec_manager_default(self):
-        return KernelSpecManager(ipython_dir=self.ipython_dir)
-
     trust_xheaders = Bool(False, config=True,
         help=("Whether to trust or not X-Scheme/X-Forwarded-Proto and X-Real-Ip/X-Forwarded-For headers"
               "sent by the upstream reverse proxy. Necessary if the proxy handles SSL")
@@ -567,8 +562,6 @@ class ColaboratoryApp(BaseIPythonApplication):
             c = Config()
             if os.path.isdir(f):
                 c.ColaboratoryApp.notebook_dir = f
-            elif os.path.isfile(f):
-                c.ColaboratoryApp.file_to_run = f
             self.update_config(c)
 
     def init_kernel_argv(self):
@@ -603,9 +596,9 @@ class ColaboratoryApp(BaseIPythonApplication):
 
     def init_webapp(self):
         """initialize tornado webapp and httpserver"""
-        self.web_app = NotebookWebApplication(
+        self.web_app = ColaboratoryWebApplication(
             self, self.kernel_manager, self.notebook_manager,
-            self.session_manager, self.kernel_spec_manager,
+            self.session_manager,
             self.log, self.base_url, self.webapp_settings,
             self.jinja_environment_options
         )
@@ -799,20 +792,13 @@ class ColaboratoryApp(BaseIPythonApplication):
 
         self.write_server_info_file()
 
-        if self.open_browser or self.file_to_run:
+        if self.open_browser:
             try:
                 browser = webbrowser.get(self.browser or None)
             except webbrowser.Error as e:
                 self.log.warn('No web browser found: %s.' % e)
                 browser = None
-
-            if self.file_to_run:
-                fullpath = os.path.join(self.notebook_dir, self.file_to_run)
-                if not os.path.exists(fullpath):
-                    self.log.critical("%s does not exist" % fullpath)
-                    self.exit(1)
-
-                uri = url_path_join('notebooks', self.file_to_run)
+                uri = 'notebooks'
             else:
                 uri = 'tree'
             if browser:
