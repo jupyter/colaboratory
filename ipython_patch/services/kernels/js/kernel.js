@@ -554,6 +554,10 @@ var IPython = (function (IPython) {
         } else if (execution_state === 'dead') {
             this.stop_channels();
             $([IPython.events]).trigger('status_dead.Kernel', {kernel: this});
+        } else if (execution_state == 'nacl_ready') {
+            $([IPython.events]).trigger(IPythonInterface.KERNEL_STARTED_EVENT,
+                              {kernel: this});
+            this.running = true;
         }
     };
     
