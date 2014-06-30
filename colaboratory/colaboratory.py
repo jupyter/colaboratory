@@ -130,11 +130,11 @@ class ColaboratoryWebApplication(web.Application):
 
     def __init__(self, ipython_app, kernel_manager, notebook_manager,
                  session_manager, log,
-                 base_url, settings_overrides, jinja_env_options):
+                 settings_overrides, jinja_env_options):
 
         settings = self.init_settings(
             ipython_app, kernel_manager, notebook_manager,
-            session_manager, log, base_url,
+            session_manager, log,
             settings_overrides, jinja_env_options)
         handlers = self.init_handlers(settings)
 
@@ -142,29 +142,20 @@ class ColaboratoryWebApplication(web.Application):
 
     def init_settings(self, ipython_app, kernel_manager, notebook_manager,
                       session_manager,
-                      log, base_url, settings_overrides,
+                      log, settings_overrides,
                       jinja_env_options=None):
-        # Python < 2.6.5 doesn't accept unicode keys in f(**kwargs), and
-        # base_url will always be unicode, which will in turn
-        # make the patterns unicode, and ultimately result in unicode
-        # keys in kwargs to handler._execute(**kwargs) in tornado.
-        # This enforces that base_url be ascii in that situation.
-        #
-        # Note that the URLs these patterns check against are escaped,
-        # and thus guaranteed to be ASCII: 'héllo' is really 'h%C3%A9llo'.
-        base_url = py3compat.unicode_to_str(base_url, 'ascii')
         template_path = settings_overrides.get("template_path", os.path.join(os.path.dirname(__file__), "templates"))
         jenv_opt = jinja_env_options if jinja_env_options else {}
         env = Environment(loader=FileSystemLoader(template_path),**jenv_opt )
         settings = dict(
             # basics
             log_function=log_request,
-            base_url=base_url,
+            base_url='/',
             template_path=template_path,
 
             # authentication
             cookie_secret=ipython_app.cookie_secret,
-            login_url=url_path_join(base_url,'/login'),
+            login_url='/login',
             password=ipython_app.password,
 
             # managers
@@ -173,8 +164,6 @@ class ColaboratoryWebApplication(web.Application):
             session_manager=session_manager,
 
             # IPython stuff
-            nbextensions_path = ipython_app.nbextensions_path,
-            mathjax_url=ipython_app.mathjax_url,
             config=ipython_app.config,
             jinja2_env=env,
         )
@@ -196,51 +185,13 @@ class ColaboratoryWebApplication(web.Application):
                     (r'/static/ipython/(.*)', FileFindHandler,
                         {'path': [pjoin(RESOURCES, 'ipython_patch'), DEFAULT_STATIC_FILES_PATH]}),
         ]
-        ipython_handlers = []
-        ipython_handlers.extend(load_handlers('base.handlers'))
-        #handlers.extend(load_handlers('tree.handlers'))
-        #handlers.extend(load_handlers('auth.login'))
-        #handlers.extend(load_handlers('auth.logout'))
-        #handlers.extend(load_handlers('notebook.handlers'))
-        #handlers.extend(load_handlers('nbconvert.handlers'))
-        #handlers.extend(load_handlers('kernelspecs.handlers'))
-        ipython_handlers.extend(load_handlers('services.kernels.handlers'))
-        #handlers.extend(load_handlers('services.notebooks.handlers'))
-        ipython_handlers.extend(load_handlers('services.sessions.handlers'))
-        #handlers.extend(load_handlers('services.nbconvert.handlers'))
-        #handlers.extend(load_handlers('services.kernelspecs.handlers'))
-
-        # prepend base_url onto the IPython patterns that we match
-        for handler in ipython_handlers:
-            pattern = url_path_join(settings['base_url'], handler[0])
-            new_handler = tuple([pattern] + list(handler[1:]))
-            handlers.append(new_handler)
-        # add 404 on the end, which will catch everything that falls through
-        # new_handlers.append((r'(.*)', Template404))
+        
+        handlers.extend(load_handlers('base.handlers'))
+        handlers.extend(load_handlers('services.kernels.handlers'))
+        handlers.extend(load_handlers('services.sessions.handlers'))
+        
         return handlers
 
-
-class NbserverListApp(BaseIPythonApplication):
-
-    description="List currently running notebook servers in this profile."
-
-    flags = dict(
-        json=({'NbserverListApp': {'json': True}},
-              "Produce machine-readable JSON output."),
-    )
-
-    json = Bool(False, config=True,
-          help="If True, each line of output will be a JSON object with the "
-                  "details from the server info file.")
-
-    def start(self):
-        if not self.json:
-            print("Currently running servers:")
-        for serverinfo in list_running_servers(self.profile):
-            if self.json:
-                print(json.dumps(serverinfo))
-            else:
-                print(serverinfo['url'], "::", serverinfo['notebook_dir'])
 
 #-----------------------------------------------------------------------------
 # Aliases and Flags
@@ -250,17 +201,6 @@ flags = dict(base_flags)
 flags['no-browser']=(
     {'ColaboratoryApp' : {'open_browser' : False}},
     "Don't open the notebook in a browser after startup."
-)
-flags['no-mathjax']=(
-    {'ColaboratoryApp' : {'enable_mathjax' : False}},
-    """Disable MathJax
-
-    MathJax is the javascript library IPython uses to render math/LaTeX. It is
-    very large, so you may want to disable it if you have a slow internet
-    connection, or for offline use of the notebook.
-
-    When disabled, equations etc. will appear as their untransformed TeX source.
-    """
 )
 
 # Add notebook manager flags
@@ -273,7 +213,6 @@ aliases.update({
     'transport': 'KernelManager.transport',
     'keyfile': 'ColaboratoryApp.keyfile',
     'certfile': 'ColaboratoryApp.certfile',
-    'notebook-dir': 'ColaboratoryApp.notebook_dir',
     'browser': 'ColaboratoryApp.browser',
 })
 
@@ -303,10 +242,6 @@ class ColaboratoryApp(BaseIPythonApplication):
     flags = Dict(flags)
     aliases = Dict(aliases)
 
-    subcommands = dict(
-        list=(NbserverListApp, NbserverListApp.description.splitlines()[0]),
-    )
-
     kernel_argv = List(Unicode)
 
     _log_formatter_cls = LogFormatter
@@ -323,7 +258,7 @@ class ColaboratoryApp(BaseIPythonApplication):
 
     # Network related information.
 
-    ip = Unicode('localhost', config=True,
+    ip = Unicode('127.0.0.1', config=True,
         help="The IP address the notebook server will listen on."
     )
 
@@ -391,102 +326,6 @@ class ColaboratoryApp(BaseIPythonApplication):
     jinja_environment_options = Dict(config=True,
             help="Supply extra arguments that will be passed to Jinja environment.")
 
-
-    enable_mathjax = Bool(True, config=True,
-        help="""Whether to enable MathJax for typesetting math/TeX
-
-        MathJax is the javascript library IPython uses to render math/LaTeX. It is
-        very large, so you may want to disable it if you have a slow internet
-        connection, or for offline use of the notebook.
-
-        When disabled, equations etc. will appear as their untransformed TeX source.
-        """
-    )
-    def _enable_mathjax_changed(self, name, old, new):
-        """set mathjax url to empty if mathjax is disabled"""
-        if not new:
-            self.mathjax_url = u''
-
-    base_url = Unicode('/', config=True,
-                               help='''The base URL for the notebook server.
-
-                               Leading and trailing slashes can be omitted,
-                               and will automatically be added.
-                               ''')
-    def _base_url_changed(self, name, old, new):
-        if not new.startswith('/'):
-            self.base_url = '/'+new
-        elif not new.endswith('/'):
-            self.base_url = new+'/'
-
-    base_project_url = Unicode('/', config=True, help="""DEPRECATED use base_url""")
-    def _base_project_url_changed(self, name, old, new):
-        self.log.warn("base_project_url is deprecated, use base_url")
-        self.base_url = new
-
-    extra_static_paths = List(Unicode, config=True,
-        help="""Extra paths to search for serving static files.
-
-        This allows adding javascript/css to be available from the notebook server machine,
-        or overriding individual files in the IPython"""
-    )
-    def _extra_static_paths_default(self):
-        return [os.path.join(self.profile_dir.location, 'static')]
-
-    @property
-    def static_file_path(self):
-        """return extra paths + the default location"""
-        return self.extra_static_paths + [DEFAULT_STATIC_FILES_PATH]
-
-    nbextensions_path = List(Unicode, config=True,
-        help="""paths for Javascript extensions. By default, this is just IPYTHONDIR/nbextensions"""
-    )
-    def _nbextensions_path_default(self):
-        return [os.path.join(get_ipython_dir(), 'nbextensions')]
-
-    mathjax_url = Unicode("", config=True,
-        help="""The url for MathJax.js."""
-    )
-    def _mathjax_url_default(self):
-        if not self.enable_mathjax:
-            return u''
-        static_url_prefix = self.webapp_settings.get("static_url_prefix",
-                         self.base_url
-        )
-
-        # try local mathjax, either in nbextensions/mathjax or static/mathjax
-        for (url_prefix, search_path) in [
-            (url_path_join(self.base_url, "nbextensions"), self.nbextensions_path),
-            (static_url_prefix, self.static_file_path),
-        ]:
-            self.log.debug("searching for local mathjax in %s", search_path)
-            try:
-                mathjax = filefind(os.path.join('mathjax', 'MathJax.js'), search_path)
-            except IOError:
-                continue
-            else:
-                url = url_path_join(url_prefix, u"mathjax/MathJax.js")
-                self.log.info("Serving local MathJax from %s at %s", mathjax, url)
-                return url
-
-        # no local mathjax, serve from CDN
-        if self.certfile:
-            # HTTPS: load from Rackspace CDN, because SSL certificate requires it
-            host = u"https://c328740.ssl.cf1.rackcdn.com"
-        else:
-            host = u"http://cdn.mathjax.org"
-
-        url = host + u"/mathjax/latest/MathJax.js"
-        self.log.info("Using MathJax from CDN: %s", url)
-        return url
-
-    def _mathjax_url_changed(self, name, old, new):
-        if new and not self.enable_mathjax:
-            # enable_mathjax=False overrides mathjax_url
-            self.mathjax_url = u''
-        else:
-            self.log.info("Using MathJax: %s", new)
-
     notebook_manager_class = DottedObjectName('IPython.html.services.notebooks.filenbmanager.FileNotebookManager',
         config=True,
         help='The notebook manager class to use.'
@@ -510,59 +349,6 @@ class ColaboratoryApp(BaseIPythonApplication):
     def _info_file_default(self):
         info_file = "nbserver-%s.json"%os.getpid()
         return os.path.join(self.profile_dir.security_dir, info_file)
-
-    notebook_dir = Unicode(py3compat.getcwd(), config=True,
-        help="The directory to use for notebooks and kernels."
-    )
-
-    pylab = Unicode('disabled', config=True,
-        help="""
-        DISABLED: use %pylab or %matplotlib in the notebook to enable matplotlib.
-        """
-    )
-    def _pylab_changed(self, name, old, new):
-        """when --pylab is specified, display a warning and exit"""
-        if new != 'warn':
-            backend = ' %s' % new
-        else:
-            backend = ''
-        self.log.error("Support for specifying --pylab on the command line has been removed.")
-        self.log.error(
-            "Please use `%pylab{0}` or `%matplotlib{0}` in the notebook itself.".format(backend)
-        )
-        self.exit(1)
-
-    def _notebook_dir_changed(self, name, old, new):
-        """Do a bit of validation of the notebook dir."""
-        if not os.path.isabs(new):
-            # If we receive a non-absolute path, make it absolute.
-            self.notebook_dir = os.path.abspath(new)
-            return
-        if not os.path.isdir(new):
-            raise TraitError("No such notebook dir: %r" % new)
-
-        # setting App.notebook_dir implies setting notebook and kernel dirs as well
-        self.config.FileNotebookManager.notebook_dir = new
-        self.config.MappingKernelManager.root_dir = new
-
-
-    def parse_command_line(self, argv=None):
-        super(ColaboratoryApp, self).parse_command_line(argv)
-
-        if self.extra_args:
-            arg0 = self.extra_args[0]
-            f = os.path.abspath(arg0)
-            self.argv.remove(arg0)
-            if not os.path.exists(f):
-                self.log.critical("No such file or directory: %s", f)
-                self.exit(1)
-
-            # Use config here, to ensure that it takes higher priority than
-            # anything that comes from the profile.
-            c = Config()
-            if os.path.isdir(f):
-                c.ColaboratoryApp.notebook_dir = f
-            self.update_config(c)
 
     def init_kernel_argv(self):
         """construct the kernel arguments"""
@@ -599,7 +385,7 @@ class ColaboratoryApp(BaseIPythonApplication):
         self.web_app = ColaboratoryWebApplication(
             self, self.kernel_manager, self.notebook_manager,
             self.session_manager,
-            self.log, self.base_url, self.webapp_settings,
+            self.log, self.webapp_settings,
             self.jinja_environment_options
         )
         if self.certfile:
@@ -757,8 +543,6 @@ class ColaboratoryApp(BaseIPythonApplication):
                 'hostname': self.ip if self.ip else 'localhost',
                 'port': self.port,
                 'secure': bool(self.certfile),
-                'base_url': self.base_url,
-                'notebook_dir': os.path.abspath(self.notebook_dir),
                }
 
     def write_server_info_file(self):
@@ -810,19 +594,6 @@ class ColaboratoryApp(BaseIPythonApplication):
             self.cleanup_kernels()
             self.remove_server_info_file()
 
-
-def list_running_servers(profile='default'):
-    """Iterate over the server info files of running notebook servers.
-
-    Given a profile name, find nbserver-* files in the security directory of
-    that profile, and yield dicts of their information, each one pertaining to
-    a currently running notebook server instance.
-    """
-    pd = ProfileDir.find_profile_dir_by_name(get_ipython_dir(), name=profile)
-    for file in os.listdir(pd.security_dir):
-        if file.startswith('nbserver-'):
-            with io.open(os.path.join(pd.security_dir, file), encoding='utf-8') as f:
-                yield json.load(f)
 
 #-----------------------------------------------------------------------------
 # Main entry point
