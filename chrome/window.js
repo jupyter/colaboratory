@@ -3,7 +3,6 @@ var notebookPath = '/static/v2/notebook.html';
 var notebookUrl = chrome.runtime.getURL(notebookPath);
 var serverOrigin = notebookUrl.substr(0, notebookUrl.length -
     notebookPath.length);
-
 var tokenRefreshInterval = 10 * 60 * 1000;  // 10 minutes
 
 var webview = document.getElementById('webview');
@@ -25,6 +24,14 @@ window.addEventListener('message', function(message) {
     kernel.start();
   } else if (message.data === 'restart_kernel') {
     kernel.restart();
+  } else if (message.data == 'pick_file') {
+    chrome.fileSystem.chooseEntry({type: 'openDirectory'}, function(theEntry) {
+      if (!theEntry) {
+        return;
+      }
+      kernel.handleMessage({'filesystem_name': theEntry.fullPath,
+                            'filesystem_resource': theEntry.filesystem});
+    });
   } else if (message.data && message.data.json) {
     kernel.handleMessage(message.data);
   }

@@ -4,9 +4,16 @@
 
 """A simple shell that uses the IPython messaging system."""
 
+import time
 import json
 import logging
 import sys
+sys_stdout = sys.stdout
+sys_stderr = sys.stderr
+
+def emit(s):
+    print >> sys_stderr, "EMITTING: %s" % (s)
+    time.sleep(1)
 
 import IPython
 from IPython.core.interactiveshell import InteractiveShell, InteractiveShellABC
@@ -17,7 +24,7 @@ from IPython.core.displaypub import DisplayPublisher
 from IPython.config.configurable import Configurable
 
 # module defined in shell.cc for communicating via pepper API
-import ppmessage
+from pyppapi import nacl_instance
 
 def sendMessage(socket_name, msg_type, parent_header=None, content=None):
   if parent_header is None:
@@ -27,9 +34,11 @@ def sendMessage(socket_name, msg_type, parent_header=None, content=None):
   msg = {
       'header': {'msg_type': msg_type},
       'parent_header': parent_header,
-      'content': content
+      'content': content,
+      'msg_type': msg_type,
       }
-  ppmessage._PostJSONMessage(socket_name, json.dumps(msg))
+  nacl_instance.send_raw_object({'stream': socket_name,
+                              'json': json.dumps(msg)})
 
 class MsgOutStream(object):
   """Class to overrides stderr and stdout."""
@@ -58,11 +67,8 @@ class MsgOutStream(object):
 # override sys.stdout and sys.stderr to broadcast on iopub
 stdout_stream = MsgOutStream('stdout')
 stderr_stream = MsgOutStream('stderr')
-sys_stdout = sys.stdout
-sys_stderr = sys.stderr
 sys.stdout = stdout_stream
 sys.stderr = stderr_stream
-
 
 
 class PepperShellDisplayHook(DisplayHook):
@@ -161,7 +167,10 @@ sendMessage('iopub', 'status', content={'execution_state': 'nacl_ready'})
 
 while 1:
   sendMessage('iopub', 'status', content={'execution_state': 'idle'})
-  msg = json.loads(ppmessage._AcquireJSONMessageWait())
+  msg = None
+  while msg is None:
+    msg = nacl_instance.wait_for_message()
+  msg = json.loads(msg['json'])
   sendMessage('iopub', 'status', content={'execution_state': 'busy'})
 
   if not 'header' in msg:

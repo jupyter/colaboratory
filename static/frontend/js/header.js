@@ -130,6 +130,10 @@ colab.createMenubar = function(document, permissions) {
         colab.drive.openDriveViewer();
         break;
 
+      case 'openlocalfs-menuitem':
+        colab.filepicker.selectLocalFile();
+        break;
+
       case 'clear-outputs-menuitem':
         colab.globalNotebook.clearOutputs();
         break;
