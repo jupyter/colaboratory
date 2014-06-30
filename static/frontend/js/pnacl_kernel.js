@@ -8,7 +8,7 @@
  * with the Chrome App that contains the webview that this code is running in.
  */
 
-goog.provide(‘colab.PNaClKernel’);
+goog.provide('colab.PNaClKernel');
 
 /**
  * A subclass of IPython.Kernel that uses
@@ -28,10 +28,11 @@ colab.PNaClKernel = function(kernelWindow, kernelOrigin) {
    * @type {string}
    * @private
    */
-  this.kerneOrigin_ = kernelOrigin;
+  this.kernelOrigin_ = kernelOrigin;
 
-  goog.base(this, ‘’);
-}
+  goog.base(this, '');
+};
+goog.inherits(colab.PNaClKernel, IPython.Kernel);
 
 /**
  * Starts the PNaCl IPython Kernel
@@ -40,12 +41,12 @@ colab.PNaClKernel = function(kernelWindow, kernelOrigin) {
 colab.PNaClKernel.prototype.start = function () {
   var that = this;
 
-  this.kernel_window.postMessage('start_kernel', this.kernelOrigin_);
+  this.kernelWindow_.postMessage('start_kernel', this.kernelOrigin_);
 
   window.addEventListener('message', function(e) {
     if (e.data && e.origin === that.kernelOrigin_ &&
       e.source === that.kernelWindow_) {
-      that.handleMessage(e.data);
+      that.handleMessage_(e.data);
     }
   });
 
@@ -58,13 +59,21 @@ colab.PNaClKernel.prototype.start = function () {
 }
 
 /**
+ * Kills the kernel
+ * @override
+ */
+colab.PNaClKernel.prototype.kill = function() {
+  // TODO send message to app, to kill the kernel.
+};
+
+/**
  * Does nothing as shell channels are just custom objects
  * @override
  */
 colab.PNaClKernel.prototype.stop_channels = function() {
   this.stdin_channel = null;
   this.shell_channel = null;
-}
+};
 
 /**
  * Handles a message from the PNaCl kernel or parent App.
