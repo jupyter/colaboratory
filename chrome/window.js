@@ -1,5 +1,5 @@
 // This must start with a /, otherwise serverOrigin will be wrong.
-var notebookPath = '/static/frontend/notebook.html';
+var notebookPath = '/static/v2/notebook.html';
 var notebookUrl = chrome.runtime.getURL(notebookPath);
 var serverOrigin = notebookUrl.substr(0, notebookUrl.length -
     notebookPath.length);
@@ -29,7 +29,8 @@ window.addEventListener('message', function(message) {
       if (!theEntry) {
         return;
       }
-      kernel.handleMessage(theEntry.filesystem);
+      kernel.handleMessage({'filesystem_name': theEntry.fullPath,
+                            'filesystem_resource': theEntry.filesystem});
     });
   } else if (message.data && message.data.json) {
     kernel.handleMessage(message.data);

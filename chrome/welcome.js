@@ -92,7 +92,7 @@ window.onload = function() {
     chrome.identity.getAuthToken({'interactive': true }, function(token) {
       if (token) {
         // Remove this cached token and re-authenticate
-        chrome.identity.removeCachedAuthToken(token, authenticate);
+        chrome.identity.removeCachedAuthToken({'token': token}, authenticate);
       } else {
         // There is no cached token, so prompt for authentication
         authenticate();
