@@ -7,6 +7,7 @@ goog.provide('colab');
 
 goog.require('colab.Header');
 goog.require('colab.Notebook');
+goog.require('colab.PNaClKernel');
 goog.require('colab.Presence');
 goog.require('colab.cell.Cell');
 goog.require('colab.dialog');
@@ -202,7 +203,11 @@ window.addEventListener('load', function() {
         goog.net.cookies.set('kernelUrl', kernelUrl, 10000);
       }
 
-      colab.loadKernelFromSessionUrl(goog.net.cookies.get('kernelUrl') || '');
+      if (colab.app.appMode) {
+        colab.loadPNaClKernel();
+      } else {
+        colab.loadKernelFromSessionUrl(goog.net.cookies.get('kernelUrl') || '');
+      }
 
       // set up the header: docname input, menubar, toolbar, share button
       colab.setupHeader(document, permissions);
@@ -429,39 +434,9 @@ colab.loadKernelFromSessionUrl = function(url) {
 };
 
 /**
- * Launch a new IPython kernel.
- *
- * @param {string} url The location of the kernel.
- * @param {boolean} opt_forceAuthorization if true, initates
- *  authorization flow and starts kernel only upon successful
- *  authorization. If false loading might fail because
- *  of not being authorized.
+ * Launch a new PNaCl IPython kernel.
  */
-colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
-  // NOTE - Authororization in Google version hasn't been ported
-  // yet, so set forceAuthorization to false
-  opt_forceAuthorization = false;
-
-  if (url != colab.IN_BROWSER_KERNEL_URL && url != colab.NACL_KERNEL_URL) {
-    url = url.replace(/^http:\/\//, 'https://');
-    // Adds /kernel suffix.
-    url = url.replace(/\/kernels$/, '') + '/kernels';
-    // Never authorize if in app mode (as all authorization is handled
-    // by the parent window).
-    opt_forceAuthorization = opt_forceAuthorization && !colab.app.appMode;
-  }
-
-  // Never authorize if using in-browser kernel
-  opt_forceAuthorization = opt_forceAuthorization &&
-      !(url === colab.IN_BROWSER_KERNEL_URL || url === colab.NACL_KERNEL_URL);
-
-  if (opt_forceAuthorization) {
-    colab.authorizeKernel(
-        url, goog.partial(colab.loadKernelFromUrl, url, false));
-    return;
-  }
-
-  goog.net.cookies.set('kernelUrl', url, 10000);
+colab.loadPNaClKernel = function() {
   if (colab.globalKernel) {
     colab.globalKernel.kill();
     colab.globalKernel.stop_channels();
@@ -469,26 +444,21 @@ colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
 
   // Waits for promise (of parent window details) before starting kernel
   // if in app mode, otherwise immediately starts kernel.
-  if (url === colab.IN_BROWSER_KERNEL_URL) {
-    colab.appKernelDetails.then(function(details) {
-      var options = /*** @type {IPython.KernelCreationOptions} */ ({
-        in_browser_kernel: true,
-        kernel_origin: details.origin,
-        kernel_window: details.source
-      });
-      colab.globalKernel = new IPython.Kernel(url, options);
-      colab.globalKernel.start();
-    });
-  } else {
-    colab.globalKernel = new IPython.Kernel(url);
+  colab.appKernelDetails.then(function(details) {
+    colab.globalKernel = new colab.PNaClKernel(details.source, details.origin);
     colab.globalKernel.start();
-  }
+  });
 };
 
 /**
  * Dialog box for connecting to a kernel backend.
  */
 colab.openKernelDialogBox = function() {
+  if (colab.app.appMode) {
+    colab.loadPNaClKernel();
+    return;
+  }
+
   var dialog = new goog.ui.Dialog();
   dialog.setDisposeOnHide(true);
 
