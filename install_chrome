@@ -1,0 +1,16 @@
+#!/bin/bash
+# Builds and installs the Chrome app
+
+set -x
+
+# make directory for Chrome app build
+DEST=build_chrome
+
+# stage static files
+./bundle_static $DEST
+
+# copy chrome app files, putting pnacl files in root
+# as the folder structure is hard coded into the pnacl kernel code
+# right now
+cp chrome/* $DEST
+cp chrome/pnacl/* "$DEST"
