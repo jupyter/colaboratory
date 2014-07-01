@@ -1,0 +1,37 @@
+#!/bin/bash
+# Stage the static resources tree
+#
+# This script copies the various resources to their fixed static paths.
+# If an argument is given, it's interpreted as a path in which `static` should be created.
+#
+# Needed by the Chrome App and statically hosted colaboratory files.
+
+set -e
+HERE=$(dirname $0)
+if [ ! -z "$1" ]; then
+  DEST="$1"
+else
+  DEST="$HERE/build"
+fi
+
+set -x
+
+# make the static directory
+STATIC="$DEST/static"
+rm -rf "$STATIC"
+mkdir -p "$STATIC"
+
+# stage the basic colab and extern directories
+COLAB_RESOURCES="$HERE/colaboratory/resources"
+cp -r "$COLAB_RESOURCES/colab/" "$STATIC/colab/"
+cp -r "$COLAB_RESOURCES/extern/" "$STATIC/extern/"
+
+# stage IPython's static files, then clobber them with patched versions
+IPYTHON_STATIC=`python -c 'import IPython.html; print(IPython.html.DEFAULT_STATIC_FILES_PATH)'`
+cp -r "$IPYTHON_STATIC/" "$STATIC/ipython/"
+cp -r "$COLAB_RESOURCES/ipython_patch/" "$STATIC/ipython/"
+
+# stage closure from the submodule
+git submodule init && git submodule update
+CLOSURE="$COLAB_RESOURCES/closure-library/closure/goog"
+cp -r "$CLOSURE/" "$STATIC/closure/"

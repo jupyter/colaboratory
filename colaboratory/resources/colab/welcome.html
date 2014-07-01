@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>coLaboratory</title>
+
+    <!-- Load the closure . -->
+    <!-- For compiled version use js/modules/lib_closure.js
+      TODO(kayur, sandler): When this becomes a template, we could
+       switch automatically based on url parameters or config.
+    -->
+    <script src="../closure/base.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans:300,600">
+
+    <!-- Fav icon -->
+    <link rel="shortcut icon" href="img/colab-black.png">
+
+    <script src="js/params.js"></script>
+    <script src="js/filepicker.js"></script>
+    <script src="js/install.js"></script>
+    <script src="js/welcome.js"></script>
+
+    <link rel="stylesheet" href="../closure/css/common.css">
+    <link rel="stylesheet" href="css/header.css"/>
+    <link rel="stylesheet" href="css/main.css"/>
+    <link rel="stylesheet" href="css/welcome.css"/>
+  </head>
+  <body>
+
+<!--     <div id="welcome-logo">
+      <img src="img/logo.png" id="logo">
+    </div>
+ -->
+    <div id="main-content">
+      <div id="welcome-title">Welcome to coLaboratory</div>
+      <div id="welcome-content">
+
+        <div id="left" class="column" >
+          <div class="subsection">
+            <div class="subtitle">Powerful</div>
+            <div class="message">
+              Analyze data using standard google3 and open source tools.
+            </div>
+
+            <img src="img/library-logos.png">
+          </div>
+
+          <div class="subsection">
+            <div class="subtitle">Interactive</div>
+            <div class="message" style="text-align: center">
+              Create rich, interactive visualizations.
+            </div>
+          </div>
+
+
+          <div class="subsection">
+            <div class="subtitle">Collaborative</div>
+            <div class="message">
+              Share. Comment. Edit in Realtime.
+            </div>
+          </div>
+
+
+          <div class="subsection">
+            <div class="subtitle">Learn More</div>
+            <div class="message">
+              Visit <a href="http://go/colab"> our sites page</a>.
+            </div>
+          </div>
+
+    </div>
+
+        <div id="right" class="column" style='display:none'>
+
+          <div class="subsection" id="step1">
+            <div class="subtitle">
+               <span class='if-done'>&#x2713;</span>
+               Step 1: Install coLaboratory
+            </div>
+            <div class="message if-not-done" id="install-message">
+              Please click on the button below to install coLab in Google Drive.
+            </div>
+            <div class="message if-done" id="installed-message">
+              Congrats, you have the coLaboratory Drive application installed.
+            </div>
+
+            <div class="buttons if-not-done">
+              <button id="install-button" class="realtime-button large-button">Install</button>
+            </div>
+          </div>
+
+          <div class="subsection" id="step2" >
+
+            <div class="subtitle">Step 2: Open a Notebook</div>
+            <div class="message">
+              To run coLaboratory, you need a coLaboratory notebook and a python backend. For more information about creating a
+              backend see our instructions on <a href="https://sites.google.com/a/google.com/colaboratory/home/running-colab-and-kernels">
+              getting started with coLaboratory</a>. You can click on the buttons below to either create a new notebook or
+              open an existing notebook from Google Drive.
+            </div>
+
+            <div class="buttons">
+              <button id="create-button" class="realtime-button large-button" disabled>Create</button>
+              <button id="show-files-button" class="realtime-button large-button" disabled>Open</button>
+            </div>
+          </div>
+
+          <script type="text/javascript"
+                  src="https://apis.google.com/js/api.js?onload=onClientLoad"></script>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

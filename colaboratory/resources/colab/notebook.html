@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>coLaboratory</title>
+    <script type="text/javascript">
+       var pageLoadStart = new Date().getTime();
+    </script>
+    <!-- Google Fonts -->
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Open+Sans:300,600"/>
+
+     <!-- Fav icon -->
+    <link rel="shortcut icon" href="img/colab-black.png" />
+
+    <link rel="stylesheet" href="/static/ipython/components/codemirror/lib/codemirror.css"/>
+    <link rel="stylesheet" href="/static/ipython/components/codemirror/addon/hint/show-hint.css"/>
+  </head>
+  <body>
+
+    <script src="/static/ipython/components/jquery/jquery.min.js"></script>
+
+    <script src="../closure/base.js"></script>
+
+    <!-- Load the CodeMirror libraries. -->
+    <script src="/static/ipython/components/codemirror/lib/codemirror.js"></script>
+    <script src="/static/ipython/components/codemirror/addon/hint/show-hint.js"></script>
+    <script src="/static/ipython/components/codemirror/mode/python/python.js"></script>
+
+    <!-- Load the notebook libraries. -->
+    <script type="text/javascript">
+      // Initializes IPython
+      var IPython = {};
+      IPython.namespace = function(x) { };
+      IPython.events = {} // initiliaze object for event handling
+
+      // These dummy classes are needed for the IPython 2.x kernel.
+      IPython.CommManager = function() {}
+      IPython.WidgetManager = function() {}
+    </script>
+    <script type="text/javascript"
+            src="../extern/mathjax/MathJax.js?config=TeX-AMS_HTML-full&delayStartupUntil=configured"
+            charset="utf-8">
+    </script>
+    <script src="/static/ipython/base/js/ipython.js"></script>
+    <script src="/static/ipython/base/js/utils.js"></script>
+    <script src="/static/ipython/services/kernels/js/comm.js"></script>
+    <script src="/static/ipython/services/kernels/js/kernel.js"></script>
+    <script src="/static/ipython/services/sessions/js/session.js"></script>
+    <script src="/static/ipython/notebook/js/mathjaxutils.js"
+            type="text/javascript"
+            charset="utf-8">
+    </script>
+
+     <script src="js/pnacl_kernel.js"></script>
+     <script src="js/preferences.js"></script>
+     <script src="js/undo.js"></script>
+     <script src="js/dialog.js"></script>
+     <script src="js/colabdeps.js"></script>
+     <script src="js/error.js"></script>
+     <script src="js/params.js"></script>
+     <script src="js/app.js"></script>
+     <script src="js/nbformat.js"></script>
+     <script src="js/filepicker.js"></script>
+     <script src="js/permissions.js"></script>
+     <script src="js/drive.js"></script>
+     <script src="js/share.js"></script>
+     <script src="js/sharingstate.js"></script>
+     <script src="js/services.js"></script>
+     <script src="js/presence.js"></script>
+     <script src="js/cell/cell.js"></script>
+     <script src="js/cell/tooltip.js"></script>
+     <script src="js/cell/editor.js"></script>
+     <script src="js/cell/formview.js"></script>
+     <script src="js/cell/outputarea.js"></script>
+     <script src="js/cell/codecell.js"></script>
+     <script src="js/cell/textcell.js"></script>
+     <script src="js/cell/cellfactory.js"></script>
+     <script src="js/comments.js"></script>
+     <script src="js/notification.js"></script>
+     <script src="js/bottompane.js"></script>
+     <script src="js/notebook.js"></script>
+     <script src="js/header.js"></script>
+     <script src="js/main.js"></script>
+
+    <!-- Load the Markdown libraries. -->
+    <script type="text/javascript" src="../extern/pagedown/Markdown.Converter.js"></script><style type="text/css"></style>
+    <script type="text/javascript" src="../extern/pagedown/Markdown.Sanitizer.js"></script>
+    <script type="text/javascript" src="../extern/pagedown/Markdown.Editor.js"></script>
+
+    <!-- Load bootstrapping code for interactive notebooks -->
+    <script src="js/colabtools.js"></script>
+    <link rel="stylesheet" href="../closure/css/common.css">
+    <link rel="stylesheet" href="../closure/css/menu.css">
+    <link rel="stylesheet" href="../closure/css/menubar.css">
+    <link rel="stylesheet" href="../closure/css/menubutton.css">
+    <link rel="stylesheet" href="../closure/css/menuitem.css">
+    <link rel="stylesheet" href="../closure/css/menuseparator.css">
+    <link rel="stylesheet" href="../closure/css/toolbar.css">
+    <link rel="stylesheet" href="../closure/css/combobox.css">
+    <link rel="stylesheet" href="../closure/css/dialog.css">
+    <link rel="stylesheet" href="css/main.css"/>
+    <link rel="stylesheet" href="css/cell.css"/>
+    <link rel="stylesheet" href="css/ansi.css"/>
+    <link rel="stylesheet" href="css/header.css"/>
+    <link rel="stylesheet" href="css/form.css"/>
+    <link rel="stylesheet" href="css/comments.css"/>
+    <link rel="stylesheet" href="css/ipython.css"/>
+
+    <div id="top-floater">
+      <div id="header">
+        <div id="header-left">
+          <div id="header-logo">
+            <img src="img/colab-white.svg">
+          </div>
+          <div id="header-doc-toolbar">
+            <input id="doc-name" disabled>
+            <span id="message-area"> </span>
+            <div id="top-menubar" class="goog-menubar format-lightborder" style="display: none;">
+              <div id="file-button" class="goog-menu-button" title="File">
+                File
+                <div id="file-menu-button" class="goog-menu">
+                  <div class="goog-menuitem goog-menuitem" id="open-menuitem">Open...</div>
+                  <div class="goog-menuitem goog-menuitem" id="new-menuitem">New Notebook</div>
+                  <div class="goog-menuseparator goog-menuitem-disabled"></div>
+                  <div class="goog-menuitem" id="share-menuitem">Share...</div>
+                  <div class="goog-menuitem" id="save-menuitem">Save and Checkpoint</div>
+                  <div class="goog-menuitem" id="viewindrive-menuitem">View in Drive...</div>
+                  <div class="goog-menuitem" id="clone-menuitem">Clone</div>
+                  <div class="goog-menuseparator goog-menuitem-disabled"></div>
+
+                  <div class="goog-menuitem" id="download-ipynb-menuitem">Download Ipynb</div>
+                </div>
+              </div>
+              <div id="edit-menu-button" class="goog-menu-button" title="Edit">
+                Edit
+                <div id="edit-menu" class="goog-menu">
+                  <div class="goog-menuitem" id="undo-menuitem">Undo</div>
+                  <div class="goog-menuitem" id="redo-menuitem">Redo</div>
+                  <div class="goog-menuseparator"></div>
+                  <div class="goog-menuitem" id="clear-outputs-menuitem">Clear Outputs</div>
+                  <div class="goog-menuitem" id="clear-notebook-menuitem">Clear Notebook</div>
+                </div>
+              </div>
+              <div id="run-menu-button" class="goog-menu-button" title="Edit">
+                Run
+                <div id="run-menu" class="goog-menu">
+                  <div class="goog-menuitem" id="runall-menuitem">Run All</div>
+                  <div class="goog-menuitem" id="runbefore-menuitem">Run Before</div>
+                  <div class="goog-menuitem" id="runafter-menuitem">Run After</div>
+                </div>
+              </div>
+              <div id="backend-menu-button" class="goog-menu-button" title="Backend">
+                Python
+                <div id="backend-menu" class="goog-menu">
+                  <div class="goog-menuitem goog-menuitem" id="connect-menuitem">Connect...</div>
+                  <div class="goog-menuseparator"></div>
+                  <div class="goog-menuitem" id="interrupt-menuitem">Interrupt</div>
+                  <div class="goog-menuitem" id="restart-menuitem">Restart</div>
+                  <div class="goog-menuitem" id="kill-menuitem">Kill</div>
+                </div>
+              </div>
+              <div id="feedback-menu-button" class="goog-menu-button" title="Feedback">
+                Feedback
+                <div id="feedback-menu" class="goog-menu">
+                  <div class="goog-menuitem" id="report-bug-menuitem">Report Bug</div>
+                  <div class="goog-menuitem" id="send-feedback-menuitem">Send Feedback...</div>
+                </div>
+              </div>
+              <div id="help-menu-button" class="goog-menu-button" title="Help">
+                Help
+                <div id="help-menu" class="goog-menu">
+                  <div class="goog-menuitem" id="shortcuts-menuitem">Keyboard Shortcuts...</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        <div id="header-right">
+          <div id="collaborators"></div>
+          <button id="comments" style="display: none;"
+                  class="realtime-button comments-button">Comments</button>
+          <button id="share" style="display: none;"
+                  class="realtime-button">Share</button>
+          <div id="comments-box" class="comments-activitybox" style="display: none">
+          </div>
+        </div>
+      </div>
+
+      <div id="top-toolbar" class="goog-toolbar" style="display: none;">
+        <div id='add-text-toolbar-button' class="goog-toolbar-button">Add Text</div>
+        <div id='add-code-toolbar-button' class="goog-toolbar-button">Add Code</div>
+        <div class="goog-toolbar-separator"></div>
+        <div id='cell-up-toolbar-button' class="goog-toolbar-button">Cell Up</div>
+        <div id='cell-down-toolbar-button' class="goog-toolbar-button">Cell Down</div>
+        <div class="goog-toolbar-separator"></div>
+        <div id='backend-connect-toolbar-button' class="goog-toolbar-button disconnected">Connect to Python</div>
+      </div>
+    </div>
+
+    <!-- Load the Realtime libraries.  This must come after loading colab/js/main.js -->
+    <script type="text/javascript"
+               src="https://apis.google.com/js/api.js?onload=onClientLoad"></script>
+
+   <!-- Notebook will be inserted here at the end of the document.
+        Don't add any html after this line -->
+  </body>
+</html>
