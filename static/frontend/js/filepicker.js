@@ -117,12 +117,3 @@ colab.filepicker.selectFileAndReload = function() {
   };
   colab.filepicker.selectFile(cb);
 };
-
-
-/**
- * Selects a file from the local filesystem and posts a message directly.
- */
-colab.filepicker.selectLocalFile = function() {
-    // use local storage to retain access to this file
-    colab.globalKernel.kernel_window.postMessage('pick_file', colab.globalKernel.kernel_origin);
-}

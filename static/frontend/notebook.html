@@ -11,19 +11,21 @@
      <!-- Fav icon -->
     <link rel="shortcut icon" href="img/colab-black.png" />
 
-    <link rel="stylesheet" href="/static/components/codemirror/lib/codemirror.css"/>
-    <link rel="stylesheet" href="/static/components/codemirror/addon/hint/show-hint.css"/>
+    <link rel="stylesheet" href="css/codemirror-css.css"/>
   </head>
   <body>
 
-    <script src="/static/components/jquery/jquery.min.js"></script>
-
-    <script src="js/raw/closure/base.js"></script>
+    <!-- load closure if raw -->
+    <!--%raw%
+      <script src="js/raw/closure/base.js"></script>
+     %raw%-->
 
     <!-- Load the CodeMirror libraries. -->
-    <script src="/static/components/codemirror/lib/codemirror.js"></script>
-    <script src="/static/components/codemirror/addon/hint/show-hint.js"></script>
-    <script src="/static/components/codemirror/mode/python/python.js"></script>
+    <script src="js/modules/lib_codemirror.js"></script>
+
+    <!--%raw%
+    <script src="js/modules/lib_userfeedback.js"></script>
+    %raw%-->
 
     <!-- Load the notebook libraries. -->
     <script type="text/javascript">
@@ -31,14 +33,17 @@
       var IPython = {};
       IPython.namespace = function(x) { };
       IPython.events = {} // initiliaze object for event handling
+
+      // These dummy classes are needed for the IPython 2.x kernel.
+      IPython.CommManager = function() {}
+      IPython.WidgetManager = function() {}
     </script>
     <script type="text/javascript"
             src="/static/mathjax/MathJax.js?config=TeX-AMS_HTML-full&delayStartupUntil=configured"
             charset="utf-8">
     </script>
-    <script src="/static/base/js/ipython.js"></script>
+    <script src="/static/components/jquery/jquery.min.js"></script>
     <script src="/static/base/js/utils.js"></script>
-    <script src="/static/services/kernels/js/comm.js"></script>
     <script src="/static/services/kernels/js/kernel.js"></script>
     <script src="/static/services/sessions/js/session.js"></script>
     <script src="/static/notebook/js/mathjaxutils.js"
@@ -46,38 +51,58 @@
             charset="utf-8">
     </script>
 
-    <script src="js/raw/colab/pnacl_kernel.js"></script>
-    <script src="js/raw/colab/preferences.js"></script>
-    <script src="js/raw/colab/undo.js"></script>
-    <script src="js/raw/colab/dialog.js"></script>
-    <script src="js/raw/colab/colabdeps.js"></script>
-    <script src="js/raw/colab/params.js"></script>
-    <script src="js/raw/colab/app.js"></script>
-    <script src="js/raw/colab/drive.js"></script>
-    <script src="js/raw/colab/sharingstate.js"></script>
-    <script src="js/raw/colab/services.js"></script>
-    <script src="js/raw/colab/presence.js"></script>
-    <script src="js/raw/colab/cell/cell.js"></script>
-    <script src="js/raw/colab/cell/tooltip.js"></script>
-    <script src="js/raw/colab/cell/editor.js"></script>
-    <script src="js/raw/colab/cell/formview.js"></script>
-    <script src="js/raw/colab/cell/outputarea.js"></script>
-    <script src="js/raw/colab/cell/codecell.js"></script>
-    <script src="js/raw/colab/cell/textcell.js"></script>
-    <script src="js/raw/colab/cell/cellfactory.js"></script>
-    <script src="js/raw/colab/comments.js"></script>
-    <script src="js/raw/colab/notification.js"></script>
-    <script src="js/raw/colab/notebook.js"></script>
-    <script src="js/raw/colab/filepicker.js"></script>
-    <script src="js/raw/colab/header.js"></script>
-    <script src="js/raw/colab/main.js"></script>
+    <!-- This is a hack, the %> annotations will be removed
+         and the line below will become a comment.
+         Note the annotations are white space sensitive.
+         There should be no space betwen % and -.
+
+    %raw%-->
+    <script src="js/modules/js_compiled.js"></script>
+    <!--%raw%
+
+     -->
+
+    <!--%raw%
+     <script src="js/raw/colab/preferences.js"></script>
+     <script src="js/raw/colab/undo.js"></script>
+     <script src="js/raw/colab/dialog.js"></script>
+     <script src="js/raw/colab/colabdeps.js"></script>
+     <script src="js/raw/colab/error.js"></script>
+     <script src="js/raw/colab/params.js"></script>
+     <script src="js/raw/colab/app.js"></script>
+     <script src="js/raw/colab/nbformat.js"></script>
+     <script src="js/raw/colab/filepicker.js"></script>
+     <script src="js/raw/colab/permissions.js"></script>
+     <script src="js/raw/colab/drive.js"></script>
+     <script src="js/raw/colab/share.js"></script>
+     <script src="js/raw/colab/sharingstate.js"></script>
+     <script src="js/raw/colab/services.js"></script>
+     <script src="js/raw/colab/presence.js"></script>
+     <script src="js/raw/colab/cell/cell.js"></script>
+     <script src="js/raw/colab/cell/tooltip.js"></script>
+     <script src="js/raw/colab/cell/editor.js"></script>
+     <script src="js/raw/colab/cell/formview.js"></script>
+     <script src="js/raw/colab/cell/outputarea.js"></script>
+     <script src="js/raw/colab/cell/codecell.js"></script>
+     <script src="js/raw/colab/cell/textcell.js"></script>
+     <script src="js/raw/colab/cell/cellfactory.js"></script>
+     <script src="js/raw/colab/comments.js"></script>
+     <script src="js/raw/colab/notification.js"></script>
+     <script src="js/raw/colab/bottompane.js"></script>
+     <script src="js/raw/colab/notebook.js"></script>
+     <script src="js/raw/colab/header.js"></script>
+     <script src="js/raw/colab/main.js"></script>
+    %raw%-->
 
     <!-- Load the Markdown libraries. -->
-    <script type="text/javascript" src="/static/pagedown/Markdown.Converter.js"></script>
-    <script type="text/javascript" src="/static/pagedown/Markdown.Sanitizer.js"></script>
+    <script type="text/javascript" src="js/pagedown/Markdown.Converter.js"></script><style type="text/css"></style>
+    <script type="text/javascript" src="js/pagedown/Markdown.Sanitizer.js"></script>
+    <script type="text/javascript" src="js/pagedown/Markdown.Editor.js"></script>
 
     <!-- Load bootstrapping code for interactive notebooks -->
     <script src="/static/custom/colabtools.js"></script>
+    <!-- google analytics -->
+    <script src='/static/js/ga.js'> </script>
     <link rel="stylesheet" href="css/raw/closure/common.css">
     <link rel="stylesheet" href="css/raw/closure/menu.css">
     <link rel="stylesheet" href="css/raw/closure/menubar.css">
@@ -110,8 +135,6 @@
                 <div id="file-menu-button" class="goog-menu">
                   <div class="goog-menuitem goog-menuitem" id="open-menuitem">Open...</div>
                   <div class="goog-menuitem goog-menuitem" id="new-menuitem">New Notebook</div>
-                  <div class="goog-menuseparator goog-menuitem-disabled"></div>
-                  <div class="goog-menuitem" id="openlocalfs-menuitem">Open Local Directory</div>
                   <div class="goog-menuseparator goog-menuitem-disabled"></div>
                   <div class="goog-menuitem" id="share-menuitem">Share...</div>
                   <div class="goog-menuitem" id="save-menuitem">Save and Checkpoint</div>
@@ -189,11 +212,11 @@
       </div>
     </div>
 
-    <div id="content"></div>
-    <!-- Load the Realtime libraries.  This must come after loading js/raw/main.js -->
+    <!-- Load the Realtime libraries.  This must come after loading js/raw/colab/main.js -->
     <script type="text/javascript"
                src="https://apis.google.com/js/api.js?onload=onClientLoad"></script>
 
-
+   <!-- Notebook will be inserted here at the end of the document.
+        Don't add any html after this line -->
   </body>
 </html>

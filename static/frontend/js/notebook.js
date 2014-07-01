@@ -6,6 +6,7 @@
 goog.provide('colab.CellDragger');
 goog.provide('colab.Notebook');
 
+goog.require('colab.BottomPane');
 goog.require('colab.CommentsWidget');
 goog.require('colab.Preferences');
 goog.require('colab.Undo');
@@ -20,38 +21,72 @@ goog.require('goog.fx.DragListGroup');
 goog.require('goog.fx.dom.FadeInAndShow');
 goog.require('goog.fx.dom.FadeOutAndHide');
 goog.require('goog.json');
+goog.require('goog.ui.Component');
 
 
 /**
  * Creates a new Notebook object. A Notebook is a collection of Cell objects.
  *
- * @param {gapi.drive.realtime.Model} model The Realtime root model object.
- * @param {colab.drive.Permissions} permissions Edit permissions
+ * @param {colab.drive.NotebookModel} notebook The Realtime notebook object.
+ * @extends goog.ui.Component
  * @constructor
  */
-colab.Notebook = function(model, permissions) {
+colab.Notebook = function(notebook) {
+  goog.base(this);
+
+  /** @type {gapi.drive.realtime.Model} model The Realtime root */
+  this.model = notebook.getDocument().getModel();
+
   /** @private {Array.<colab.cell.Cell>} */
   this.cells_ = [];
 
-  /** @private {colab.drive.Permissions} */
-  this.permissions_ = permissions;
-
   /** @private {gapi.drive.realtime.CollaborativeList} */
-  this.realtimeCells_ = model.getRoot().get('cells');
+  this.realtimeCells_ = this.model.getRoot().get('cells');
 
   /** @private */
   this.history_ = new colab.Undo(this.realtimeCells_);
 
-  /** @type {gapi.drive.realtime.Model} model The Realtime root */
-  this.model = model;
+  /** @private {colab.drive.Permissions} */
+  this.permissions_ = notebook.getPermissions();
 
   /** @private */
   this.listeners_ = {};
 
-  var readOnly = model.isReadOnly;
-  // add realtime cells as document cells
-  var contentDiv = goog.dom.getElement('content');
-  this.contentDiv = contentDiv;
+  /** @private {colab.drive.NotebookModel} */
+  this.driveNotebook_ = notebook;
+};
+goog.inherits(colab.Notebook, goog.ui.Component);
+
+
+/**
+ * @param {Element} content
+ */
+colab.Notebook.prototype.setBottomPaneContent = function(content) {
+  var el = this.bottomPane_.getContentElement();
+  el.innerHTML = '';
+  goog.dom.appendChild(el, content);
+  this.bottomPane_.restore();
+};
+
+/** @inheritDoc */
+colab.Notebook.prototype.createDom = function() {
+  var element = goog.dom.createDom('div', 'notebook-container');
+
+  /** @private Content Element */
+  this.contentElement_ = goog.dom.createDom('div', 'notebook-content');
+  goog.dom.appendChild(element, this.contentElement_);
+
+  this.setElementInternal(element);
+};
+
+/** @inheritDoc */
+colab.Notebook.prototype.enterDocument = function() {
+  goog.base(this, 'enterDocument');
+
+  /** @private {colab.BottomPane} */
+  this.bottomPane_ = new colab.BottomPane();
+  this.addChild(this.bottomPane_, true);
+
   for (var i = 0; i < this.realtimeCells_.length; i++) {
     var rt_cell = /** @type {gapi.drive.realtime.CollaborativeMap} */
         (this.realtimeCells_.get(i));
@@ -60,20 +95,18 @@ colab.Notebook = function(model, permissions) {
         rt_cell,
         this.permissions_);
 
-    // Previous version of the realtime model may not have the support
-    // for comments and collaborator. This patches old models to add that
-    // support.
-
-    if (!readOnly && !rt_cell.has('commentsSentinel')) {
-      rt_cell.set('commentsSentinel', model.createString());
+    // Previous version of the realtime model may not have the support for
+    // comments and collaborator. This patches old models to add that support.
+    if (this.permissions_.isEditable() && !rt_cell.has('commentsSentinel')) {
+      rt_cell.set('commentsSentinel', this.model.createString());
     }
 
-    if (!readOnly && !rt_cell.has('collaborators')) {
-      rt_cell.set('collaborators', model.createList());
+    if (this.permissions_.isEditable() && !rt_cell.has('collaborators')) {
+      rt_cell.set('collaborators', this.model.createList());
     }
 
     this.cells_.push(cell);
-    cell.render(contentDiv);
+    cell.render(this.contentElement_);
   }
 
   // make the cells drag droppable
@@ -92,16 +125,10 @@ colab.Notebook = function(model, permissions) {
       gapi.drive.realtime.EventType.VALUES_SET,
       goog.bind(this.realtimeCellsSet_, this));
 
-  if (!model.getRoot().get('sentinel')) {
-    model.getRoot().set('sentinel',
-                        model.createList([new Date().toISOString()]));
-  }
+  /** @private {colab.CommentsWidget} */
+  this.commentsWidget_ = new colab.CommentsWidget(this.driveNotebook_);
 
-  var commentSentinel = model.getRoot().get('sentinel');
-  this.commentsWidet = new colab.CommentsWidget(
-      commentSentinel, this.permissions_);
   window.addEventListener('message', goog.bind(this.receiveCellMessage, this));
-
   this.setupKeyHandler();
 };
 
@@ -115,7 +142,7 @@ colab.Notebook.prototype.getId = function() {
   return this.realtimeCells_.id;
 };
 
-/** @private {number} duration of animations in millisecons */
+/** @private {number} duration of animations in milliseconds */
 colab.Notebook.ANIMATION_DURATION_ = 400;
 
 /**
@@ -128,14 +155,13 @@ colab.Notebook.ANIMATION_DURATION_ = 400;
  *
  * @param {string} type Type of the cell.
  * @param {number} opt_position Position of the cell
- * @param {string} opt_content Content of the cell
  */
-colab.Notebook.prototype.addNewCell = function(type, opt_position, opt_content) {
+colab.Notebook.prototype.addNewCell = function(type, opt_position) {
   if (!this.permissions_.isEditable()) {
     return;
   }
 
-  var realtimeCell = colab.cell.newRealtimeCell(this.model, type, opt_content);
+  var realtimeCell = colab.cell.newRealtimeCell(this.model, type);
 
   var position = opt_position === undefined ?
       this.realtimeCells_.length : opt_position;
@@ -194,6 +220,15 @@ colab.Notebook.prototype.kernelAccessAllowed = function(cell) {
 colab.Notebook.prototype.receiveCellMessage = function(message) {
   var data = /** @type {CellMessage} */ (/** @type {?} */ (message.data));
   if (data.target != 'notebook') return;
+
+  if (data.action == 'load_failed') {
+    colab.dialog.displayError(
+        'Could not load the JavaScript files needed to display output.' +
+            'This is probably because you are no longer logged into your ' +
+            'corp account.  Try reloading this page.', '');
+    return;
+  }
+
   /** type {colab.cell.CodeCell} */
   var cell = this.findCellByCellId(data.cellId);
 
@@ -384,8 +419,7 @@ colab.Notebook.prototype.redo = function() {
 colab.Notebook.prototype.saveNotebook = function() {
   var n = colab.notification.showNotification(
       'Saving...', '', -1);
-  colab.drive.saveDocument(
-      colab.globalRealtimeDoc,
+  colab.drive.globalNotebook.save(
       function() { n.change('Saved successfully!', 5000); },
       function(err) {
         n.clear();
@@ -395,9 +429,15 @@ colab.Notebook.prototype.saveNotebook = function() {
 };
 
 /**
+ * Commands that get executed after ctrl-M is pressed
  * @type {Object}
  */
 colab.Notebook.prototype.magicCommands = null;
+
+/**
+ * Commands that get executed on ctrl pressed.
+ */
+colab.Notebook.prototype.ctrlCommands = null;
 
 /**
  * @param {boolean} after
@@ -463,11 +503,11 @@ colab.Notebook.prototype.setupMagicCommands = function() {
 
     shortcut(codes.NINE,
        goog.bind(this.changeEditorFontSize, this, -1),
-       'Editor Font Size++'),
+       'Editor Font Size--'),
 
     shortcut(codes.ZERO,
        goog.bind(this.changeEditorFontSize, this, 1),
-       'Editor Font Size--'),
+       'Editor Font Size++'),
 
     shortcut(codes.S, this.saveNotebook, 'Save and Checkpoint'),
 
@@ -485,15 +525,54 @@ colab.Notebook.prototype.setupMagicCommands = function() {
     shortcut(codes.H, this.displayShortcutHelp,
              'Show Keyboard Shortcuts'),
 
-    shortcut(codes.Y, this.NotImplemented, 'Convert to Code Cell'),
+    shortcut(
+      codes.Y,
+      goog.bind(this.convertSelectedCell, this, colab.cell.CellType.CODE),
+      'Convert to Code Cell'),
 
-    shortcut(codes.M, this.NotImplemented, 'Convert to Markdown Cell')
-
+    shortcut(
+      codes.M,
+      goog.bind(this.convertSelectedCell, this, colab.cell.CellType.TEXT),
+      'Convert to Markdown Cell')
   ];
+
+  var ctrlCommands = [
+    shortcut(codes.S, this.saveNotebook, 'Save Notebook'),
+    shortcut(codes.O, this.openNotebook, 'Open Notebook'),
+    shortcut(codes.M, this.enterMagicMode, 'Magic Shortcut Mode')
+  ];
+  this.ctrlCommands = {};
   this.magicCommands = {};
+
   for (var i = 0; i < commands.length; i++) {
     this.magicCommands[commands[i].shortcut] = commands[i];
   }
+  for (var i = 0; i < ctrlCommands.length; i++) {
+    this.ctrlCommands[ctrlCommands[i].shortcut] = ctrlCommands[i];
+  }
+};
+
+
+/** Opens a new notebook
+ */
+colab.Notebook.prototype.openNotebook = function() {
+  colab.filepicker.selectFileAndReload();
+};
+
+/**
+ * Converts selected cell to markdown cell
+ * @param {colab.cell.CellType} newType
+ */
+colab.Notebook.prototype.convertSelectedCell = function(newType) {
+  var cell = this.getSelectedCell();
+  var index = this.getCellIndex(this.selectedCellId_);
+
+  if (!cell || cell.getType() == newType) return;
+  var ed = cell.getEditor();
+  if (!ed) return;
+  var text = ed.getText();
+  var newcell = colab.cell.newRealtimeCell(this.model, newType, text);
+  this.history_.recordReplacement(index, newcell);
 };
 
 /**
@@ -580,13 +659,14 @@ colab.KeyboardShortcut;
 
 /**
  * @param {KeyboardEvent} ev
+ * @param {Object} shortcuts
  * @return {boolean}
  */
-colab.Notebook.prototype.handleMagicKey = function(ev) {
+colab.Notebook.prototype.handleShortcuts = function(ev, shortcuts) {
   /**
    * @type {colab.KeyboardShortcut}
    */
-  var sc = this.magicCommands[ev.keyCode];
+  var sc = shortcuts[ev.keyCode];
   if (sc && sc.func) {
     sc.func(sc, ev);
     return true;
@@ -624,6 +704,14 @@ colab.Notebook.prototype.NotImplemented = function(shortcut) {
 };
 
 /**
+ * Magic mode for shortcuts
+ */
+colab.Notebook.prototype.enterMagicMode = function() {
+  /** @type {boolean} */
+  this.magicMode = true;
+};
+
+/**
  * Sets up document keyhandler, which handles global key presses.
  * TODO(kayur): look into browser events for undo and redo.
  */
@@ -631,7 +719,6 @@ colab.Notebook.prototype.setupKeyHandler = function() {
   this.setupMagicCommands();
   var notebook = this;
   var docKh = new goog.events.KeyHandler(document);
-  var magicMode = false;
 
   goog.events.listen(docKh, 'key', function(e) {
     if ((e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) &&
@@ -643,24 +730,21 @@ colab.Notebook.prototype.setupKeyHandler = function() {
       e.preventDefault();
       return;
     }
-    if (magicMode && notebook.handleMagicKey(e)) {
+    if (notebook.magicMode &&
+        notebook.handleShortcuts(e, notebook.magicCommands)) {
       e.stopPropagation();
       e.preventDefault();
-      // Keep magic mode, so we can do more than one command at a time
-      // (e.g. for font changes)
-      magicMode = false;
+      notebook.magicMode = false;
       return;
     }
-    magicMode = false;
-    if (e.ctrlKey && e.keyCode == goog.events.KeyCodes.M) {
+    notebook.magicMode = false;
+
+    if ((e.ctrlKey || e.metaKey) &&
+         notebook.handleShortcuts(e, notebook.ctrlCommands)) {
+      e.stopPropagation();
       e.preventDefault();
-      magicMode = true;
       return;
     }
-
-
-
-
 
     // For whatever reason these get triggered whether in capture
     // or in bubble mode. It might have something to do with codemirror
@@ -682,6 +766,22 @@ colab.Notebook.prototype.setupKeyHandler = function() {
       e.stopPropagation();
       e.preventDefault();
     }
+
+    if (e.keyCode == goog.events.KeyCodes.UP) {
+      notebook.changeSelectedCell(-1);
+    }
+
+    if (e.keyCode == goog.events.KeyCodes.DOWN) {
+      notebook.changeSelectedCell(1);
+    }
+
+    if (e.keyCode == goog.events.KeyCodes.ENTER) {
+      var cell = notebook.getSelectedCell();
+      if (cell && cell.getType() == colab.cell.CellType.TEXT) {
+        cell.setEditing(true);
+      }
+    }
+
   }, false /* bubble */);
 };
 
@@ -701,7 +801,7 @@ colab.Notebook.prototype.realtimeCellsAdded_ = function(e) {
   var values = e.values;
 
   // Update DOM element content and its parallel structure this.cells_
-  var content = goog.dom.getElement('content');
+  var content = this.contentElement_;
 
   // Find the "corrected" index, which is index or index - 1 depending
   // on whether the order of elements has been shifted by a local drag
@@ -795,7 +895,7 @@ colab.Notebook.prototype.realtimeCellsSet_ = function(e) {
    * @type {Array.<gapi.drive.realtime.CollaborativeMap>}
    */
   var values = e.newValues; // The values to add
-  var content = goog.dom.getElement('content');
+  var content = this.contentElement_;
   var children = goog.dom.getChildren(content);
   for (var i = 0; i < values.length; i++) {
     var cell = colab.cell.cellFromRealtime(values[i], this.permissions_);
@@ -854,7 +954,7 @@ colab.CellDragger.prototype.createDragElementInternal = function(sourceEl) {
 colab.Notebook.prototype.makeDraggable_ = function() {
   // make cells draggable
   var dlg = new colab.CellDragger();
-  dlg.addDragList(goog.dom.getElement('content'),
+  dlg.addDragList(this.contentElement_,
       goog.fx.DragListDirection.DOWN, true);
   dlg.setDragItemHoverClass('dragged');
   dlg.setCurrDragItemClass('dragitem');

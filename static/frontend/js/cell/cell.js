@@ -36,7 +36,7 @@ goog.require('goog.ui.ToolbarMenuButton');
 colab.cell.Cell = function(realtimeCell, permissions) {
   goog.base(this);
 
-  /** @type {Object} */
+  /** @type {gapi.drive.realtime.CollaborativeObject} */
   this.realtimeCell = realtimeCell;
 
   /**  @protected {Element} The element (div) that contains the toolbar. */
@@ -200,10 +200,9 @@ colab.cell.Cell.prototype.splitAtCursor = function() {
   var first = editor.getRange(undefined, editor.getCursor());
   var second = editor.getRange(editor.getCursor());
   if (!first || !second) return null;
-  var cell1 = colab.cell.newRealtimeCell(colab.globalRealtimeDoc.getModel(),
-      this.getType(), first);
-  var cell2 = colab.cell.newRealtimeCell(colab.globalRealtimeDoc.getModel(),
-      this.getType(), second);
+  var model = colab.globalNotebook.model;
+  var cell1 = colab.cell.newRealtimeCell(model, this.getType(), first);
+  var cell2 = colab.cell.newRealtimeCell(model, this.getType(), second);
   return [cell1, cell2];
 };
 
@@ -244,19 +243,7 @@ colab.cell.Cell.prototype.setSelected = function(value) {
 /**
  * Refresh the cell dom.
  */
-colab.cell.Cell.prototype.refresh = function() {
-  var prevScrollY = window.scrollY;
-
-  // the code below forces a redraw. Need for Chrome on Mac (34 beta) because of
-  // bug in Chrome.
-  // http://stackoverflow.com/questions/3485365/how-can-i-force-webkit-to-redraw-repaint-to-propagate-style-changes
-  goog.style.setElementShown(this.mainContentDiv, false);
-  // need this to redraw object
-  window['____noop____'] = this.mainContentDiv['offsetHeight'];
-  goog.style.setElementShown(this.mainContentDiv, true);
-  // Keep scrolling posistion.
-  window.scrollTo(window.scrollX, prevScrollY);
-};
+colab.cell.Cell.prototype.refresh = function() { };
 
 /**
  * Change the cell if it is being dragged.
@@ -281,18 +268,22 @@ colab.cell.Cell.prototype.isSelected = function() {
  */
 colab.cell.Cell.prototype.updateCollaborators_ = function() {
   // filter collaborators to only be global
-  var globalCollaborators = colab.globalRealtimeDoc.getCollaborators();
+  var globalCollaborators =
+      colab.drive.globalNotebook.getDocument().getCollaborators();
   var collaborators = this.realtimeCell.get('collaborators');
-  goog.array.forEach(collaborators.asArray(), function(collaborator, index) {
-    var globalCollaborator = goog.array.find(globalCollaborators, function(c) {
-      return c.sessionId === collaborator.sessionId &&
-        c.userId === collaborator.userId;
-    });
+  if (this.permissions.isEditable()) {
+    goog.array.forEach(collaborators.asArray(), function(collaborator, index) {
+      var globalCollaborator = goog.array.find(globalCollaborators,
+          function(c) {
+            return c.sessionId === collaborator.sessionId &&
+            c.userId === collaborator.userId;
+      });
 
-    if (!globalCollaborator) {
-      collaborators.remove(index);
-    }
-  });
+      if (!globalCollaborator) {
+        collaborators.remove(index);
+      }
+    });
+  }
 
   var collabDiv = this.getElementByClass('cell-collaborators');
   colab.populateCollaboratorsDiv(collabDiv, collaborators.asArray(), 3);

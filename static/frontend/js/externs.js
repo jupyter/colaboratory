@@ -7,11 +7,12 @@
  */
 var IPython = {};
 
-
 /**
- * Notebook events..
+ * Notebook events.
  */
 IPython.events = {};
+
+
 
 /**
  * @param {Object} params (expects 'editor' and 'kernel')
@@ -22,39 +23,43 @@ IPython.Completer = function(params) {};
 /***/
 IPython.Completer.prototype.startCompletion = function() {};
 
-/**
- * @type {IPython.Cell}
- */
+/** @type {IPython.Cell} */
 IPython.Completer.prototype.cell = null;
 
-/**
- * @constructor
- */
+
+
+/** @constructor */
 IPython.Cell = function() {};
 
-/**
- * @type {IPython.Kernel}
- */
+/** @type {IPython.Kernel} */
 IPython.Cell.prototype.kernel = null;
 
+
+
+/** @typedef {{notebook_name: string,
+ *             notebook_path: string,
+ *             base_url: string}} */
+IPython.NotebookStruct;
+
+
+
 /**
- * @param {string} url
- * @param {KernelOptions|undefined} opt_options
+ * @param {IPython.NotebookStruct} notebook
+ * @param {{kernel_host: string}} options
  * @constructor
  */
+IPython.Session = function(notebook, options) {};
 
-/**
- * @type {string}
- */
-IPython.Kernel.prototype.base_url = '';
+/** @param {function()} callback */
+IPython.Session.prototype.start = function(callback) {};
 
-/***/
-IPython.Kernel.prototype.interrupt = function() {};
+/** @type {IPython.Kernel} */
+IPython.Session.prototype.kernel = null;
 
-/**
- * @type {WebSocket}
- */
-IPython.Kernel.prototype.shell_channel = null;
+/** @type {string} */
+IPython.Session.prototype.kernel_host = '';
+
+
 
 /**
  * @param {string} url
@@ -62,6 +67,15 @@ IPython.Kernel.prototype.shell_channel = null;
  * @constructor
  */
 IPython.Kernel = function(url, opt_options) {};
+
+/** @type {string} */
+IPython.Kernel.prototype.base_url = '';
+
+/***/
+IPython.Kernel.prototype.interrupt = function() {};
+
+/** @type {WebSocket} */
+IPython.Kernel.prototype.shell_channel = null;
 
 /***/
 IPython.Kernel.prototype.kill = function() {};
@@ -76,11 +90,6 @@ IPython.Kernel.prototype.restart = function() {};
 IPython.Kernel.prototype.running = false;
 
 /**
- * @param {string} id
- */
-IPython.Kernel.prototype.start = function(id) {};
-
-/**
  * @param {string} code
  * @param {IPython.KernelCallbacks=} callbacks
  * @param {IPython.KernelOptions=} options
@@ -89,77 +98,60 @@ IPython.Kernel.prototype.execute = function(code, callbacks, options) {};
 
 /**
  * @param {string} code
- * @param {IPython.KernelCallbacks=} callbacks
+ * @param {function({ content: IPython.ObjectInfoReply })} callback
  */
-IPython.Kernel.prototype.object_info_request = function(code, callbacks) {};
+IPython.Kernel.prototype.object_info = function(code, callback) {};
 
-/**
- * @param {JsonObject|string} reply
- */
+/** @param {JsonObject|string} reply */
 IPython.Kernel.prototype.send_input_reply = function(reply) {};
-
 
 /**
  * @param {string} code
  * @param {number} position
- * @param {IPython.KernelCallbacks=} callbacks
+ * @param {function({content: IPython.CompleterReply})} callback
  */
-IPython.Kernel.prototype.complete = function(code, position, callbacks) {};
+IPython.Kernel.prototype.complete = function(code, position, callback) {};
+
 
 
 /**
  * @constructor
+ * @struct
  */
+IPython.ExecuteReply = function() {
+  /** @type Array.< {source: string, text: string} > */
+  this.payload = null;
+  /** @type {number} */
+  this.execution_count = 0;
+};
+
+
+
+/** @constructor */
 IPython.KernelCallbacks = function() {};
 
-
-/**
- * @type {function(string)}
- */
+/** @type {function(string)} */
 IPython.KernelCallbacks.prototype.execute_reply = function(content) {};
 
-
-/**
- * @type {function(IPython.CompleterReply=)}
- */
-IPython.KernelCallbacks.prototype.complete_reply = function(content) {};
-
-/**
- * @type {function(string, Object)}
- */
+/** @type {function(string, Object)}*/
 IPython.KernelCallbacks.prototype.output = function(s, o) {};
 
-/**
- * @type {function()}
- */
+/** @type {function()} */
 IPython.KernelCallbacks.prototype.clear_output = function() {};
 
-/**
- * @type {function(string)} s
- */
+/** @type {function(string)} s */
 IPython.KernelCallbacks.prototype.set_next_input = function(s) {};
 
-/**
- * @type {function(IPython.ObjectInfoReply=)} s
- */
-IPython.KernelCallbacks.prototype.object_info_reply = function(s) {};
 
 
-/**
- * @constructor
- */
+/** @constructor */
 IPython.ObjectInfoReply = function() {};
 
-/**
- * @type {string}
- */
+/** @type {string} */
 IPython.ObjectInfoReply.prototype.docstring = '';
 
-/**
- * @type {string}
- */
+/** @type {string} */
 IPython.ObjectInfoReply.prototype.init_docstring = '';
-
 
 /** @type {string}  */
 IPython.ObjectInfoReply.prototype.init_definition = '';
@@ -167,7 +159,7 @@ IPython.ObjectInfoReply.prototype.init_definition = '';
 /** @type {string}  */
 IPython.ObjectInfoReply.prototype.definition = '';
 
-// Many more are avaiable in ObjectInfoReply see kernel.js
+
 
 /**
  * @struct
@@ -182,8 +174,7 @@ IPython.CompleterReply = function() {
 };
 
 /**
- * @constructor
- * @struct
+ * @struct @constructor
  */
 IPython.KernelOptions = function() {
   /** @type {?boolean}; */
@@ -227,6 +218,8 @@ IPython.OutputArea.prototype.append_mime_type = function(a, b, c) {};
  */
 IPython.OutputArea.prototype.append_javascript = function(js, md, container) {};
 
+/***/
+IPython.utils = {};
 
 /**
  * @param {string} data

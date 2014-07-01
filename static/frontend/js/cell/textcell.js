@@ -48,7 +48,7 @@ colab.cell.TextCell.prototype.updateMarkdown_ = function() {
     var text = this.editor_.getText();
 
     if (text == '') {
-      text = 'Double-click to edit';
+      text = 'Double-click (or enter) to edit';
     }
     var text_and_math = IPython.mathjaxutils.remove_math(text);
     text = text_and_math[0];

@@ -2,46 +2,534 @@
  *
  * @fileoverview Functions for dealing with Google Drive.
  *
+ * TODO(colab-team): Move NotebookModel out of drive into notebookModel.js.
+ *     Deal with circular dependencies.
  */
 
 goog.provide('colab.drive');
-goog.provide('colab.drive.Permissions');
+goog.provide('colab.drive.NotebookModel');
 
+goog.require('colab.Error');
 goog.require('colab.app');
+goog.require('colab.error');
+goog.require('colab.filepicker');
+goog.require('colab.nbformat');
 goog.require('goog.Promise');
-goog.require('goog.format.JsonPrettyPrinter');
+goog.require('goog.array');
+goog.require('goog.dom');
+goog.require('goog.events');
+goog.require('goog.ui.Dialog');
+
 
 /**
- * Specifies edit and interaction permissions for the notebook.
+ * A wrapper for a Notebook model object.
+ * TODO(kestert): This is part of a larger refactoring process.  Right
+ * now the object is just a wrapper, but refactoring will move most of
+ * the logic related to Google Drive interaction inside this class.
  *
- * @param {boolean} editable Document is editable.
- * @param {boolean} opt_commentable Document allows commenting
+ * @param {string} fileId Google Drive File Id of file
  * @constructor
  */
-colab.drive.Permissions = function(editable, opt_commentable) {
-  this.editable_ = editable;
-  this.commentable_ = opt_commentable;
+colab.drive.NotebookModel = function(fileId) {
+  /** @private {string} */
+  this.fileId_ = fileId;
+
+  /** @private {gapi.drive.realtime.Document} */
+  this.document_ = null;
+
+  /** @private {boolean} */
+  this.isDirty_ = false;
+
+  /** @private {boolean} */
+  this.isClosing_ = false;
+
+  /** @private {boolean} */
+  this.isClosed_ = false;
+
+  /** @private {number} */
+  this.numFailedSaveAttempts_ = 0;
+
+  /** @private {string} */
+  this.offlineTitle_ = '';
+
+  /** @private {boolean} */
+  this.offlineTitleChangePending_ = false;
+
+  /** @private {colab.drive.Permissions} */
+  this.permissions_ = null;
+
+  /** @private {string} */
+  this.fileDriveUrl_ = '';
+
+  /**
+   * @private {boolean} Whether the realtime doc is shared with anyone.
+   * For security reasons, this is assumed true by default.
+   */
+  this.isShared_ = true;
 };
 
 /**
- * @return {boolean} true if notebook can be edited
+ * @return {string} The Google Drive File Id of this notebook
  */
-colab.drive.Permissions.prototype.isEditable = function() {
-  return this.editable_;
+colab.drive.NotebookModel.prototype.getFileId = function() {
+  return this.fileId_;
 };
 
 /**
- * @return {boolean} true if notebook can be commented on
+ * @return {gapi.drive.realtime.Document} The Realtime document.
  */
-colab.drive.Permissions.prototype.isCommentable = function() {
-  return !!(this.editable_ || this.commentable_);
+colab.drive.NotebookModel.prototype.getDocument = function() {
+  return this.document_;
 };
+
+/**
+ * @return {colab.drive.Permissions} Permissions of the notebook
+ */
+colab.drive.NotebookModel.prototype.getPermissions = function() {
+  return this.permissions_;
+};
+
+/**
+ * @return {boolean} Whether the document is shared by other users.
+ */
+colab.drive.NotebookModel.prototype.isShared = function() {
+  return this.isShared_;
+};
+
+/**
+ * @return {string} The URL to open the file in the Google Drive web interface.
+ */
+colab.drive.NotebookModel.prototype.fileDriveUrl = function() {
+  return this.fileDriveUrl_;
+};
+
+/**
+ * @return {Object} A realtime object that acts as a sentinel for comments
+ *    changes.
+ */
+colab.drive.NotebookModel.prototype.getCommentSentinel = function() {
+  var model = this.document_.getModel();
+  if (!model.getRoot().get('sentinel')) {
+    model.getRoot().set('sentinel',
+                        model.createList([new Date().toISOString()]));
+  }
+
+  return model.getRoot().get('sentinel');
+};
+
+/**
+ * Starts listening for model changes to mark document as dirty, for the
+ * purpose of autosave.
+ */
+colab.drive.NotebookModel.prototype.setModelChangeListener = function() {
+  var that = this;
+  this.document_.getModel().getRoot().addEventListener(
+      gapi.drive.realtime.EventType.OBJECT_CHANGED,
+      function(event) {
+        var root = that.document_.getModel().getRoot();
+        if (event.target == root.get('metadata')) {
+          // Changes to metadata don't constitute changes to a document
+          return;
+        }
+        if (!event.isLocal) {
+          // Not local changes are handled by others. Don't mark outselves
+          // dirty.
+          return;
+        }
+        that.isDirty_ = true;
+      });
+};
+
+/**
+ * Gets the title of the document
+ * @return {string} title of the document.
+ */
+colab.drive.NotebookModel.prototype.getTitle = function() {
+  if (!this.document_) {
+    return this.offlineTitle_;
+  }
+  var model = this.document_.getModel();
+  var title = model.getRoot().get('title');
+  if (title && title.getText) {
+    var title_text = title.getText();
+  }
+  title_text = title_text || this.offlineTitle_;
+  title_text = title_text || colab.drive.NEW_NOTEBOOK_TITLE;
+  return title_text;
+};
+
+/**
+ * Sets the title of the document
+ * @param {string} newTitle new file name.
+ */
+colab.drive.NotebookModel.prototype.setTitle = function(newTitle) {
+  var model = this.document_.getModel();
+  if (model.isReadOnly) { return; }
+  var title = colab.drive.createTitle(model);
+  if (!title) return;
+  title.setText(newTitle);
+};
+
+/**
+ * registers a listener to receive updates when title changes.
+ * Does nothing if there is no realtime doc attached.
+ * @param {function(string)} handler listener that receives title.
+ */
+colab.drive.NotebookModel.prototype.onTitleChange = function(handler) {
+  if (!this.document_) return;
+  var title = colab.drive.createTitle(this.document_.getModel());
+  if (title && title.addEventListener) {
+    title.addEventListener(
+       gapi.drive.realtime.EventType.OBJECT_CHANGED,
+       function(event) {
+         handler(event.target.getText());
+       });
+  }
+};
+
+/**
+ * @param {gapi.client.drive.files.Resource} resource
+ * @private
+ */
+colab.drive.NotebookModel.prototype.updateDocumentMetadata_ =
+    function(resource) {
+  this.fileDriveUrl_ = resource.alternateLink;
+  this.offlineTitle_ = colab.drive.getTitleFromMetadataResponse_(resource);
+  // if shared is absent or not false, assume shared.
+  this.isShared_ = !(resource.shared == false);
+};
+
+/**
+ * @param {gapi.client.drive.files.Resource} response
+ * @param {gapi.drive.realtime.Error} error
+ * @param {function(gapi.drive.realtime.Error)} closure
+ * @private
+ */
+colab.drive.NotebookModel.prototype.handleReadOnlyDocument_ =
+    function(response, error, closure) {
+  // TODO(kestert): refactor to use colab.Error class.
+  var new_error = /** @type {gapi.drive.realtime.Error} */ ({
+    'message': 'This file was not created via coLab. Its' +
+      ' metadata needs to be modified for realtime support. <br> <br>' +
+      ' Please ask the owner to open this file in ' +
+      ' colab so it can be set up properly.' +
+      ' It will remain compatible with ipynb and it will be compatible ' +
+      ' with readonly viewers. <br/>' +
+      ' Alternatively you can clone this file through menu.',
+    'original_error': error });
+  this.offlineTitle_ = colab.drive.getTitleFromMetadataResponse_(response);
+  this.fileDriveUrl_ = response.alternateLink;
+  closure(new_error);
+};
+
+/**
+ * Handle realtime error after document has loaded
+ * @param {gapi.drive.realtime.Error} error The realtime error that occured.
+ * @private
+ */
+colab.drive.NotebookModel.prototype.handleRealtimeError_ = function(error) {
+  console.error(error);
+
+  // Don't display anything if the document is already closing
+  if (this.isClosing_) return;
+
+  if (error.isFatal) {
+    var reason = 'The realtime API gave the following error: ' + error.message +
+        '.  You must reload this document.';
+    colab.onDocumentInvalidation('Fatal Realtime API Error', reason);
+    return;
+  }
+
+  if (error.type === gapi.drive.realtime.ErrorType.TOKEN_REFRESH_REQUIRED) {
+    // In app mode, token should be refreshed by the parent window,
+    // so something has gone wrong if we get to here
+    if (colab.app.appMode) {
+      // TODO(kestert): inform user that token need to be refreshed.
+      return;
+    }
+
+    // Attempt to refresh token
+    colab.drive.authorize(function() {}, function(reason) {
+      colab.onDocumentInvalidation('Failed to get an OAuth token',
+          'See console for details.');
+      console.log(reason);
+    });
+  }
+};
+
+/**
+ * Checks if the document is readonly, and if so returns appropriate
+ * message into callback. Otherwise passes error into calblack
+ *
+ * @private
+ * @param {gapi.drive.realtime.Error} error
+ * @param {function(gapi.drive.realtime.Error)} closure
+ */
+colab.drive.NotebookModel.prototype.checkIfReadOnly_ =
+    function(error, closure) {
+  var that = this;
+  gapi.client.drive.files.get({ 'fileId': this.fileId_ })
+      .execute(function(response) {
+    if (response && !response.error && !response.editable) {
+      that.handleReadOnlyDocument_(response, error, closure);
+    } else {
+     closure(error);
+    }
+  });
+};
+
+/**
+ * Opens a new window with drive viwer for the current document
+ *
+ */
+colab.drive.NotebookModel.prototype.openDriveViewer = function() {
+  window.open(this.fileDriveUrl_);
+};
+
+
+/**
+ * Forces saving of a document to offline format into fileId
+ *
+ * @param {function(Object)} onSave success handler. response is null
+ *   if save was not needed
+ * @param {function(?)} onError error handler
+ * @param {Object=} opt_params extra parameters.
+ * @private
+ */
+colab.drive.NotebookModel.prototype.saveInternal_ = function(onSave, onError,
+    opt_params) {
+  var that = this;
+  // If parameters are provided, force saving.
+  if (!this.isDirty_ && !opt_params) {
+    onSave(null);
+    return;
+  }
+
+  var model = this.document_.getModel();
+  var data = colab.nbformat.convertRealtimeToJsonNotebook(this.getTitle(),
+      model);
+  var newTitle = this.getTitle();
+  this.offlineTitleChangePending_ = this.offlineTitle_ != newTitle;
+  var metadata = {
+    'title': this.offlineTitleChangePending_ ? newTitle : undefined,
+    'description': 'IP[y] file',
+    'mimeType': colab.drive.NEW_NOTEBOOK_MIMETYPE
+  };
+
+  colab.drive.uploadToDrive(data, metadata, function(response) {
+    that.isDirty_ = false;
+    that.numFailedSaveAttempts_ = 0;
+
+    var oldTitle = colab.drive.offlineTitle;
+    that.updateDocumentMetadata_(response);
+    if (colab.drive.offlineTitle != oldTitle) {
+      console.log('Updating title due external change: new title ',
+                  colab.drive.offlineTitle, 'old title: ', oldTitle);
+      if (!that.offlineTitleChangePending_) {
+        // Only update if it is not our change.
+        // Since if it our change, user might be typing right now...
+        that.setTitle(that.offlineTitle_);
+      }
+    }
+
+    onSave(response);
+  }, onError, this.fileId_, opt_params);
+};
+
+
+/**
+ * Loads a realtime document from Google Drive.
+ *
+ * @param {function()} onLoad callback for
+ *    successful load.  This function is
+ *     passed a single argument, which is the realtime document that has been
+ *     loaded.
+ * @param {function(Object)} onError callback for an error loading the document.
+ * callback for a realtime error after the document has loaded.
+ */
+colab.drive.NotebookModel.prototype.load = function(onLoad, onError) {
+  var that = this;
+
+  var onLoadCallback = function(document) {
+    that.document_ = document;
+    var model = document.getModel();
+    // We have a newly created notebook, so initialize by loading the Drive
+    // file.
+    var request = gapi.client.drive.files.get({ 'fileId': that.fileId_ });
+
+    var isReadOnly = model.isReadOnly;
+    that.permissions_ = new colab.drive.Permissions(!isReadOnly, !isReadOnly);
+
+    request.execute(function(response) {
+      if (!response || response['error']) {
+        onError(new colab.error.GapiError(response ? response['error'] : null));
+        return;
+      }
+
+      var resource = /** @type {gapi.client.drive.files.Resource} */ (response);
+
+      that.updateDocumentMetadata_(resource);
+      // The offline title takes priority, since it might have changed.
+      that.setTitle(that.offlineTitle_);
+      // If notebook has cells, this indicates that the realtime doc hasn't
+      // been newly created or created as a result of invalidation.  Therefore
+      // there is no need to load from the underlying file.
+      if (model.getRoot().get('cells') != null) {
+        colab.drive.createModelUUID(model, that.fileId_);
+        onLoad();
+        return;
+      }
+
+      // Sends request to load file to drive.
+      var token = gapi.auth.getToken()['access_token'];
+      var xhrRequest = new XMLHttpRequest();
+      xhrRequest.open('GET', response['downloadUrl'], true);
+      xhrRequest.setRequestHeader('Authorization', 'Bearer ' + token);
+      xhrRequest.onreadystatechange = function(e) {
+        if (xhrRequest.readyState == 4) {
+          if (xhrRequest.status == 200) {
+            colab.nbformat.convertJsonNotebookToRealtime(
+                xhrRequest.responseText, model);
+            // Create a UUID for this notebook, and store it in both the
+            // realtime doc and the file's metadata.
+            colab.drive.createModelUUID(model, that.fileId_);
+            onLoad();
+          } else {
+            console.error(xhrRequest);
+            onError(xhrRequest);
+          }
+        }
+      };
+      xhrRequest.send();
+    });
+  };
+
+  // This is needed in the error handler passed to gapi.drive.realtime.load,
+  // in order to determine whether the error occurs during the load or not.
+  var isLoaded = false;
+
+  colab.drive.driveApiReady.then(function() {
+    gapi.drive.realtime.load(that.fileId_, function(document) {
+      isLoaded = true;
+      onLoadCallback(document);
+    }, function() {}, function(error) {
+      if (!isLoaded) {
+        colab.drive.checkIfReadOnly_(that.fileId_, error, onError);
+      } else {
+        that.handleRealtimeError_(error);
+      }
+    });
+  }, function(reason) {
+    onError(/** @type {Object} */(reason));
+  });
+};
+
+
+/**
+ * Saves the realtime Document to a Google Drive file in ipynb format.
+ *
+ * This will save to drive, even if the file on Drive has been overwritten
+ * by another app.  However, all versions will be available on Drive through
+ * the revisions manager.
+ *
+ * @param {function(Object)} onSave callback for successful save.
+ *     null if save is not needed.
+ * @param {function(Object)} onError callback for an error loading the document.
+ * @param {Object} opt_params parameters for upload (currently
+ *   supported 'pinned')
+ */
+colab.drive.NotebookModel.prototype.save =
+    function(onSave, onError, opt_params) {
+  if (this.isClosed_) {
+    onSave(null);
+  }
+  var userOnError = onError;
+  onError = function(reason) {
+    this.numFailedSaveAttempts_++;
+    userOnError(reason);
+  };
+
+  this.saveInternal_(onSave, onError, opt_params);
+};
+
+
+/**
+ * Clones the document, and calls onSuccess or opt_onError
+ * upon completion.
+ * @param {function(Object)} onSuccess takes response object
+ * @param {function(colab.Error)=} opt_onError takes response object, if
+ *    not provided, just logs the error on the console
+ */
+colab.drive.NotebookModel.prototype.clone = function(onSuccess, opt_onError) {
+  var body = {
+    'title': 'Copy of ' + goog.dom.getElement('doc-name').value,
+    'parents': [{'id': colab.drive.rootFolderId }]
+  };
+  var request = gapi.client.drive.files.copy({
+    'fileId': this.fileId_,
+    'resource': body
+  });
+  request.execute(function(response) {
+    if (!response || response['error']) {
+      if (opt_onError) {
+        opt_onError(
+            new colab.error.GapiError(response ? response['error'] : null));
+      } else {
+        console.error(response);
+      }
+      return;
+    }
+    onSuccess(response);
+  });
+};
+
+
+/**
+ * Closes the document
+ * @param {function(Object=)=} callback takes opt_response object or undefined
+ */
+colab.drive.NotebookModel.prototype.close = function(callback) {
+  // TODO(sandler): should we chain callback?
+  if (this.isClosing_) return;
+  colab.notification.showPrimary('Closing \'' +
+      colab.drive.offlineTitle + '\'', -1);
+  this.isClosing_ = true;
+  var handler = function(response) {
+    if (response && response.error) {
+      console.log(response);
+      // Fall through, since we still need to close
+    }
+
+    if (this.document_) {
+      this.document_.close();
+    }
+    colab.notification.clearPrimary();
+    this.isClosed_ = true;
+    this.isClosing_ = false;
+    if (callback) {
+      callback();
+    }
+  };
+  if (!this.document_ || this.isClosed_) {
+    handler(null);
+    return;
+  }
+  this.save(handler, handler);
+};
+
+
 
 /**
  * Name of newly created notebook files.
  * @type {string}
  */
-colab.drive.NEW_NOTEBOOK_TITLE = 'Untitled.ipynb';
+colab.drive.NEW_NOTEBOOK_TITLE = 'Untitled';
+
+/**
+ * Extension for notebook files.
+ * @type {string}
+ */
+colab.drive.NOTEBOOK_EXTENSION = 'ipynb';
 
 
 /**
@@ -66,7 +554,7 @@ colab.drive.FILE_SCOPE = 'https://www.googleapis.com/auth/drive';
  * This client is from the same project that is used by chromeapp
  * https://console.developers.google.com/project/apps~windy-ellipse-510/apiui/credential
  */
-colab.drive.NEW_CLIENT_ID = '911569945122-hpps2slo3mri3uk7lpc032vfudausme9'
+colab.drive.NEW_CLIENT_ID = '911569945122-hpps2slo3mri3uk7lpc032vfudausme9' +
     '.apps.googleusercontent.com';
 
 /**
@@ -96,11 +584,6 @@ colab.drive.CLIENT_ID = colab.params.getHashParams().legacyClient ?
  * @type {string}
  */
 colab.APP_ID = '26410270374';
-
-
-/** @private {goog.format.JsonPrettyPrinter} */
-colab.drive.JSON_FORMATTER_ = new goog.format.JsonPrettyPrinter(
-     null /* use default to make js compiler happy */);
 
 
 /**
@@ -144,39 +627,22 @@ colab.drive.apiLoaded = new goog.Promise(function(resolve, reject) {
 });
 
 /**
- * @type {goog.Promise}
- */
-colab.drive.userInfoLoaded = new goog.Promise(function(resolve, reject) {
-  colab.drive.clientLoaded.then(function() {
-    gapi.client.load('plus', 'v1', resolve);
-  });
-});
-
-/**
  * @type {gapi.client.plus.PeopleGetResponse}
  */
 colab.drive.myInfo = null;
 
-/**
- * @type {goog.Promise}
- */
-colab.drive.userInfoPromise = new goog.Promise(function(resolve, reject) {
-  colab.drive.userInfoLoaded.then(function() {
+colab.drive.clientLoaded.then(function() {
+  gapi.client.load('plus', 'v1', function() {
     colab.drive.authorized.then(function() {
-    var request = gapi.client.plus.people.get({
+      var request = gapi.client.plus.people.get({
        'userId' : 'me'
       });
-    request.execute(function(json) {
-      var resp = /** @type {gapi.client.plus.PeopleGetResponse} */(json);
-      if (resp.error) {
-       reject(resp.error);
-       return;
-      }
-      resolve(resp);
-      colab.drive.myInfo = resp;
+      request.execute(function(response) {
+        colab.drive.myInfo =
+            /** @type {gapi.client.plus.PeopleGetResponse} */ (response);
+      });
     });
-   });
-  }, reject);
+  });
 });
 
 /**
@@ -194,16 +660,16 @@ colab.drive.authorize = function(onSuccess, onFailure, opt_withPopup) {
       'scope': ['email', colab.drive.FILE_SCOPE],
       'immediate': !opt_withPopup
     }, function(response) {
-      if (response && !response['error']) {
-        onSuccess();
-      } else {
+      if (!response || response['error']) {
         if (opt_withPopup) {
-          console.error(response);
-          onFailure(response['error'] || '');
+          onFailure(response ? response['error'] : null);
         } else {
           colab.drive.authorize(onSuccess, onFailure, true);
         }
+        return;
       }
+
+      onSuccess();
     });
   };
 
@@ -269,29 +735,6 @@ colab.drive.authorized = new goog.Promise(function(resolve, reject) {
 colab.drive.driveApiReady = goog.Promise.all(
     [colab.drive.apiLoaded, colab.drive.authorized]);
 
-
-/**
- * Resolver whose promise is fullfilled when the realtime doc's file ID
- * is known.
- *
- * @type {goog.promise.Resolver}
- */
-colab.drive.fileId = goog.Promise.withResolver();
-
-/**
- * contains fileID if available. Use only when it is guaranteed
- * that file has been resolved.
- */
-colab.drive.fileIdIfAvailable = undefined;
-
-/**
- * Contains url of the file on drive
- * @type {goog.promise.Resolver}
- */
-colab.drive.fileDriveUrl = goog.Promise.withResolver();
-
-
-
 /**
  * @type {?string}
  */
@@ -311,55 +754,14 @@ colab.drive.driveApiReady.then(function() {
   });
 });
 
-
-/**
- * Opens a new window with drive viwer for the current document
- *
- */
-colab.drive.openDriveViewer = function() {
-  colab.drive.fileDriveUrl.promise.then(function(url) {
-    window.open(url);
-  });
-};
-
-/**
- * Clones current document, and calls onSuccess or opt_onError
- * upon completion.
- * @param {function(Object)} onSuccess takes response object
- * @param {function(Object)=} opt_onError takes response object, if
- *    not provided, just logs the error on the console
- */
-colab.drive.cloneDocument = function(onSuccess, opt_onError) {
-  colab.drive.fileId.promise.then(function(fileId) {
-    var body = {
-      'title': 'Copy of ' + goog.dom.getElement('doc-name').value,
-      'parents': [{'id': colab.drive.rootFolderId }]
-    };
-    var request = gapi.client.drive.files.copy({
-      'fileId': fileId,
-      'resource': body
-    });
-    request.execute(function(resp) {
-      if (resp.error) {
-        if (opt_onError) {
-          opt_onError(resp);
-        } else {
-          console.error(resp);
-        }
-        return;
-      }
-      onSuccess(resp);
-    });
-  });
-};
-
 /**
  * Uploads a notebook to Drive, either creating a new one or saving an
  * existing one.
  *
  * @param {string} data The file contents as a string
  * @param {Object} metadata File metadata
- * @param {function(Object)} onSuccess callback for success
+ * @param {function(gapi.client.drive.files.Resource)} onSuccess callback for
+ *     success
  * @param {function(?):?} onError callback for error, takes response object
  * @param {string=} opt_fileId file Id.  If false, a new file is created.
  * @param {Object?} opt_params
@@ -397,28 +799,70 @@ colab.drive.uploadToDrive = function(data, metadata, onSuccess, onError,
       'body': body
     });
     request.execute(function(response) {
-      if (response && !response.error) {
-        var res = /** @type {gapi.client.drive.files.Resource} */ (response);
-        var oldTitle = colab.drive.offlineTitle;
-        colab.drive.updateDocumentMetadata(res);
-        if (colab.drive.offlineTitle != oldTitle) {
-          console.log('Updating title due external change: new title ',
-              colab.drive.offlineTitle, 'old title: ', oldTitle);
-          if (!colab.drive.offlineTitleChangePending &&
-              colab.globalRealtimeDoc) {
-            // Only update if it is not our change.
-            // Since if it our change, user might be typing right now...
-            colab.drive.setTitle(colab.drive.offlineTitle);
-          }
-        }
-        onSuccess(/** @type {Object} */ (response));
-      } else {
-        onError(/** @type {Object} */ (response || null));
+      if (!response || response['error']) {
+        onError(new colab.error.GapiError(response ? response['error'] : null));
+        return;
       }
+
+      onSuccess(/** @type {gapi.client.drive.files.Resource} */ (response));
     });
   }, onError);
 };
 
+/**
+ * Obtains the filename that should be used for a new file in a given folder.
+ * This is the next file in the series Untitled0, Untitled1, ... in the given
+ * drive folder.  As a fallback, returns Untitled.
+ *
+ * @param {function(string)} callback Called with the name for the new file.
+ * @param {string=} opt_folderId optinal Drive folder Id to search for
+ *     filenames.  Uses root, if none is specified.
+ */
+colab.drive.getNewFilename = function(callback, opt_folderId) {
+  /** @type {string} */
+  var folderId = opt_folderId || 'root';
+  var query = 'title contains \'' + colab.drive.NEW_NOTEBOOK_TITLE + '\'' +
+      ' and \'' + folderId + '\' in parents' +
+      ' and trashed = false';
+  var request = gapi.client.drive.files.list({
+    'maxResults': 1000,
+    'folderId' : folderId,
+    'q': query
+  });
+
+  request.execute(function(response) {
+    // Use 'Untitled.ipynb' as a fallback in case of error
+    var fallbackFilename = colab.drive.NEW_NOTEBOOK_TITLE + '.' +
+        colab.drive.NOTEBOOK_EXTENSION;
+    if (!response || response['error']) {
+      callback(fallbackFilename);
+      return;
+    }
+
+    var files = response['items'] || [];
+    var existingFilenames = goog.array.map(files, function(filesResource) {
+      return filesResource['title'];
+    });
+
+    // Loop over file names Untitled0, ... , UntitledN where N is the number of
+    // elements in existingFilenames.  Select the first file name that does not
+    // belong to existingFilenames.  This is guaranteed to find a file name
+    // that does not belong to existingFilenames, since there are N + 1 file
+    // names tried, and existingFilenames contains N elements.
+    for (var i = 0; i <= existingFilenames.length; i++) {
+      /** @type {string} */
+      var filename = colab.drive.NEW_NOTEBOOK_TITLE + i + '.' +
+          colab.drive.NOTEBOOK_EXTENSION;
+      if (existingFilenames.indexOf(filename) == -1) {
+        callback(filename);
+        return;
+      }
+    }
+
+    // Control should not reach this point, so an error has occured
+    callback(fallbackFilename);
+  });
+};
 
 /**
  * Creates a new Notebook file in Drive, and calls either onSuccess, with
@@ -432,159 +876,26 @@ colab.drive.uploadToDrive = function(data, metadata, onSuccess, onError,
  * @param {string=} opt_folderId optional Drive folder ID to create file in.
  */
 colab.drive.createNewNotebook = function(onSuccess, onError, opt_folderId) {
-  var name = colab.drive.NEW_NOTEBOOK_TITLE;
-  var parents = [];
-  if (opt_folderId) {
-    parents.push({id: opt_folderId});
-  }
-
-  // String containing file contents for a new notebook.
-  var data = colab.drive.convertRealtimeToNotebook();
-
-  var metadata = {
-    'parents': parents,
-    'title': name,
-    'description': 'IP[y] file',
-    'mimeType': colab.drive.NEW_NOTEBOOK_MIMETYPE
-  };
-  colab.drive.uploadToDrive(data, metadata, onSuccess, onError);
-};
-
-
-/**
- * Convert Notebook json from file format to in memory format. Mutates the input
- * argument.
- *
- * @param {JsonObject} json_nb The json object read from the notebook file.
- *   Changed by the function.
- */
-colab.drive.convertFromIpynbFormat = function(json_nb) {
-  var multiline_outputs = {
-    'text': 0,
-    'html': 0,
-    'svg': 0,
-    'latex': 0,
-    'javascript': 0,
-    'json': 0
-  };
-
-  // Implements functionality of IPython.nbformat.v3.rwbase.rejoin_lines
-  var nb = /** @type {NotebookFormat.Notebook} */ (json_nb);
-  for (var i = 0; i < nb.worksheets.length; i++) {
-    var ws = nb.worksheets[i];
-    for (var j = 0; j < ws['cells'].length; j++) {
-      var cell = ws.cells[j];
-      if (cell.cell_type === 'code') {
-        if ('input' in cell && Array.isArray(cell.input)) {
-          cell.input = cell.input.join('');
-        }
-        for (var k = 0; k < cell.outputs.length; k++) {
-          var output = cell.outputs[k];
-          for (var key in multiline_outputs) {
-            if (key in output && Array.isArray(output[key])) {
-              output[key] = output[key].join('');
-            }
-          }
-        }
-      } else {
-        for (var key in {'source': 0, 'rendered': 0}) {
-          if (key in cell && Array.isArray(cell[key])) {
-            cell[key] = cell[key].join('');
-          }
-        }
-      }
+  colab.drive.getNewFilename(function(newFilename) {
+    var parents = [];
+    if (opt_folderId) {
+      parents.push({id: opt_folderId});
     }
-  }
+
+    // String containing file contents for a new notebook.
+    var data = colab.nbformat.createEmptyJsonNotebook(newFilename);
+
+    var metadata = {
+      'parents': parents,
+      'title': newFilename,
+      'description': 'IP[y] file',
+      'mimeType': colab.drive.NEW_NOTEBOOK_MIMETYPE,
+      'colabVersion': colab.nbformat.COLAB_VERSION
+    };
+    colab.drive.uploadToDrive(data, metadata, onSuccess, onError);
+  }, opt_folderId);
 };
 
-
-/**
- * Takes in notebook file content and saves it in the realtime model.
- *
- * @param {string} fileContents A string containing the notebook file contents.
- * @param {gapi.drive.realtime.Model} model The Realtime root model object.
- */
-colab.drive.convertNotebookToRealtime = function(fileContents, model) {
-  /** @type {NotebookFormat.Notebook} */
-  var json = /** @type {NotebookFormat.Notebook} */ (goog.json.parse(
-      fileContents));
-  var worksheets = json.worksheets;
-  var metadata = json.metadata; //
-  colab.drive.convertFromIpynbFormat(json);
-  // This is initialized from filename.
-  // colab.drive.setTitle(metadata['name'], model);
-
-  var cellFromJson = function(json) {
-    var cell = model.createMap();
-    if (json['cell_type'] == 'code') {
-      cell.set('type', 'code');
-      cell.set('text', model.createString(json['input']));
-      cell.set('outputs', model.createList(json['outputs']));
-    } else {
-      cell.set('type', 'text');
-      cell.set('text', model.createString(json['source']));
-    }
-    return cell;
-  };
-
-  var cells = model.createList();
-  for (var i = 0; i < worksheets.length; i++) {
-    cells.pushAll(
-        goog.array.map(worksheets[i]['cells'], cellFromJson));
-  }
-  metadata = model.createMap();
-  model.getRoot().set('cells', cells);
-  model.getRoot().set('metadata', metadata);
-};
-
-
-/**
- * Takes a realtime model and returns a corresponding notebook file.
- * If no realtime model is provided, return an empty notebook file.
- *
- * @param {gapi.drive.realtime.Model} opt_model The Realtime root model object.
- * @return {string} Notebook file as string
- */
-colab.drive.convertRealtimeToNotebook = function(opt_model) {
-  var cellToJson = function(cell) {
-    var json = {};
-    var type = cell.get('type');
-    if (type === 'code') {
-      json['cell_type'] = 'code';
-      json['input'] = cell.get('text').getText();
-      json['outputs'] = cell.get('outputs').asArray();
-      json['language'] = 'python';
-    } else {
-      json['cell_type'] = 'markdown'; // backwards compatibility with IPython
-      json['source'] = cell.get('text').getText();
-    }
-    return json;
-  };
-
-  var cells = [];
-  var name = colab.drive.NEW_NOTEBOOK_TITLE;
-  if (opt_model) {
-    cells = goog.array.map(opt_model.getRoot().get('cells').asArray(),
-                           cellToJson);
-    name = colab.drive.getTitle(opt_model);
-  } else {
-    cells.push({
-      'cell_type': 'code',
-      'input': '',
-      'outputs': [],
-      'language': 'python'
-    });
-  }
-
-  var data = {
-    'worksheets': [{'cells' : cells}],
-    'metadata': {'name': name},
-    'nbformat': 3,
-    'nbformat_minor': 0
-  };
-
-  return colab.drive.JSON_FORMATTER_.format(data);
-};
 
 /**
  * Creates a UUID (if the realtime doc doesn't have one already)
@@ -608,7 +919,7 @@ colab.drive.createModelUUID = function(model, fileId)  {
         'resource': {'key': 'UUID', 'value': uuid, 'visibility': 'PUBLIC'}
     });
     request.execute(function(response) {
-      if (!response || response.error) {
+      if (!response || response['error']) {
         console.log('Error saving UUID to file');
       }
     });
@@ -637,8 +948,8 @@ colab.drive.checkModelUUID = function(model, fileId, onFoundUUIDs, onError) {
     'visibility': 'PUBLIC'
   });
   request.execute(function(response) {
-    if (!response || response.error) {
-      onError(response);
+    if (!response || response['error']) {
+      onError(new colab.error.GapiError(response ? response['error'] : null));
       return;
     }
 
@@ -660,8 +971,9 @@ colab.drive.getTitleFromMetadataResponse_ = function(response) {
  * @param {gapi.client.drive.files.Resource} response
  * @param {gapi.drive.realtime.Error} error
  * @param {function(gapi.drive.realtime.Error)} closure
+ * @private
  */
-colab.drive.handleReadOnlyDocument = function(fileId, response, error,
+colab.drive.handleReadOnlyDocument_ = function(fileId, response, error,
     closure) {
   var new_error = /** @type {gapi.drive.realtime.Error} */ ({
     'message': 'This file was not created via coLab. Its' +
@@ -674,8 +986,7 @@ colab.drive.handleReadOnlyDocument = function(fileId, response, error,
     'original_error': error });
   colab.drive.offlineTitle = colab.drive.getTitleFromMetadataResponse_(
       response);
-  colab.drive.fileDriveUrlIfPresent = response.alternateLink;
-  colab.drive.fileDriveUrl.resolve(response.alternateLink);
+  colab.drive.fileDriveUrl_ = response.alternateLink;
   closure(new_error);
 };
 
@@ -691,7 +1002,7 @@ colab.drive.handleReadOnlyDocument = function(fileId, response, error,
 colab.drive.checkIfReadOnly_ = function(fileId, error, closure) {
   gapi.client.drive.files.get({ 'fileId': fileId }).execute(function(response) {
     if (response && !response.error && !response.editable) {
-      colab.drive.handleReadOnlyDocument(fileId,
+      colab.drive.handleReadOnlyDocument_(fileId,
          response, error, closure);
     } else {
      closure(error);
@@ -699,251 +1010,6 @@ colab.drive.checkIfReadOnly_ = function(fileId, error, closure) {
   });
 };
 
-/**
- * Whether the realtime doc is shared with anyone
- * Assume default state is shared
- */
-
-colab.drive.documentShared = true;
-/**
- * @param {gapi.client.drive.files.Resource} resource
- */
-colab.drive.updateDocumentMetadata = function(resource) {
-  colab.drive.fileDriveUrlIfPresent = resource.alternateLink;
-  colab.drive.offlineTitle = colab.drive.getTitleFromMetadataResponse_(
-      resource);
-  // if shared is absent or not false, assume shared.
-  colab.drive.documentShared = !(resource.shared == false);
-};
-
-
-
-/**
- * Loads a realtime document from Google Drive.
- *
- * @param {string} fileId The file ID to load.
- * @param {function(gapi.drive.realtime.Document)} onLoad callback for
- *    successful load.  This function is
- *     passed a single argument, which is the realtime document that has been
- *     loaded.
- * @param {function(Object)} onError callback for an error loading the document.
- * @param {function(gapi.drive.realtime.Error)} onRealtimeError
- * callback for a realtime error after the document has loaded.
- */
-colab.drive.loadDocument = function(fileId, onLoad, onError, onRealtimeError) {
-
-  var onLoadCallback = function(document) {
-    var model = document.getModel();
-    // We have a newly created notebook, so initialize by loading the Drive
-    // file.
-    var request = gapi.client.drive.files.get({ 'fileId': fileId });
-
-    request.execute(function(response) {
-      if (response.error) {
-        console.error(response.error);
-        onError(response.error);
-        return;
-      }
-      var resource = /** @type {gapi.client.drive.files.Resource} */ (response);
-
-      colab.drive.updateDocumentMetadata(resource);
-      // The offline title takes priority, since it might have changed.
-      colab.drive.setTitle(colab.drive.offlineTitle, model);
-      colab.drive.fileDriveUrl.resolve(response['alternateLink']);
-      // If notebook has cells, this indicates that the realtime doc hasn't
-      // been newly created or created as a result of invalidation.  Therefore
-      // there is no need to load from the underlying file.
-      if (model.getRoot().get('cells') != null) {
-        colab.drive.createModelUUID(model, fileId);
-        onLoad(document);
-        return;
-      }
-
-      // Sends request to load file to drive.
-      var token = gapi.auth.getToken()['access_token'];
-      var xhrRequest = new XMLHttpRequest();
-      xhrRequest.open('GET', response['downloadUrl'], true);
-      xhrRequest.setRequestHeader('Authorization', 'Bearer ' + token);
-      xhrRequest.onreadystatechange = function(e) {
-        if (xhrRequest.readyState == 4) {
-          if (xhrRequest.status == 200) {
-            colab.drive.convertNotebookToRealtime(xhrRequest.responseText,
-                model);
-            // Create a UUID for this notebook, and store it in both the
-            // realtime doc and the file's metadata.
-            colab.drive.createModelUUID(model, fileId);
-            onLoad(document);
-          } else {
-            console.error(xhrRequest);
-            onError(xhrRequest);
-          }
-        }
-      };
-      xhrRequest.send();
-    });
-  };
-
-  // This is needed in the error handler passed to gapi.drive.realtime.load,
-  // in order to determine whether the error occurs during the load or not.
-  var isLoaded = false;
-
-  colab.drive.driveApiReady.then(function() {
-    gapi.drive.realtime.load(fileId, function(document) {
-      isLoaded = true;
-      onLoadCallback(document);
-    }, function() {}, function(error) {
-      if (!isLoaded) {
-        colab.drive.checkIfReadOnly_(fileId, error, onError);
-      } else {
-        onRealtimeError(error);
-      }
-    });
-  }, function(reason) {
-    onError(/** @type {Object} */(reason));
-  });
-};
-
-/**
- * Contains whether realtime doc has diverged from underlying doc
- * @type {boolean}
- */
-colab.drive.isDirty = false;
-
-/**
- * If true, the document is closed and can't be accessed anymore
- * basically the only way to recover from this is to reload the page
- * @type {boolean}
- */
-colab.drive.isClosed = false;
-
-/**
- * Forces saving of a document to offline format into fileId
- *
- * @param {string} fileId drive file id
- * @param {Object} document realtimeDoc
- * @param {function(Object)} onSave success handler. response is null
- *   if save was not needed
- * @param {function(?)} onError error handler
- * @param {Object=} opt_params extra parameters.
- */
-colab.drive.saveDocumentInternal = function(fileId,
-    document, onSave, onError, opt_params) {
-  // If parameters are provided, force saving.
-  if (!colab.drive.isDirty && !opt_params) {
-    onSave(null);
-    return;
-  }
-
-  var data = colab.drive.convertRealtimeToNotebook(document.getModel());
-  var newTitle = colab.drive.getTitle(document.getModel());
-  /** @type {boolean} */
-  colab.drive.offlineTitleChangePending = colab.drive.offlineTitle != newTitle;
-  var metadata = {
-    'title': colab.drive.offlineTitleChangePending ? newTitle : undefined,
-    'description': 'IP[y] file',
-    'mimeType': colab.drive.NEW_NOTEBOOK_MIMETYPE
-  };
-
-  colab.drive.uploadToDrive(data, metadata, function(response) {
-    colab.drive.isDirty = false;
-    colab.drive.numFailedSaveAttempts = 0;
-    onSave(response);
-  }, onError, fileId, opt_params);
-};
-
-/**
- * Contains number of failed save attempts since last succesful saveDocument
- */
-colab.drive.numFailedSaveAttempts = 0;
-
-/**
- * Saves a realtime Document to a Google Drive file in ipynb format.
- *
- * This will save to drive, even if the file on Drive has been overwritten
- * by another app.  However, all versions will be available on Drive through
- * the revisions manager.
- *
- * @param {Object} document The realtime docuemnt.
- * @param {function(Object)} onSave callback for successful save.
- *    null if save is not needed.
- * @param {function(Object)} onError callback for an error loading the document.
- * @param {Object} opt_params parameters for upload (currently
- *   supported 'pinned')
- */
-colab.drive.saveDocument = function(document, onSave, onError, opt_params) {
-  if (colab.drive.isClosed) {
-    onSave(null);
-  }
-  var userOnError = onError;
-  onError = function(reason) {
-    colab.drive.numFailedSaveAttempts++;
-    userOnError(reason);
-  };
-
-  colab.drive.fileId.promise.then(function(fileId) {
-    colab.drive.saveDocumentInternal(fileId, document, onSave,
-        onError, opt_params);
-  });
-};
-
-
-/**
- * @type {string}
- */
-colab.drive.offlineTitle = '';
-
-/**
- * Get name of current file
- * @param {gapi.drive.realtime.Model} opt_model model to use to get the data.
- * If not provided uses globalRealTimeDoc.
- * @return {string} title of the document.
- */
-colab.drive.getTitle = function(opt_model) {
-  var doc = colab.globalRealtimeDoc;
-  if (!doc && !opt_model) {
-    return colab.drive.offlineTitle;
-  }
-  var model = opt_model || doc.getModel();
-  var title = model.getRoot().get('title');
-  if (title && title.getText) {
-    var title_text = title.getText();
-  }
-  title_text = title_text || colab.drive.offlineTitle;
-  title_text = title_text || colab.drive.NEW_NOTEBOOK_TITLE;
-  return title_text;
-};
-
-/**
- * registers a listener to receive updates when title changes.
- * Does nothing if there is no realtime doc attached.
- * @param {function(string)} handler listener that receives title.
- */
-colab.drive.onTitleChange = function(handler) {
-  if (!colab.globalRealtimeDoc) return;
-  var title = colab.drive.createTitle(colab.globalRealtimeDoc.getModel());
-  if (title && title.addEventListener) {
-    title.addEventListener(
-       gapi.drive.realtime.EventType.OBJECT_CHANGED,
-       function(event) {
-         handler(event.target.getText());
-       });
-  }
-};
-
-/**
- * Sets the  name of current file.
- *
- * @param {string} newTitle new file name.
- * @param {gapi.drive.realtime.Model?} opt_model model to use to get the data.
- * If not provided uses realtimeDoc.getModel()
- */
-colab.drive.setTitle = function(newTitle, opt_model) {
-  var model = opt_model || colab.globalRealtimeDoc.getModel();
-  if (model.isReadOnly) { return; }
-  var title = colab.drive.createTitle(model);
-  if (!title) return;
-  title.setText(newTitle);
-};
 
 /**
  * Creates title element
@@ -962,138 +1028,29 @@ colab.drive.createTitle = function(model) {
 };
 
 /**
- * @type {gapi.drive.share.ShareClient}
+ * This is the notebook created in the promise below.  It should be avoided
+ * and eventually removed, but it is useful to have the notebook object
+ * in case the load process failed so the promise below is not fullfilled.
  */
-colab.drive.shareClient_;
+colab.drive.globalNotebook = null;
 
 /**
- * Open share dialog for the document.
- */
-colab.drive.shareDocument = function() {
-  colab.drive.fileId.promise.then(function(fileId) {
-    if (!colab.drive.shareClient_) {
-      colab.drive.shareClient_ = new gapi.drive.share.ShareClient(colab.APP_ID);
-    }
-    var shareClient = colab.drive.shareClient_;
-    shareClient.setItemIds([fileId]);
-    shareClient.showSettingsDialog();
-    colab.drive.validateSharingDialog();
-  });
-};
-
-/**
- * Keeps interval task for validation dialog
- * @type {number}
- */
-colab.drive.validationDialogTask = 0;
-
-/**
- * Validates that sharing dialog present itself.
- */
-colab.drive.validateSharingDialog = function() {
-  var SHARING_FAILED_CSS_PATH = 'body > ' +
-     'div > div:contains("Sorry, sharing is unavailable")';
-
-  var count = 0;
-  if (colab.drive.validationDialogTask) {
-    clearInterval(colab.drive.validationDialogTask);
-    colab.drive.validationDialogTask = 0;
-  }
-  var fileViewerUrl = colab.drive.fileDriveUrlIfPresent;
-  var failedHtml = (
-      'Sorry, sharing from the app is unavailable at this time.<br/> <br/>' +
-      'If you are signed in under multiple accounts (eg personal and work), ' +
-      'it is likely that you are bitten by a Drive Api bug (' +
-      '<a href="https://b.corp.google.com/issue?id=13139246">b/13139246</a>).' +
-      '<br/><br/>As a workaround use Drive Viewer (' +
-      '<b><a href="' + fileViewerUrl + '" target=_blank>Click To Open</a></b>)'
-  );
-  var check = function() {
-    count += 1;
-    var failed = jQuery(SHARING_FAILED_CSS_PATH);
-    if (failed.size()) {
-      failed.html(failedHtml);
-      // Can't clear interval, because otherwise this
-      // fails on sequential 'share' clicks (since element
-      // already exists and is not cleanly removed. It is not that
-      // terrible overhead and happens rarely.
-      // TODO(sandler): fix as needed
-      // clearInterval(colab.drive.validationDialogTask);
-      // return;
-    }
-    if (count > 100) { // 300 * 100 = ~30 seconds
-      console.log('Sharing validation finished');
-      clearInterval(colab.drive.validationDialogTask);
-      // Done here.
-    }
-  };
-  colab.drive.validationDialogTask = setInterval(check, 300);
-};
-
-
-/**
- * Handle realtime error after document has loaded
- * @param {gapi.drive.realtime.Error} error The realtime error that occured.
- */
-colab.drive.handleRealtimeError = function(error) {
-  console.error(error);
-  if (error.isFatal) {
-    var reason = 'The realtime API gave the following error: ' + error.message +
-        '.  You must reload this document.';
-    colab.onDocumentInvalidation('Fatal Realtime API Error', reason);
-    return;
-  }
-
-  if (error.type === gapi.drive.realtime.ErrorType.TOKEN_REFRESH_REQUIRED) {
-    // In app mode, token should be refreshed by the parent window,
-    // so something has gone wrong if we get to here
-    if (colab.app.appMode) {
-      // TODO(kestert): inform user that token need to be refreshed.
-      return;
-    }
-
-    // Attempt to refresh token
-    colab.drive.authorize(function() {}, function(reason) {
-      colab.onDocumentInvalidation('Failed to get an OAuth token',
-          'See console for details.');
-      console.log(reason);
-    });
-  }
-};
-
-/**
- * Promise fullfilled with realtime Doc when it is loaded.
+ * Promise fullfilled with Notebook object when it is loaded.
  * The constructor attempts to load or create the realtime document based on
  * the hash parameters of this window.
  *
- * @type {goog.Promise}
+ * @type {goog.Promise.<colab.drive.NotebookModel>}
  */
-colab.drive.document = new goog.Promise(function(resolve, reject) {
+colab.drive.notebook = new goog.Promise(function(resolve, reject) {
   var params = colab.params.getHashParams();
 
   var load = function(fileId) {
-    colab.drive.fileId.resolve(fileId);
-    colab.drive.fileIdIfAvailable = fileId;
-
-    colab.drive.loadDocument(fileId, function(document) {
-      colab.globalRealtimeDoc = document;
-      colab.globalRealtimeDoc.getModel().getRoot().addEventListener(
-         gapi.drive.realtime.EventType.OBJECT_CHANGED,
-         function(event) {
-           var root = colab.globalRealtimeDoc.getModel().getRoot();
-           if (event.target == root.get('metadata')) {
-             // Changes to metadata don't constitute changes to a document
-             return;
-           }
-           if (!event.isLocal) {
-             // Not local changes are handled by others. Don't mark outselves
-             // dirty.
-             return;
-           }
-           colab.drive.isDirty = true;
-        });
-      resolve(document);
-    }, reject, colab.drive.handleRealtimeError);
+    var notebook = new colab.drive.NotebookModel(fileId);
+    colab.drive.globalNotebook = notebook;
+    notebook.load(function() {
+      notebook.setModelChangeListener();
+      resolve(notebook);
+    }, reject);
   };
 
   if (params.fileId) {
@@ -1103,55 +1060,26 @@ colab.drive.document = new goog.Promise(function(resolve, reject) {
     load(params.fileId);
   } else if (params.create) {
     console.log('Creating new notebook in Google Drive.');
-    colab.drive.createNewNotebook(function(response) {
-      var fileId = response.id;
-      // Change hash param to correspond to newly created notebook, preserving
-      // all hash params except those used to create the file.
-      // NOTE: this doesn't cause reload because we stay on same page
-      delete params['create'];
-      delete params['folderId'];
-      params['fileId'] = fileId;
-      window.location.hash = '#' + colab.params.encodeParamString(params);
-      load(fileId);
-    }, reject, params.folderId);
+    colab.drive.driveApiReady.then(function() {
+      colab.drive.createNewNotebook(function(response) {
+        var fileId = response.id;
+        // Change hash param to correspond to newly created notebook
+        // NOTE: this doesn't cause reload because we stay on same page
+        window.location.hash = '#' + colab.params.encodeParamString(
+            {fileId: fileId});
+        load(fileId);
+      }, reject, params.folderId);
+    });
   } else if (params.fileIds) { // redirect to drive
     colab.params.redirectToNotebook({fileId: params.fileIds});
     load(params.fileIds);
   } else if (window.location.search.indexOf('state=') >= 0) {
     window.location.pathname = '/v2/drive';
   } else { // redirect to main page.
-    window.location.href = '/v2/';
+    colab.drive.authorized.then(function() {
+      colab.filepicker.selectFileAndReload();
+    });
+    //window.location.href = '/v2/';
   }
 });
 
-/**
- * Closes the current document
- * @param {function(Object=)=} callback takes opt_response object or undefined
- */
-colab.drive.close = function(callback) {
-  // TODO(sandler): should we chain callback?
-  if (colab.drive.isClosing) return;
-  colab.notification.showPrimary('Closing \'' +
-      colab.drive.offlineTitle + '\'', -1);
-  colab.drive.isClosing = true;
-  var handler = function(response) {
-    if (response && response.error) {
-      console.log(response);
-      // Fall through, since we still need to close
-    }
-    if (colab.globalRealtimeDoc) {
-      colab.globalRealtimeDoc.close();
-    }
-    colab.notification.clearPrimary();
-    colab.drive.isClosed = true;
-    colab.drive.isClosing = false;
-    if (callback) {
-      callback();
-    }
-  };
-  if (!colab.globalRealtimeDoc || colab.drive.isClosed) {
-    handler(null);
-    return;
-  }
-  colab.drive.saveDocument(colab.globalRealtimeDoc, handler, handler);
-};

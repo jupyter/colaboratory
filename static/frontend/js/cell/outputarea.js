@@ -58,11 +58,21 @@ colab.cell.OutputArea.prototype.setHeaderContent = function(executionInfo) {
   if (executionInfo) {
     var headerContent = goog.dom.getElementByClass('output-header-content',
         this.getElement());
+    // These two strings are used for code which was run with earlier formats
+    var dateString = executionInfo['date'] || '';
+    var timeString = executionInfo['time'] || '';
 
+    if (executionInfo['timestamp']) {
+      var ts = goog.date.DateTime.fromTimestamp(executionInfo['timestamp']);
+      dateString = goog.string.format('(%s GMT) %s',
+        ts.getTimezoneOffsetString(),
+        ts.date.toDateString());
+      timeString = ts.toIsoTimeString();
+    }
     var timeElem = goog.dom.createDom('span', 'output-header-content-time',
-        executionInfo['time']);
+        timeString);
     var dateElem = goog.dom.createDom('span', 'output-header-content-dateuser',
-        executionInfo['date'] + ' by ' + executionInfo['user']);
+        dateString + ' by ' + executionInfo['user']);
 
     goog.dom.removeChildren(headerContent);
     goog.dom.appendChild(headerContent, timeElem);
@@ -155,6 +165,8 @@ colab.cell.OutputArea.html = '<head>' +
     '<script>' +
     '   IPython  = {};' +
     '   IPython.namespace = function() {};' +
+    '   IPython.keyboard_manager = {};' +
+    '   IPython.keyboard_manager.register_events = function(x) {};' +
     '</script>' +
     '<script src="/static/components/jquery/jquery.min.js"></script>' +
     '<script src="js/raw/colab/cell/outputframe.js"></script>' +
@@ -162,6 +174,12 @@ colab.cell.OutputArea.html = '<head>' +
     '<script src="/static/custom/colabtools.js"></script>' +
     '<script src="/static/js/interactive_widgets.js"></script>' +
     '<script src="/static/notebook/js/outputarea.js"></script>' +
+    '<script>' +
+    '    if (!window[\'colab\']) {' +
+    '        window.parent.postMessage({target:\'notebook\',' +
+    '                                   action:\'load_failed\'}, \'*\');' +
+    '    }' +
+    '</script>' +
     '</head>' +
 
     '<body style="background: white;">' +
@@ -248,7 +266,6 @@ colab.cell.OutputArea.prototype.resizeOutput = function(desiredHeight) {
   if (this.height == desiredHeight) return;
   var heightIncrease = desiredHeight - this.height;
   this.height = desiredHeight;
-
   var enclosingDivHeight = 'initial';
   if (desiredHeight == 0) {
     enclosingDivHeight = 0;
@@ -330,7 +347,6 @@ colab.cell.OutputArea.prototype.handleKernelOutputMessage =
 };
 
 
-
 /**
  * Tries to merge old output with the new one
  * Merge is only possible if msgType is the same and the name
@@ -351,6 +367,7 @@ colab.cell.OutputArea.prototype.tryMerge = function(prevOut, nextOut) {
   nextOut.text = prevOut.text + nextOut.text;
   return true;
 };
+
 
 /**
  * Handle removal of realtime outputs.
@@ -375,6 +392,7 @@ colab.cell.OutputArea.prototype.outputsRemoved_ = function(e) {
   }
 };
 
+
 /**
  * Handle changes to the realtime outputs object.
  *
@@ -390,17 +408,26 @@ colab.cell.OutputArea.prototype.outputsChanged_ = function(e) {
   this.localContent_ = this.localContent_ && e.isLocal;
 
   if (this.iframeLoaded) {
-    var values =
-        /**@type {!gapi.drive.realtime.ValuesAddedEvent} */ (e).values ||
-        /**@type {!gapi.drive.realtime.ValuesSetEvent} */ (e).newValues;
+    var values = 0;
+    var index = 0;
+    if (e.type == gapi.drive.realtime.EventType.VALUES_ADDED) {
+      var event = /** @type {gapi.drive.realtime.ValuesAddedEvent} */ (e);
+      values = event.values;
+      index = event.index;
+    } else if (e.type == gapi.drive.realtime.EventType.VALUES_SET) {
+      var event = /** @type {gapi.drive.realtime.ValuesSetEvent} */ (e);
+      values = event.newValues;
+      index = event.index;
+    }
     // This works because we only append values to the outputs_
     // if we also inserted them in the middle we would need to pass in
     // 'insert' vs. 'update' flag here.
     for (var i = 0; i < values.length; i++) {
-      this.updateOutput_(e.index + i);
+      this.updateOutput_(index + i);
     }
   }
 };
+
 
 /**
  * Convert kernel output to ipynb output. Modified from function in
@@ -419,14 +446,14 @@ colab.cell.OutputArea.prototype.convertKernelOutput_ =
     json['text'] = content['data'];
     json['stream'] = content['name'];
   } else if (msgType === 'display_data') {
-    json = this.convertMimeTypes_(json, content['data']);
-    json['metadata'] = this.convertMimeTypes_(/** @type {JsonObject} */ ({}),
-        content['metadata']);
+    json = content['data'];
+    json['output_type'] = msgType;
+    json['metadata'] = content['metadata'];
   } else if (msgType === 'pyout') {
+    json = content['data'];
     json['prompt_number'] = content['execution_count'];
-    json = this.convertMimeTypes_(json, content['data']);
-    json['metadata'] = this.convertMimeTypes_(/** @type {JsonObject} */({}),
-        content['metadata']);
+    json['output_type'] = msgType;
+    json['metadata'] = content['metadata'];
   } else if (msgType === 'pyerr') {
     json['ename'] = content['ename'];
     json['evalue'] = content['evalue'];
@@ -483,6 +510,7 @@ colab.cell.OutputArea.prototype.convertMimeTypes_ =
   return json;
 };
 
+
 /**
  * Updates a single element of the output iframe to its current value in
  * this.outputs_.  Calling updateOutput_ with an index larger than the number
@@ -493,7 +521,6 @@ colab.cell.OutputArea.prototype.convertMimeTypes_ =
  *   that would be updated on screen.
  * @private
  */
-
 colab.cell.OutputArea.prototype.updateOutput_ = function(outputIndex) {
   if (!(outputIndex < this.outputs_.length)) {
     console.error('Can\'t update non-existent output ' + outputIndex);

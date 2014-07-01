@@ -19,11 +19,29 @@ var sendMessageToNotebook = function(data) {
   window.parent.postMessage(data, '*');
 };
 
-
 /**
  * Namespace for output related utility functions
  */
 colab.output = {};
+
+
+/**
+ * @type {CSSStyleSheet}
+ * @private
+ */
+colab.output.customCss_ = null;
+
+/**
+ * @return {CSSStyleSheet}  custom stylesheet for this area
+ */
+colab.output.customCss = function() {
+  if (colab.output.customCss_) return colab.output.customCss_;
+  var style = document.createElement('style');
+  document.head.appendChild(style);
+  colab.output.customCss_ = style.sheet;
+  return colab.output.customCss_;
+};
+
 
 /**
  * Evals ephemeral script
@@ -90,6 +108,14 @@ colab.output.handlePyerr = function(traceback) {
  */
 colab.output.createOutput = function(helper, output) {
   var outputDiv = jQuery('<div>').addClass(output['output_type']);
+
+  // This code converts from short mimetypes to real mime types may change
+  // in IPython 3.0.
+  output = helper.rename_keys(output, IPython.OutputArea.mime_map_r);
+  output.metadata = helper.rename_keys(output.metadata,
+      IPython.OutputArea.mime_map_r);
+
+
   // display outputs
   switch (output['output_type']) {
     case 'stream':
@@ -108,7 +134,12 @@ colab.output.createOutput = function(helper, output) {
   return outputDiv;
 };
 
+/** @type {boolean} if true, output will be auto resized on dom changes
+ */
+colab.output.autoResize = true;
+
 var resizeOutput = function() {
+  if (!(colab.output.autoResize)) return;
   var now = new Date();
   clearTimeout(colab.output.timer);
   // Don't update more than twice per second.
@@ -127,12 +158,61 @@ var resizeOutput = function() {
   // pixels, don't bother resizing.
   if (height > colab.output.height - 20 &&
       height <= colab.output.height) { return; }
+  colab.output.setOutputHeight(height, true /* keep resizing */);
+};
+
+/**
+ * @param {number} height
+ * @param {boolean} optAutoResize if true, the height might update automatically
+ * in the future, based on dom resizes.
+ */
+colab.output.setOutputHeight = function(height, optAutoResize) {
+  /** @type {number} Contains the saved height of colab output */
   colab.output.height = height;
+  /** @type {boolean} */
+  colab.output.autoResize = !!optAutoResize;
   sendMessageToNotebook({
     action: 'resize_cell_output',
     desiredHeight: height
   });
 };
+
+/**
+ * @param {string} rule of the form cssselector {key: value; ...}
+ */
+colab.output.addCustomCssRule = function(rule) {
+  // we might consider cleaning up the list, but it doesn't seem to be
+  // too important, since outputarea is overwritten regularly,
+  // and new rules will supercede the old, so gains are not
+  // clear.
+  css = colab.output.customCss();
+  var ruleList = css.cssRules;
+  css.insertRule(rule, ruleList.length);
+  setTimeout(resizeOutput, 1);
+};
+
+/**
+ * @param {boolean} wordWrap If true, stream/pyout will be wrapped.
+ */
+colab.output.setWordWrap = function(wordWrap) {
+ var s = wordWrap ?
+     'pre { white-space : pre-wrap;  word-break: break-all; }' :
+     'pre { white-space: pre; word-break: initial;} ';
+ colab.output.addCustomCssRule(s);
+};
+
+
+/**
+ * @param {string} type one of ipython output types
+ * (display_data, pyout, pyerr, stream)
+ * @param {boolean} visible
+ */
+colab.output.setOutputVisibility = function(type, visible) {
+  var display = visible ? 'initial' : 'none';
+  var rule = 'div.' + type + ' { display: ' + display + '; }';
+  colab.output.addCustomCssRule(rule);
+};
+
 
 window.addEventListener('load', function() {
   var domObserver = new MutationObserver(function(event, obs) {
