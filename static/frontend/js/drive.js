@@ -1063,10 +1063,13 @@ colab.drive.notebook = new goog.Promise(function(resolve, reject) {
     colab.drive.driveApiReady.then(function() {
       colab.drive.createNewNotebook(function(response) {
         var fileId = response.id;
-        // Change hash param to correspond to newly created notebook
+        // Change hash param to correspond to newly created notebook, preserving
+        // all hash params except those used to create the file.
         // NOTE: this doesn't cause reload because we stay on same page
-        window.location.hash = '#' + colab.params.encodeParamString(
-            {fileId: fileId});
+	delete params['create'];
+	delete params['folderId'];
+	params['fileId'] = fileId;
+	window.location.hash = '#' + colab.params.encodeParamString(params);
         load(fileId);
       }, reject, params.folderId);
     });
@@ -1082,4 +1085,3 @@ colab.drive.notebook = new goog.Promise(function(resolve, reject) {
     //window.location.href = '/v2/';
   }
 });
-

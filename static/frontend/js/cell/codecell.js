@@ -295,7 +295,7 @@ colab.cell.CodeCell.prototype.enterDocument = function() {
   }
   this.updateFormView_();
 
-  // handles the view for the cell to that view
+  // handles the view for the cell to that view
   // add form if this is editable
   if (this.permissions.isEditable()) {
     // add update for forms

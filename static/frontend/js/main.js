@@ -9,6 +9,7 @@ goog.provide('colab.globalNotebook');
 
 goog.require('colab.Header');
 goog.require('colab.Notebook');
+goog.require('colab.PNaClKernel');
 goog.require('colab.Preferences');
 goog.require('colab.app');
 goog.require('colab.dialog');
@@ -231,14 +232,18 @@ window.addEventListener('load', function() {
 
       // load kernel (default to localhost, and store in cookie 'kernelUrl')
       if (!goog.net.cookies.containsKey('kernelUrl')) {
-        var kernelUrl = 'https://127.0.0.1:8888';
+        var kernelUrl = 'https://127.0.0.1:8888/';
         if (colab.app.appMode) {
           // If in app mode, connect to in-browser kernel by default
           kernelUrl = colab.IN_BROWSER_KERNEL_URL;
         }
         goog.net.cookies.set('kernelUrl', kernelUrl, 10000);
       }
-      colab.loadKernelFromUrl(goog.net.cookies.get('kernelUrl') || '');
+      if (colab.app.appMode) {
+        colab.loadPNaClKernel();
+      } else {
+        colab.loadKernelFromUrl(goog.net.cookies.get('kernelUrl') || '');
+      }
 
       // set up the header: docname input, menubar, toolbar, share button
       colab.setupHeader(notebook);
@@ -255,14 +260,12 @@ window.addEventListener('load', function() {
       colab.setupHeader(null);
       console.log(err);
     }
-    colab.recordAnalytics(notebook, error);
 
   }, function(reason) {
     // Displays error to user on failure
     colab.dialog.displayError('Error creating/loading document.', reason);
     colab.setupHeader(null);
     loading.clear();
-    colab.recordAnalytics(null, /** @type {Object} */ (reason));
   });
 });
 
@@ -490,9 +493,31 @@ colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
 
 
 /**
+ * Launch a new PNaCl IPython kernel.
+ */
+colab.loadPNaClKernel = function() {
+  if (colab.globalKernel) {
+    colab.globalKernel.kill();
+    colab.globalKernel.stop_channels();
+  }
+
+  // Waits for promise (of parent window details) before starting kernel
+  // if in app mode, otherwise immediately starts kernel.
+  colab.appKernelDetails.then(function(details) {
+    colab.globalKernel = new colab.PNaClKernel(details.source, details.origin);
+    colab.globalKernel.start();
+  });
+};
+
+
+/**
  * Dialog box for connecting to a kernel backend.
  */
 colab.openKernelDialogBox = function() {
+  if (colab.app.appMode) {
+    colab.loadPNaClKernel();
+    return;
+  }
   var dialog = new goog.ui.Dialog();
   dialog.setDisposeOnHide(true);
 
