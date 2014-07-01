@@ -32,7 +32,6 @@ goog.require('goog.ui.ToolbarSeparator');
 goog.require('goog.ui.ToolbarToggleButton');
 goog.require('goog.ui.menuBar');
 goog.require('goog.ui.menuBarDecorator');
-goog.require('userfeedback.api');
 
 /**
  * Setup coLaboratory header.
