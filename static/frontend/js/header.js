@@ -9,7 +9,9 @@ goog.provide('colab.Header');
 
 goog.require('colab.dialog');
 goog.require('colab.filepicker');
+goog.require('colab.nbformat');
 goog.require('colab.notification');
+goog.require('colab.share');
 
 goog.require('goog.Promise');
 goog.require('goog.dom');
@@ -21,7 +23,6 @@ goog.require('goog.ui.MenuItem');
 goog.require('goog.ui.Option');
 goog.require('goog.ui.SelectionModel');
 goog.require('goog.ui.Separator');
-goog.require('goog.ui.SubMenu');
 goog.require('goog.ui.Toolbar');
 goog.require('goog.ui.ToolbarButton');
 goog.require('goog.ui.ToolbarMenuButton');
@@ -31,18 +32,19 @@ goog.require('goog.ui.ToolbarSeparator');
 goog.require('goog.ui.ToolbarToggleButton');
 goog.require('goog.ui.menuBar');
 goog.require('goog.ui.menuBarDecorator');
+goog.require('userfeedback.api');
 
 /**
  * Setup coLaboratory header.
- * @param {Object} document the current realtime document.
- * @param {colab.drive.Permissions} permissions Drive permissions
+ * @param {colab.drive.NotebookModel} notebook the current realtime document.
  */
-colab.setupHeader = function(document, permissions) {
+colab.setupHeader = function(notebook) {
+  var permissions = notebook.getPermissions();
   // add the divs to change document name and authorize to share
-  colab.initDocumentNameInput(permissions);
+  colab.initDocumentNameInput(notebook);
 
   // create a menubar
-  colab.createMenubar(document, permissions);
+  colab.createMenubar(notebook);
 
   if (permissions) {
     // create a toolbar
@@ -54,7 +56,7 @@ colab.setupHeader = function(document, permissions) {
     var shareButton = goog.dom.getElement('share');
     goog.style.setElementShown(shareButton, true);
     shareButton.onclick = function() {
-      colab.drive.shareDocument();
+      colab.share.shareDocument(notebook);
     };
 
     // activate comments button
@@ -64,22 +66,16 @@ colab.setupHeader = function(document, permissions) {
 };
 
 /**
- * The main menu UI component
- * @type {Object}
- */
- colab.Header.mainMenu = goog.Promise.withResolver();
-
-/**
  * Create the main menu menubar.
- * @param {Object} document the current realtime document.
- * @param {colab.drive.Permissions} permissions
+ * @param {colab.drive.NotebookModel} notebook the current realtime document.
  */
-colab.createMenubar = function(document, permissions) {
+colab.createMenubar = function(notebook) {
+  var permissions = notebook.getPermissions();
+
   var menubarElement = goog.dom.getElement('top-menubar');
   goog.style.setElementShown(menubarElement, true);
   var menubar = goog.ui.decorate(menubarElement);
-  colab.Header.mainMenu.resolve(menubar);
-  if (!document || (permissions && !permissions.isEditable())) {
+  if (!permissions.isEditable()) {
     menubar.getChild('edit-menu-button').setEnabled(false);
     menubar.getChild('run-menu-button').setEnabled(false);
     menubar.getChild('backend-menu-button').setEnabled(false);
@@ -91,17 +87,20 @@ colab.createMenubar = function(document, permissions) {
   goog.events.listen(menubar, goog.ui.Component.EventType.ACTION, function(e) {
     switch (e.target.getId()) {
       case 'save-menuitem':
+        // TODO(kestert): either we should call a method of
+        // colab.drive.NotebookModel, or we should be passing
+        // in a colab.Notebook object.
         colab.globalNotebook.saveNotebook();
         return;
 
       case 'share-menuitem':
-        colab.drive.shareDocument();
+        colab.share.shareDocument(notebook);
         break;
       case 'clone-menuitem':
         colab.close(function() {
           colab.notification.showPrimary(
             'Creating a copy...', -1);
-          colab.drive.cloneDocument(function(response) {
+          notebook.clone(function(response) {
             colab.notification.showPrimary('Done');
             window.location.hash = colab.params.existingNotebookHash(
               response.id);
@@ -115,11 +114,8 @@ colab.createMenubar = function(document, permissions) {
         break;
 
       case 'new-menuitem':
-        // TODO(sandler): It would have been nice
-        // if we didn't have to reload, and instead just
-        // restart inplace.
-        window.location.hash = colab.params.newNotebookHash();
-        colab.reload();
+        var tab = window.open(colab.params.getNewNotebookUrl(), '_blank');
+        tab.focus();
         break;
 
       case 'open-menuitem':
@@ -127,11 +123,7 @@ colab.createMenubar = function(document, permissions) {
         break;
 
       case 'viewindrive-menuitem':
-        colab.drive.openDriveViewer();
-        break;
-
-      case 'openlocalfs-menuitem':
-        colab.filepicker.selectLocalFile();
+        notebook.openDriveViewer();
         break;
 
       case 'clear-outputs-menuitem':
@@ -162,12 +154,12 @@ colab.createMenubar = function(document, permissions) {
         colab.globalNotebook.runAfter();
         break;
 
-      //TODO(kayur): there probably has to be a better way to do this
       case 'download-ipynb-menuitem':
         var a = goog.dom.createElement('a');
         var name = goog.dom.getElement('doc-name').value;
-        var data = colab.drive.convertRealtimeToNotebook(
-            colab.globalRealtimeDoc.getModel());
+        var data = colab.nbformat.convertRealtimeToJsonNotebook(
+            colab.drive.globalNotebook.getTitle(),
+            colab.drive.globalNotebook.getDocument().getModel());
         a.href = window.URL.createObjectURL(new Blob([data]));
 
         // get filename and remove extention(s)
@@ -190,20 +182,18 @@ colab.createMenubar = function(document, permissions) {
         colab.openKernelDialogBox();
         break;
 
-      //TODO(kayur): show add new bug instead of list of open bugs?
       case 'report-bug-menuitem':
         window.open('https://b.corp.google.com/createIssue?component=102164',
             'Colab Bugs');
         break;
       case 'send-feedback-menuitem':
-      //userfeedback.api.startFeedback({productId: 101049});
+        userfeedback.api.startFeedback({productId: 101049});
         break;
 
       case 'shortcuts-menuitem':
         colab.globalNotebook.displayShortcutHelp();
       default:
-// Removed as other menu items may be added by custom code
-//        console.error('Unknown menu item ' + e.target.getContent());
+        console.error('Unknown menu item ' + e.target.getContent());
     }
   });
 };
@@ -220,7 +210,6 @@ colab.createToolbar = function(permissions) {
   // add toolbar
   var toolbarElement = goog.dom.getElement('top-toolbar');
   goog.style.setElementShown(toolbarElement, true);
-
 
   var toolbar = new goog.ui.Toolbar();
   toolbar.decorate(toolbarElement);
@@ -249,10 +238,10 @@ colab.createToolbar = function(permissions) {
 
   var buttonElement = jQuery('#backend-connect-toolbar-button')
       .children().children();
+
   // TODO(kayur): The code below is horrible. Make it less horrible.
   // jQuery command for listening to kernel messages
-
-  jQuery([IPython.events]).on(IPythonInterface.KERNEL_STARTED_EVENT, function() {
+  jQuery([IPython.events]).on('status_started.Kernel', function() {
     buttonElement.text('Connected');
     goog.dom.classes.addRemove(
         goog.dom.getElement('backend-connect-toolbar-button'),
@@ -310,22 +299,24 @@ colab.createToolbar = function(permissions) {
 
 /**
  * Set up document input for setting and getting document name in drive.
- * @param {colab.drive.Permissions} permissions Drive permissions
+ * @param {colab.drive.NotebookModel} notebook The notebook
  */
-colab.initDocumentNameInput = function(permissions) {
+colab.initDocumentNameInput = function(notebook) {
+  var permissions = notebook.getPermissions();
+
   var element = goog.dom.getElement('doc-name');
   if (permissions && permissions.isEditable()) {
     element.disabled = false;
     // Sets up change listener to change title
     var setRemote = function() {
-      colab.drive.setTitle(element.value);
+      notebook.setTitle(element.value);
     };
     element.onkeyup = setRemote;
     element.onchange = setRemote;
   } else {
     element.disabled = true;
   }
-  var title = colab.drive.getTitle();
+  var title = notebook.getTitle();
   var setLocal = function(title) {
     document.title = title;
     if (element.value != title) {
@@ -333,5 +324,5 @@ colab.initDocumentNameInput = function(permissions) {
     }
   };
   setLocal(title);
-  colab.drive.onTitleChange(setLocal);
+  notebook.onTitleChange(setLocal);
 };

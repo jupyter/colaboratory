@@ -15,18 +15,20 @@ goog.require('goog.dom');
  */
 colab.updateCollaborators = function() {
   var collaboratorsDiv = goog.dom.getElement('collaborators');
-  var collaboratorsList = colab.globalRealtimeDoc.getCollaborators();
+  var collaboratorsList = colab.drive.globalNotebook.getDocument()
+      .getCollaborators();
 
   colab.populateCollaboratorsDiv(collaboratorsDiv, collaboratorsList, 4);
 };
 
 /**
  * Update collaborators list.
- * @param {gapi.drive.realtime.CollaboratorLeftEvent} ev
+ * @param {gapi.drive.realtime.BaseModelEvent} ev
  */
 colab.collaboratorLeft = function(ev) {
+  var event = /** @type {gapi.drive.realtime.CollaboratorLeftEvent} */ (ev);
   colab.updateCollaborators();
-  colab.globalNotebook.removeCollaborator(ev.collaborator);
+  colab.globalNotebook.removeCollaborator(event.collaborator);
 };
 
 /**

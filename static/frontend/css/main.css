@@ -35,7 +35,7 @@
 /**
  * Page
  */
-#content {
+.notebook-content {
   margin: 5px 60px;
   padding: 30px 20px 200px 12px;
   min-width: 600px;
@@ -72,5 +72,51 @@ body {
 
 /* for interacrtive tables */
 input.text_filter.search_init {
-    width: 95%;
+  width: 95%;
+}
+
+.bottompane {
+  z-index: 19;
+  position: fixed;
+  width: 100%;
+  bottom: 0;
+}
+
+.bottompane-handle {
+  background: rgb(124, 124, 124);
+  height: 5px;
+  cursor: row-resize;
+}
+
+.bottompane-content {
+  background: white;
+  height: 100%;
+  overflow: auto;
+}
+
+.bottompane-toolbar {
+  text-align: right;
+  background: white;
+  padding-right: 10px;
+  position: absolute;
+  right: 0;
+}
+
+.bottompane-toolbar > button.goog-button {
+  background: white;
+  border: solid black 1px;
+}
+
+.bottompane-toolbar > button.goog-button:hover {
+  background: rgb(124, 124, 124);
+  border: solid black 1px;
+}
+
+.code-help {
+  white-space: pre-wrap;
+  margin: 15px;
+}
+
+body.bottompane-drag {
+ cursor: row-resize;
 }

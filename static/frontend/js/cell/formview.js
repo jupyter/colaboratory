@@ -1,46 +1,55 @@
 /**
- *
- * @fileoverview Description of this file.
- *
- * TODO(kayur): consider adding base Widget class
+ * @fileoverview Classes for paring code and creating interactive forms.
+ * Currently limited to python.
  */
 
 goog.provide('colab.cell.ComboBoxFormWidget');
 goog.provide('colab.cell.FormView');
 goog.provide('colab.cell.SliderFormWidget');
 goog.provide('colab.cell.TextFieldFormWidget');
+goog.provide('colab.cell.TitleFormWidget');
 
 goog.require('goog.array');
 goog.require('goog.dom');
 goog.require('goog.dom.classes');
+goog.require('goog.events.EventType');
+goog.require('goog.style');
+goog.require('goog.ui.Button');
 goog.require('goog.ui.ComboBox');
-goog.require('goog.ui.ComboBoxItem');
 goog.require('goog.ui.Component');
-goog.require('goog.ui.Select');
+goog.require('goog.ui.MenuItem');
 goog.require('goog.ui.Slider');
+
+
 
 /**
  * Class for the form view of the code cell. Creates a form view element
  * and manages it's visiblity.
  *
- * @param {function(string, string)} callback Updates the edtior based on form
- * changes.
+ * @param {function(string, string)} editorCallback Updates the edtior based on
+ *     form changes.
+ * @param {function()} runCallback Executes the code cell.
  * @extends {goog.ui.Component}
  * @constructor
  */
-colab.cell.FormView = function(callback) {
+colab.cell.FormView = function(editorCallback, runCallback) {
   goog.base(this);
 
   /** @private {function(string, string)} Updates the edtior based on form
    *  changes. */
-  this.callback_ = callback;
+  this.editorCallback_ = editorCallback;
+
+  /** @private {function()} */
+  this.runCallback_ = runCallback;
 };
 goog.inherits(colab.cell.FormView, goog.ui.Component);
+
 
 /** @inheritDoc */
 colab.cell.FormView.prototype.createDom = function() {
   this.setElementInternal(goog.dom.createDom('div', 'formview'));
 };
+
 
 /**
  * Sets toggles class that sets expaned mode. Exapnded means the form should
@@ -55,6 +64,7 @@ colab.cell.FormView.prototype.setExpanded = function(value) {
   }
 };
 
+
 /**
  * Sets Element visibility.
  * @param {boolean} value
@@ -63,6 +73,7 @@ colab.cell.FormView.prototype.show = function(value) {
   goog.style.setElementShown(this.getElement(), value);
 };
 
+
 /**
  * Type of widgets that can be parsed and turned into a FormView.
  * @enum {string}
@@ -70,12 +81,43 @@ colab.cell.FormView.prototype.show = function(value) {
 colab.cell.FormView.WidgetType = {
   TEXT: 'text',
   COMBOBOX: 'combo',
-  SLIDER: 'slider'
+  SLIDER: 'slider',
+  TITLE: 'title'
 };
 
+
 /**
- * Parses the code in the code cell to generate form. Currently the code
- * Must be of form x.
+ * Parses the annotations in code comments to generate a form. Code is parsed
+ * as follows. First, the entire block is segmented into lines. Then each line
+ * is parsed to see if it matches any of the following patterns:
+ *
+ *   1. #@title <text> <params>
+ *
+ *      This annotation indicates a title widget. Title widgets are ususally
+ *      created to hide boilerplate code or to provide more context for a form.
+ *      Title widgets must be on the first line of the code block. The
+ *      annotation "#@title Init Notebook" would generate a form with a run
+ *      button, which can be used to execute code, and a div containing the
+ *      text "Init Notebook."
+ *
+ *      Titles can also have parameters. For example the following:
+ *      "#@title Init Notebook { run-button: "false", font-size: "10pt")
+ *      changes the size of the font to 10pt and removes the run button.
+ *
+ *
+ *   2. <var_name> = <var_value> #@param <params>
+ *
+ *      These annotation ares used to parameterize a notebook. There are three
+ *      types of widgets currently supported. TextFeilds, ComboBoxes and
+ *      Sliders. The default type is TextFeild, additional types can be
+ *      defined through parameters. The following are examples of valid
+ *      parameterizations.
+ *
+ *         x = 5 #@param -> generates a TextField
+ *         x = 5 #@param { type: "slider" } -> generates a Slider
+ *         x = 'a' #@param ['a', 'b', 'c'] -> generates a ComboBox
+ *
+ * For more information about parameters see examples notebooks at go/colab
  *
  * @param {string} code The content of the editor.
  */
@@ -85,9 +127,21 @@ colab.cell.FormView.prototype.parseCode = function(code) {
     child.dispose();
   });
 
-  // parse lines
   // TODO(kayur): put regex as class constant.
   var lines = code.split(/[\r\n]+/);
+
+  // if there aren't any lines to parse return
+  if (!lines) {
+    return;
+  }
+
+  // check for title
+  var titleWidget = this.parseTitle_(lines[0]);
+  if (titleWidget != null) {
+    this.addChild(titleWidget, true);
+  }
+
+  // parse lines for variable widgets
   goog.array.forEach(lines, function(line) {
     var formWidget = this.parseLine_(line);
     if (formWidget != null) {
@@ -96,8 +150,12 @@ colab.cell.FormView.prototype.parseCode = function(code) {
   }, this);
 };
 
+
 /**
- * Parses the params string and returns a JSON object.
+ * Parses the params string and returns a JSON object. We try to make the
+ * parameter easier to write and read by humans. This means turning single
+ * quotes into double quotes and turning unquoted parameters into quoted
+ * parameters.
  *
  * @param {string} paramsString Parameters in string form
  * @return {Object}
@@ -105,10 +163,41 @@ colab.cell.FormView.prototype.parseCode = function(code) {
  */
 colab.cell.FormView.prototype.parseParams_ = function(paramsString) {
   try {
-    return /** @type {?Object} */ (JSON.parse(paramsString));
+     var relaxed = paramsString.replace(/'/g, '"');
+     relaxed = relaxed.replace(/(['"])?([a-zA-Z0-9_\-]+)(['"])?:/g, '"$2": ');
+     return /** @type {?Object} */ (JSON.parse(relaxed));
   } catch (e) {
     return null;
   }
+};
+
+
+/**
+ * Parses line and returns title element. Format is as follows:
+ *     #@title <title>
+ *
+ * @param {string} line Line of code
+ * @return {?goog.ui.Component} Title element
+ * @private
+ */
+colab.cell.FormView.prototype.parseTitle_ = function(line) {
+  var matches = /^#@title\s(.*)/.exec(line);
+  if (!matches) {
+    return null;
+  }
+
+  // check to see if there are any parameters
+  var paramsMatches = /(.*)(\{.*)/.exec(matches[1]);
+  var titleText = '';
+  var params = {};
+  if (!paramsMatches) {
+    titleText = matches[1].trim();
+  } else {
+    titleText = paramsMatches[1];
+    params = this.parseParams_(paramsMatches[2]) || {};
+  }
+
+  return new colab.cell.TitleFormWidget(titleText, params, this.runCallback_);
 };
 
 
@@ -119,12 +208,12 @@ colab.cell.FormView.prototype.parseParams_ = function(paramsString) {
  * @return {?goog.ui.Component} Form element
  * @private
  */
-colab.cell.FormView.prototype.parseLine_ = function(line)
-{
+colab.cell.FormView.prototype.parseLine_ = function(line) {
   // TODO(kayur): move to be part part of class
   var matches = /(\w+)\s*=(.*)#\s*@param(.*)/.exec(line);
-  if (!matches)
+  if (!matches) {
     return null;
+  }
 
   // grab name value and params
   var name = matches[1];
@@ -142,8 +231,9 @@ colab.cell.FormView.prototype.parseLine_ = function(line)
   } else if (!params || !params['type']) {
     params = {'type': colab.cell.FormView.WidgetType.TEXT};
   }
-  return colab.cell.newFormWidget(name, value, params, this.callback_);
+  return colab.cell.newFormWidget_(name, value, params, this.editorCallback_);
 };
+
 
 /**
  * Factory method that creates the proper type of widget for a parameter
@@ -151,13 +241,14 @@ colab.cell.FormView.prototype.parseLine_ = function(line)
  *
  * @param {string} name Parameter name
  * @param {string} value Parameter value
- * @param {Object} params Widget parameters. Supports 'type' value
- * These parameters come from external sources, so they should never accessed
- * as properties, only as keys.
+ * @param {Object} params Widget parameters. Supports 'type' value. These
+ *     parameters come from external sources, so they should never accessed
+ *     as properties, only as keys.
  * @param {function(string, string)} callback Function for updating the editor
  * @return {goog.ui.Component} a field widget
+ * @private
  */
-colab.cell.newFormWidget = function(name, value, params, callback) {
+colab.cell.newFormWidget_ = function(name, value, params, callback) {
   switch (params['type'])
   {
     case colab.cell.FormView.WidgetType.SLIDER:
@@ -165,12 +256,13 @@ colab.cell.newFormWidget = function(name, value, params, callback) {
     case colab.cell.FormView.WidgetType.COMBOBOX:
       return new colab.cell.ComboBoxFormWidget(name, value, params, callback);
     case colab.cell.FormView.WidgetType.TEXT:
-      return new colab.cell.TextFieldFormWidget(name, value, params, callback);
+      return new colab.cell.TextFieldFormWidget(name, value, callback);
     default:
       console.error('Can not load unknown form view: ', params['type']);
-      return new colab.cell.TextFieldFormWidget(name, value, {}, callback);
+      return new colab.cell.TextFieldFormWidget(name, value, callback);
   }
 };
+
 
 
 /**
@@ -180,27 +272,21 @@ colab.cell.newFormWidget = function(name, value, params, callback) {
  * @constructor
  * @param {string} name Parameter name
  * @param {string} value Value of the Text Field
- * @param {Object} params Supported keys: type: colab.cell.FormView.WidgetType,
- *     description: string. description of field
  * @param {function(string, string)} callback Callback to the editor on text
- *   field change. First parameter will be 'name' the second 'value'.
+ *     field change. First parameter will be 'name' the second 'value'.
  *
  * @extends {goog.ui.Component}
  */
-colab.cell.TextFieldFormWidget = function(name, value, params, callback) {
+colab.cell.TextFieldFormWidget = function(name, value, callback) {
   goog.base(this);
 
   this.name_ = name;
-  /**
-   * @private
-   * @type {string}
-   */
+  /** @private {string} */
   this.value_ = value;
   this.callback_ = callback;
-
-  this.description_ = params['description'];
 };
 goog.inherits(colab.cell.TextFieldFormWidget, goog.ui.Component);
+
 
 /** @inheritDoc */
 colab.cell.TextFieldFormWidget.prototype.createDom = function() {
@@ -217,14 +303,9 @@ colab.cell.TextFieldFormWidget.prototype.createDom = function() {
   });
   goog.dom.appendChild(element, text);
 
-  if (this.description_) {
-    var description = goog.dom.createDom('div', 'formview-namelabel',
-      this.description_);
-    goog.dom.appendChild(element, description);
-  }
-
   this.setElementInternal(element);
 };
+
 
 /** @inheritDoc */
 colab.cell.TextFieldFormWidget.prototype.enterDocument = function() {
@@ -235,10 +316,12 @@ colab.cell.TextFieldFormWidget.prototype.enterDocument = function() {
   this.getHandler().listen(text, goog.events.EventType.INPUT, function(e) {
     console.log(e);
     widget.callback_(/** @type {string} */ (e.target.name),
-                    /** @type {string} */ (e.target.value));
+                     /** @type {string} */ (e.target.value));
     // refers to the input
   }, false);
 };
+
+
 
 /**
  * Class for creating a combo box in the form view. The domain of the combo
@@ -248,11 +331,9 @@ colab.cell.TextFieldFormWidget.prototype.enterDocument = function() {
  * @param {string} name Parameter name
  * @param {string} value Current value of the combobox
  * @param {Object} params Supported keys: type: colab.cell.FormView.WidgetType,
- *     domain: Array. array of choices
- *     data: Array. array of value-label pairs
- *     selectedValue: string. the value currently selected
+ *     domain: Array. widget creation parameters(contains combo box domain)
  * @param {function(string, string)} callback Callback to the editor on
- *   combobox change.
+ *     combobox change.
  * @extends {goog.ui.Component}
  */
 colab.cell.ComboBoxFormWidget = function(name, value, params, callback) {
@@ -260,13 +341,11 @@ colab.cell.ComboBoxFormWidget = function(name, value, params, callback) {
 
   this.name_ = name;
   this.value_ = value;
-  this.domain_ = params['domain'];
-  this.data_ = params['data'];
-  this.selectedValue_ = params['selectedValue'];
-  if (!this.data_ && !this.domain_) { this.domain_ = []; }
+  this.domain_ = params['domain'] || [];
   this.callback_ = callback;
 };
 goog.inherits(colab.cell.ComboBoxFormWidget, goog.ui.Component);
+
 
 /** @inheritDoc */
 colab.cell.ComboBoxFormWidget.prototype.createDom = function() {
@@ -279,41 +358,28 @@ colab.cell.ComboBoxFormWidget.prototype.createDom = function() {
   this.setElementInternal(element);
 };
 
+
 /** @inheritDoc */
 colab.cell.ComboBoxFormWidget.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
 
   // create combobox
   var combobox = new goog.ui.ComboBox();
-  if (this.domain_) {
-    goog.array.forEach(this.domain_, function(v) {
-      this.addItem(new goog.ui.ComboBoxItem(v));
-    }, combobox);
-  } else if (this.data_) {
-    goog.array.forEach(this.data_, function(d) {
-      this.addItem(new goog.ui.ComboBoxItem(d[1], d[0]));
-    }, combobox);
-  }
+  goog.array.forEach(this.domain_, function(v) {
+    this.addItem(new goog.ui.MenuItem(v));
+  }, combobox);
 
   // add to widget
   this.addChild(combobox, true);
-  if (this.data_) {
-    var label = 'Not found';
-    for (var i = 0; i < this.data_.length; i++) {
-      if (this.data_[i][0] == this.selectedValue_) {
-        label = this.data_[i][1];
-      }
-    }
-    combobox.setValue(label);
-  } else {
-    combobox.setValue(this.value_.replace(/\"/g, ''));
-  }
+  combobox.setValue(this.value_.replace(/\"/g, ''));
   var widget = this;
-  this.getHandler().listen(combobox, goog.ui.Component.EventType.ACTION,
+  this.getHandler().listen(combobox, goog.ui.Component.EventType.CHANGE,
       function(e) {
-        widget.callback_(this.name_, '"' + e.item.getValue() + '"');
+        widget.callback_(this.name_, '"' + e.target.getValue() + '"');
       }, false);
 };
+
+
 
 /**
  * Class for creating a slider elmenet in the form view. The min, max, and
@@ -325,7 +391,7 @@ colab.cell.ComboBoxFormWidget.prototype.enterDocument = function() {
  * @param {Object} params Slider parameters
  *     (type, min, max, step)
  * @param {function(string, string)} callback Callback to the editor on
- *   slider change.
+ *     slider change.
  * @extends {goog.ui.Component}
  */
 colab.cell.SliderFormWidget = function(name, value, params, callback) {
@@ -334,12 +400,13 @@ colab.cell.SliderFormWidget = function(name, value, params, callback) {
   this.name_ = name;
   this.value_ = value;
   this.params_ = params;
-  this.max = params['max'];
-  this.min = params['min'];
-  this.step = params['step'];
+  this.max = this.params_['max'];
+  this.min = this.params_['min'];
+  this.step = this.params_['step'];
   this.callback_ = callback;
 };
 goog.inherits(colab.cell.SliderFormWidget, goog.ui.Component);
+
 
 /** @inheritDoc */
 colab.cell.SliderFormWidget.prototype.createDom = function() {
@@ -352,16 +419,18 @@ colab.cell.SliderFormWidget.prototype.createDom = function() {
   goog.dom.appendChild(element, goog.dom.createDom('div', 'formview-content'));
 
   this.valueLabel_ = goog.dom.createDom('div', 'formview-valuelabel',
-    ' [' + this.value_ + ']');
+      ' [' + this.value_ + ']');
   goog.dom.appendChild(element, this.valueLabel_);
 
   this.setElementInternal(element);
 };
 
+
 /** @inheritDoc */
 colab.cell.SliderFormWidget.prototype.getContentElement = function() {
   return goog.dom.getElementByClass('formview-content', this.getElement());
 };
+
 
 /** @inheritDoc */
 colab.cell.SliderFormWidget.prototype.enterDocument = function() {
@@ -385,3 +454,56 @@ colab.cell.SliderFormWidget.prototype.enterDocument = function() {
       }, false);
 };
 
+
+/**
+ * Class for creating a Title widget. Titles are text with a run button.
+ *
+ * @constructor
+ * @param {string} titleText Parameter name
+ * @param {Object} params TextBox parameters
+ * @param {function()} callback Call back for running code.
+ * @extends {goog.ui.Component}
+ */
+colab.cell.TitleFormWidget = function(titleText, params, callback) {
+  goog.base(this);
+
+  this.titleText_ = titleText;
+  this.callback_ = callback;
+  this.params_ = params;
+};
+goog.inherits(colab.cell.TitleFormWidget, goog.ui.Component);
+
+
+/** @inheritDoc */
+colab.cell.TitleFormWidget.prototype.createDom = function() {
+  var element = goog.dom.createDom('div', 'formview-title');
+
+  var label = goog.dom.createDom('div', 'formview-title-text',
+      this.titleText_);
+  goog.dom.appendChild(element, label);
+
+  // set title style
+  var elementStyles = ['font-size', 'font-weight'];
+  goog.array.forEach(elementStyles, function(style) {
+    if (this.params_[style]) {
+      goog.style.setStyle(label, style, this.params_[style]);
+    }
+  }, this);
+
+  this.setElementInternal(element);
+};
+
+
+/** @inheritDoc */
+colab.cell.TitleFormWidget.prototype.enterDocument = function() {
+  goog.base(this, 'enterDocument');
+
+  // add run button
+  if (this.params_['run-button'] != 'false') {
+    var button = new goog.ui.Button('Run');
+    this.addChild(button, true);
+    this.getHandler().listenWithScope(button,
+        goog.ui.Component.EventType.ACTION,
+        function(e) { this.callback_(); }, false, this);
+  }
+};

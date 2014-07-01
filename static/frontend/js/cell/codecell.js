@@ -123,7 +123,9 @@ colab.cell.CodeCell.prototype.setView_ = function(viewType, update) {
       this.realtimeCell.set('cellView', viewType);
     }
     var viewTypes = goog.object.getValues(colab.cell.CodeCell.ViewType);
-    this.formViewSelect_.setSelectedIndex(viewTypes.indexOf(viewType));
+    if (this.formViewSelect_) {
+      this.formViewSelect_.setSelectedIndex(viewTypes.indexOf(viewType));
+    }
   }
 
   // set cell viewtype
@@ -169,6 +171,49 @@ colab.cell.CodeCell.prototype.createDom = function() {
   var runningDiv = goog.dom.createDom('div', 'running-status', 'Running');
   goog.dom.appendChild(this.mainContentDiv, runningDiv);
   goog.style.setElementShown(runningDiv, false);
+
+  var executionCountDiv = goog.dom.createDom('div', 'execution-count',
+      '');
+  goog.dom.appendChild(this.mainContentDiv, executionCountDiv);
+  this.setExecutionCount(colab.cell.CodeCell.ExecutionCountStatus.UNKNOWN);
+};
+
+/**
+ * Execution count status
+ * @enum {string}
+ */
+colab.cell.CodeCell.ExecutionCountStatus = {
+  FRESH: 'fresh',
+  STALE: 'stale',
+  UNKNOWN: 'unknown'
+};
+
+/**
+ * @param {colab.cell.CodeCell.ExecutionCountStatus} status
+ * @param {number=} opt_count ignored for status different from 'FRESH'.
+ * if not provided for 'FRESH' status assumes execution is in flight.
+ */
+colab.cell.CodeCell.prototype.setExecutionCount = function(status,
+    opt_count) {
+  var el = goog.dom.getElementByClass('execution-count', this.getElement());
+  goog.dom.classes.addRemove(el, 'up-to-date', 'out-of-date');
+  switch (status) {
+  case colab.cell.CodeCell.ExecutionCountStatus.FRESH:
+    goog.dom.classes.addRemove(el, 'out-of-date', 'up-to-date');
+    el.setAttribute('title', 'This cell is up-to-date');
+    jQuery(el).text('Last Run Index: ' + (opt_count || '*'));
+    break;
+  case colab.cell.CodeCell.ExecutionCountStatus.STALE:
+    el.setAttribute('title',
+          'This cell might have changed since last execution.');
+    // keep the old content in place.
+    break;
+  case colab.cell.CodeCell.ExecutionCountStatus.UNKNOWN:
+    el.setAttribute('title',
+       'This cell has not been executed in this session');
+    jQuery(el).text('Not yet run');
+    break;
+  }
 };
 
 /**
@@ -234,11 +279,10 @@ colab.cell.CodeCell.prototype.enterDocument = function() {
   this.editor_ = new colab.cell.Editor(this.realtimeCell.get('text'), true);
   this.addChild(this.editor_);
   this.editor_.render(this.inputDiv_);
-
-
   // add form control
   this.formView_ = new colab.cell.FormView(
-      goog.bind(this.formCallback_, this));
+      goog.bind(this.formCallback_, this),
+      goog.bind(function() { this.execute(true); }, this));
   this.addChild(this.formView_);
   this.formView_.render(this.inputDiv_);
 
@@ -251,7 +295,7 @@ colab.cell.CodeCell.prototype.enterDocument = function() {
   }
   this.updateFormView_();
 
-  // handles the view for the cell to that view
+  // handles the view for the cell to that view
   // add form if this is editable
   if (this.permissions.isEditable()) {
     // add update for forms
@@ -284,6 +328,17 @@ colab.cell.CodeCell.prototype.enterDocument = function() {
   this.realtimeCell.addEventListener(
       gapi.drive.realtime.EventType.VALUE_CHANGED,
       goog.bind(this.realtimeUpdate_, this));
+
+  var editorUpdateCb = goog.bind(
+      this.setExecutionCount, this,
+      colab.cell.CodeCell.ExecutionCountStatus.STALE);
+  this.realtimeCell.get('text').addEventListener(
+      gapi.drive.realtime.EventType.TEXT_INSERTED,
+      editorUpdateCb);
+  this.realtimeCell.get('text').addEventListener(
+      gapi.drive.realtime.EventType.TEXT_DELETED,
+      editorUpdateCb);
+  this.refresh();
 };
 
 /**
@@ -351,7 +406,41 @@ colab.cell.CodeCell.prototype.isTrustedContent = function() {
  * @return {boolean}
  */
 colab.cell.CodeCell.prototype.connectedToKernel = function() {
-  return !!(colab.globalKernel && colab.globalKernel.running);
+  return !!(colab.globalKernel && colab.globalKernel.running &&
+      !colab.globalKernel.disconnected);
+};
+
+/**
+ * @param {{content: IPython.ExecuteReply}} message
+ */
+colab.cell.CodeCell.prototype.handleExecuteReply = function(message) {
+  var content = message.content;
+
+  var ts = new goog.date.DateTime();
+  this.setRunning_(false);
+  this.setExecutionCount(
+      colab.cell.CodeCell.ExecutionCountStatus.FRESH,
+      content.execution_count);
+  this.realtimeCell.set('executionInfo', {
+    'content': content,
+    'timestamp': ts.getTime(),
+    'user_tz': ts.getTimezoneOffset(),
+    'user': colab.globalMe.displayName
+  });
+  if (!content.payload || content.payload.length == 0) {
+    return;
+  }
+
+  var element = goog.dom.createDom('span');
+  for (var i = 0; i < content.payload.length; i++) {
+    if (content.payload[i].source != 'page') continue;
+    var help = goog.dom.createDom('div', 'code-help');
+    var help_text = content.payload[i].text;
+    // This will escape all existing html and add formatting.
+    help.innerHTML = IPython.utils.fixConsole(help_text);
+    goog.dom.appendChild(element, help);
+  }
+  colab.globalNotebook.setBottomPaneContent(element);
 };
 
 /**
@@ -384,6 +473,7 @@ colab.cell.CodeCell.prototype.execute = function(opt_isManual) {
     return false;
   }
 
+  this.setExecutionCount(colab.cell.CodeCell.ExecutionCountStatus.FRESH);
   this.setRunning_(true);
 
   // clear the contents of the cell
@@ -392,77 +482,42 @@ colab.cell.CodeCell.prototype.execute = function(opt_isManual) {
 
   // these callbacks handle kernel events
   // TODO(kayur): handle set_next_input, input_request
-  var reply = goog.bind(function(content) {
-      this.setRunning_(false);
-
-      // update header
-      var ts = new goog.date.DateTime();
-      var dateString = goog.string.format('(%s GMT) %02d-%02d-%02d',
-        ts.getTimezoneOffsetString(),
-        ts.getDate(), ts.getMonth() + 1, ts.getYear() - 2000);
-      var timeString = ts.toIsoTimeString();
-      this.realtimeCell.set('executionInfo', {
-        'content': content,
-        'date': dateString,
-        'time': timeString,
-        'user': colab.globalMe.displayName
-      });
-
-  }, this);
-
-  var set_next_input = goog.bind(function(content) {
-      console.log('set_next_input not implemented: ', content);
-  }, this);
-
-  var input = goog.bind(function(content) {
+  var callbacks = /** @type {IPython.KernelCallbacks} */ ({
+    'shell' : {
+      'reply': goog.bind(this.handleExecuteReply, this),
+      'payload': {'set_next_input': goog.bind(function(content) {
+        console.log('set_next_input not implemented: ', content);
+      }, this)}
+    },
+    'input' : goog.bind(function(message) {
       var dialog = new goog.ui.Prompt('User Input Requested',
-                                      content['content']['prompt'],
-                                      function(input) {
-                                          colab.globalKernel.send_input_reply(
-                                              input || '');
-                                      });
+          message['content']['prompt'],
+          function(input) {
+            colab.globalKernel.send_input_reply(input || '');
+          });
       dialog.setDisposeOnHide(true);
       dialog.setVisible(true);
-  }, this);
+    }, this),
+    'iopub' : {
+      'clear_output': goog.bind(function() {
+        this.outputArea_.clear();
+      }, this),
+      'output': goog.bind(function(msg) {
+        var msgType = msg['msg_type'];
+        var content = msg['content'];
+        // Handle special requests by the kernel.  These are answered on the
+        // stdin channel.
+        var metadata = msg['metadata'];
+        if (metadata && metadata[colab.services.REQUEST_TYPE_KEY]) {
+          colab.services.handleKernelRequest(metadata);
+          return;
+        }
 
-  var clear_output = goog.bind(function() {
-      this.outputArea_.clear();
-  }, this);
-
-  if (IPythonInterface.version == '2.1') {
-      var output = goog.bind(function(msg) {
-	  var msgType = msg['msg_type'];
-	  var content = msg['content'];
-	  // Handle special requests by the kernel.  These are answered on the stdin
-	  // channel.
-	  var metadata = msg['metadata'];
-	  if (metadata && metadata[colab.services.REQUEST_TYPE_KEY]) {
-              colab.services.handleKernelRequest(metadata);
-              return;
-	  }
-
-	  // create output object and add it to outputs list
-	  this.outputArea_.handleKernelOutputMessage(msgType, content);
-      }, this);
-  } else if (IPythonInterface.version == '1.1') {
-      var output = goog.bind(function(msgType, content) {
-	  // Handle special requests by the kernel.  These are answered on the stdin
-	  // channel.
-	  var metadata = content['metadata'];
-	  if (metadata && metadata[colab.services.REQUEST_TYPE_KEY]) {
-              colab.services.handleKernelRequest(metadata);
-              return;
-	  }
-
-	  // create output object and add it to outputs list
-	  this.outputArea_.handleKernelOutputMessage(msgType, content);
-      }, this);
-  } else {
-      console.error('Unknown version of IPyton');
-  }
-
-  var callbacks = IPythonInterface.createCallbacks(
-      reply, set_next_input, input, clear_output, output);
+        // create output object and add it to outputs list
+        this.outputArea_.handleKernelOutputMessage(msgType, content);
+      }, this)
+    }
+  });
 
   try {
     colab.globalKernel.execute(this.editor_.getText(), callbacks,

@@ -4,34 +4,29 @@
  */
 
 goog.provide('colab');
+goog.provide('colab.globalKernel');
+goog.provide('colab.globalNotebook');
 
 goog.require('colab.Header');
 goog.require('colab.Notebook');
-goog.require('colab.PNaClKernel');
-goog.require('colab.Presence');
-goog.require('colab.cell.Cell');
+goog.require('colab.Preferences');
+goog.require('colab.app');
 goog.require('colab.dialog');
 goog.require('colab.drive');
-goog.require('colab.drive.Permissions');
+goog.require('colab.drive.NotebookModel');
 goog.require('colab.notification');
 goog.require('colab.params');
+goog.require('colab.services');
 goog.require('colab.sharing.SharingState');
 goog.require('goog.Promise');
+goog.require('goog.array');
 goog.require('goog.dom');
 goog.require('goog.events');
-goog.require('goog.events.KeyCodes');
-goog.require('goog.events.KeyHandler');
-goog.require('goog.json');
-goog.require('goog.net.XhrIo');
 goog.require('goog.net.cookies');
 goog.require('goog.style');
 goog.require('goog.ui.Dialog');
-goog.require('goog.ui.Dialog.ButtonSet');
-goog.require('goog.ui.Dialog.ButtonSet.DefaultButtons');
 goog.require('goog.ui.ScrollFloater');
-goog.require('goog.ui.Toolbar');
-goog.require('goog.ui.ToolbarButton');
-goog.require('goog.ui.ToolbarSeparator');
+
 
 /**
  * Placeholder URLs for in-browser kernel (for app mode) and legacy
@@ -41,11 +36,14 @@ goog.require('goog.ui.ToolbarSeparator');
  * @type {string}
  */
 colab.IN_BROWSER_KERNEL_URL = 'app://';
+
+
 /**
  * Url placeholder for in-page kernel
  * @type {string}
  */
 colab.NACL_KERNEL_URL = 'nacl://';
+
 
 /**
  * A promse that is fullfilled with details needed to communicate with in-app
@@ -60,19 +58,59 @@ colab.appKernelDetails = new goog.Promise(function(resolve, reject) {
   });
 });
 
-/**
- * Main notebook object.
- *
- * @type {Object}
- */
-colab.globalNotebook = null;
 
 /**
- * Global Kernel.
- *
- * @type {IPython.Kernel}
+ * Records custom analytics about this request
+ * @param {colab.drive.NotebookModel} notebook
+ * @param {Error|Object=} opt_error an exception object, if available.
  */
+colab.recordAnalytics = function(notebook, opt_error) {
+  if (colab.params.getHashParams().mode == 'app') { return; }
+  var finishedLoading = new Date();
+  window.setTimeout(function() {
+    var document = notebook ? notebook.getDocument() : null;
+    var user = document ? document.getCollaborators().filter(
+        function(d) { return d.isMe }) : '';
+    var email = 'unknown';
+    if (colab.drive.myInfo && colab.drive.myInfo.emails &&
+        colab.drive.myInfo.emails.length) {
+      email = colab.drive.myInfo.emails[0].value;
+    }
+    if (user) user = user[0];
+    var params = { 'loadingTime': finishedLoading - window['pageLoadStart'],
+                   'user': user ? user.displayName : 'unknown',
+                   'userId': user ? user.userId : 'unknown',
+                   'email': email,
+                   'title': notebook ? notebook.getTitle() : ''
+                 };
+    if (opt_error) {
+      params['errormessage'] = 'Error' +
+          (opt_error.message || JSON.stringify(opt_error));
+    }
+    var analyticsQuery = colab.params.encodeParamString(params);
+    var xhrRequest = new XMLHttpRequest();
+    xhrRequest.open('GET', '/analytics?' + analyticsQuery, true);
+    xhrRequest.send();
+  }, 1000);
+};
+
+
+/** @type {colab.Notebook} Main notebook object. */
+colab.globalNotebook = null;
+
+
+/** @type {IPython.Kernel} Global Kernel. */
 colab.globalKernel = null;
+
+
+/**
+ * TODO(colab-team): Create our own base class that wraps session and gets
+ *     the kernel.
+ * @type {IPython.Session} Global Session.
+ */
+colab.globalSession = null;
+
+
 
 /**
  * Global Sharing state.
@@ -83,12 +121,6 @@ colab.globalKernel = null;
  */
 colab.globalSharingState = null;
 
-/**
- * Global Realtime Document.
- *
- * @type {Object}
- */
-colab.globalRealtimeDoc = null;
 
 /**
  * Global Realtime Document.
@@ -97,10 +129,12 @@ colab.globalRealtimeDoc = null;
  */
 colab.globalMe = null;
 
+
 /**
  * @type {HashParams}
  */
 colab.hashParams = colab.params.getHashParams();
+
 
 /**
  * Close the connection to drive on unload
@@ -109,6 +143,7 @@ window.addEventListener('unload', function() {
   colab.close();
 });
 
+
 /**
  * Close the connection to drive on unload
  */
@@ -116,17 +151,16 @@ window.addEventListener('beforeunload', function(ev) {
   if (colab.saveState && (
       colab.saveState.isSaving || colab.saveState.isPending)) {
     ev.returnValue = 'This page has pending changes, are you' +
-         ' sure you want to navigate away from this page.';
+        ' sure you want to navigate away from this page.';
   }
 });
 
 
-
 /**
- * Closes everything
- * @param {function()=} cb
+ * Closes everything.
+ * @param {function()=} opt_cb Callback for notebook close function.
  */
-colab.close = function(cb) {
+colab.close = function(opt_cb) {
   // close the notebook
   // NOTE: Don't put any asynchronous code here, unless
   // it is of fire-and-forget variety.
@@ -134,22 +168,29 @@ colab.close = function(cb) {
   if (colab.globalNotebook) {
     colab.globalNotebook = null;
   }
-  colab.drive.close(cb);
+  if (colab.drive.globalNotebook) {
+    colab.drive.globalNotebook.close(opt_cb);
+  } else {
+    if (opt_cb) opt_cb();
+  }
 };
+
 
 /** @type {colab.Preferences} */
 colab.preferences = null;
+
+
 /** gapi.drive.realtime.Document
  * Callback for window load.  Loads UI.
  */
 window.addEventListener('load', function() {
   var loading = colab.notification.showNotification('Loading....', 'startup',
       -1 /* no timeout */);
-  colab.drive.document.then(function(document) {
+  colab.drive.notebook.then(function(notebook) {
     var error = null;
     try {
-      colab.globalRealtimeDoc = document;
-      colab.startPeriodicSaving();
+      var document = notebook.getDocument();
+      colab.startPeriodicSaving(notebook);
       document.addEventListener(
           gapi.drive.realtime.EventType.COLLABORATOR_JOINED,
           colab.updateCollaborators);
@@ -162,7 +203,7 @@ window.addEventListener('load', function() {
           colab.monitorSaveState);
 
       //get the collaborator that corresponds to me
-      var collaboratorsList = colab.globalRealtimeDoc.getCollaborators();
+      var collaboratorsList = document.getCollaborators();
       colab.globalMe =
           goog.array.find(collaboratorsList, function(c) { return c.isMe; });
 
@@ -171,18 +212,16 @@ window.addEventListener('load', function() {
 
       var model = document.getModel();
 
-      // set permissions
-      var permissions = new colab.drive.Permissions(!model.isReadOnly);
-
       colab.preferences = new colab.Preferences();
 
       // get sharing state
       colab.globalSharingState = new colab.sharing.SharingState(
-          colab.drive.fileIdIfAvailable);
+          notebook.getFileId());
 
       // create notebook
       var realtimeCells = model.getRoot().get('cells');
-      colab.globalNotebook = new colab.Notebook(model, permissions);
+      colab.globalNotebook = new colab.Notebook(notebook);
+      colab.globalNotebook.render();
 
       // select the first cell
       // TODO(kayur): move this to notebook when we clean up notebook code.
@@ -190,27 +229,19 @@ window.addEventListener('load', function() {
         colab.globalNotebook.selectCell(realtimeCells.get(0).id);
       }
 
-      // KERNEL(outside)
-
       // load kernel (default to localhost, and store in cookie 'kernelUrl')
       if (!goog.net.cookies.containsKey('kernelUrl')) {
-        var kernelUrl = 'http://127.0.0.1:8888/';
-
+        var kernelUrl = 'https://127.0.0.1:8888';
         if (colab.app.appMode) {
           // If in app mode, connect to in-browser kernel by default
           kernelUrl = colab.IN_BROWSER_KERNEL_URL;
         }
         goog.net.cookies.set('kernelUrl', kernelUrl, 10000);
       }
-
-      if (colab.app.appMode) {
-        colab.loadPNaClKernel();
-      } else {
-        colab.loadKernelFromSessionUrl(goog.net.cookies.get('kernelUrl') || '');
-      }
+      colab.loadKernelFromUrl(goog.net.cookies.get('kernelUrl') || '');
 
       // set up the header: docname input, menubar, toolbar, share button
-      colab.setupHeader(document, permissions);
+      colab.setupHeader(notebook);
 
       // set up top toolbar to remain fixed as the page scrolls
       var floater = new goog.ui.ScrollFloater();
@@ -221,18 +252,20 @@ window.addEventListener('load', function() {
       loading.change('Error has occurred', 3000);
       error = err;
       colab.dialog.displayError('Unable to load the framework.', err);
-      colab.setupHeader(null, null);
+      colab.setupHeader(null);
       console.log(err);
-      console.log(err.stack);
     }
+    colab.recordAnalytics(notebook, error);
 
   }, function(reason) {
     // Displays error to user on failure
     colab.dialog.displayError('Error creating/loading document.', reason);
-    colab.setupHeader(null, null);
+    colab.setupHeader(null);
     loading.clear();
+    colab.recordAnalytics(null, /** @type {Object} */ (reason));
   });
 });
+
 
 /**
  * Interval in milliseconds for periodic saving of document
@@ -241,6 +274,7 @@ window.addEventListener('load', function() {
  *     experimentation
  */
 colab.SAVE_INTERVAL = 1 * 30 * 1000;  // 30 seconds
+
 
 /**
  * Interval in milliseconds for testing document invalidation
@@ -265,7 +299,7 @@ colab.invalidationDialogDisplayed = false;
  * @param {string=} opt_button
  */
 colab.onDocumentInvalidation = function(opt_title, opt_reason, opt_button) {
-  if (colab.invalidationDialogDisplayed || colab.drive.isClosing) return;
+  if (colab.invalidationDialogDisplayed) return;
   colab.invalidationDialogDisplayed = true;
 
   var title = opt_title || 'File change detected';
@@ -308,76 +342,77 @@ colab.reload = function() {
   colab.close(function() { window.location.reload(); });
 };
 
-/**
- * @type {colab.Notification}
- */
+
+/** @type {colab.Notification} */
 colab.uuid_failed_note = null;
+
 
 /**
  * Starts periodic saving
+ * @param {colab.drive.NotebookModel} notebook
  */
-colab.startPeriodicSaving = function() {
+colab.startPeriodicSaving = function(notebook) {
+  var document = notebook.getDocument();
+  var fileId = notebook.getFileId();
+
   // don't save if the document is readonly
-  if (colab.globalRealtimeDoc.getModel().isReadOnly) {
+  if (document.getModel().isReadOnly) {
     return;
   }
 
   // periodcally checks for document invalidation
-  colab.drive.fileId.promise.then(function(fileId) {
-    /**
-     * @type {number}
-     */
-    colab.uuid_checker = window.setInterval(function() {
-      /** @type {gapi.drive.realtime.Model} */
-      var model = null;
-      try {
-        model = colab.globalRealtimeDoc.getModel();
-      } catch (e) {
-        // TODO(sandler): it would be nice if we actually
-        // automatically reloaded this document when it is safe to do so.
-        // RIght now it takes 20-30 seconds to detect the loss...
-        colab.onDocumentInvalidation('Connection to the document lost',
-            'We no longer have live connection to google drive servers. ' +
-            'This might be caused by the change of network.' +
-            'Any further changes will not be saved. Please reload this page. ',
-            'Reload');
-        clearInterval(colab.uuid_checker);
-        return;
-      }
-      colab.drive.checkModelUUID(model, fileId,
-          function(isMatch) {
-            if (!isMatch) colab.onDocumentInvalidation();
-          },
-          function(response) {
-            if (response === 'Error getting document UUID') {
-              // Known non-error, caused by legacy docs.
-              return;
-            }
-            if (colab.uuid_failed_note) {
-              colab.uuid_failed_note.clear();
-            }
-            // This notification is now redundant and on the margin w.r.t
-            // saveStateEvents only produces false positives.
-//            colab.uuid_failed_note = colab.notification.showNotification(
-//               'Whops. There is an issue with realtime API. If this ' +
-//                'message re-occurs please email colab-team and ' +
-//                'reload the document. Include copy of console log ' +
-//               '(ctrl-shift-J) ', '', 10000);
+  /** @type {number} */
+  colab.uuid_checker = window.setInterval(function() {
+    /** @type {gapi.drive.realtime.Model} */
+    var model = null;
+    try {
+      model = document.getModel();
+    } catch (e) {
+      // TODO(sandler): it would be nice if we actually
+      // automatically reloaded this document when it is safe to do so.
+      // RIght now it takes 20-30 seconds to detect the loss...
+      colab.onDocumentInvalidation('Connection to the document lost',
+          'We no longer have live connection to google drive servers. ' +
+          'This might be caused by the change of network.' +
+          'Any further changes will not be saved. Please reload this page. ',
+          'Reload');
+      clearInterval(colab.uuid_checker);
+      return;
+    }
+    colab.drive.checkModelUUID(model, fileId,
+        function(isMatch) {
+          if (!isMatch) colab.onDocumentInvalidation();
+        },
+        function(response) {
+          if (response === 'Error getting document UUID') {
+            // Known non-error, caused by legacy docs.
+            return;
+          }
+          if (colab.uuid_failed_note) {
+            colab.uuid_failed_note.clear();
+          }
+          // This notification is now redundant and on the margin w.r.t
+          // saveStateEvents only produces false positives.
+          //     colab.uuid_failed_note = colab.notification.showNotification(
+          //        'Whops. There is an issue with realtime API. If this ' +
+          //         'message re-occurs please email colab-team and ' +
+          //         'reload the document. Include copy of console log ' +
+          //        '(ctrl-shift-J) ', '', 10000);
 
-            console.log('Error obtaining UUID', response);
-          });
-    }, colab.INVALIDATION_CHECK_INTERVAL);
-  });
+          console.log('Error obtaining UUID', response);
+        });
+  }, colab.INVALIDATION_CHECK_INTERVAL);
 
   colab.autoSaver = window.setInterval(function() {
     // console.log('autosaving...');
-    colab.drive.saveDocument(colab.globalRealtimeDoc, function() {
+    notebook.save(function() {
       // Saved successfully
     }, function(reason) {
       console.log(reason);
     });
   }, colab.SAVE_INTERVAL);
 };
+
 
 /**
  * Authorizes the kernel living at given url
@@ -394,20 +429,34 @@ colab.authorizeKernel = function(url, callback) {
       'width=600, height=500');
   var checkWindow = function() {
     if (childWindow && childWindow.closed) {
-        window.clearInterval(intervalID);
-        callback();
+      window.clearInterval(intervalID);
+      callback();
     }
   };
   var intervalID = window.setInterval(checkWindow, 100);
 };
 
+
 /**
- * Create a session and launches a kernel for IPython 2.0. This class is
- * light-weight.
+ * Launch a new IPython kernel.
  *
- * @param {string} url The location of the backend.
+ * @param {string} url The location of the kernel.
+ * @param {boolean=} opt_forceAuthorization if true, initates
+ *  authorization flow and starts kernel only upon successful
+ *  authorization. If false loading might fail because
+ *  of not being authorized.
  */
-colab.loadKernelFromSessionUrl = function(url) {
+colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
+  url = url.replace(/^http:\/\//, 'https://');
+  // Adds /kernel suffix.
+//   url = url.replace(/\/kernels$/, '') + '/kernels';
+
+  if (opt_forceAuthorization) {
+    var authorizeCallback = goog.partial(colab.loadKernelFromUrl, url, false);
+    colab.authorizeKernel(url, authorizeCallback);
+    return;
+  }
+
   goog.net.cookies.set('kernelUrl', url, 10000);
   if (colab.globalKernel) {
     colab.globalKernel.kill();
@@ -420,7 +469,7 @@ colab.loadKernelFromSessionUrl = function(url) {
     return;
   }
 
-  var session = new IPython.Session({
+  colab.globalSession = new IPython.Session({
     notebook_name: notebook_id || '',
     notebook_path: 'n/a',
     base_url: '/'
@@ -428,37 +477,22 @@ colab.loadKernelFromSessionUrl = function(url) {
     kernel_host: url
   });
 
-  session.start(function() {
-    colab.globalKernel = session.kernel;
+  colab.globalSession.start(function() {
+    colab.globalKernel = colab.globalSession.kernel;
+  });
+
+  jQuery([IPython.events]).on('websocket_closed.Kernel', function() {
+    // If websocket connection fails, disassociate with kernel.
+    colab.notification.showPrimary('Disconnected from kernel', 1000);
+    colab.globalKernel.disconnected = true;
   });
 };
 
-/**
- * Launch a new PNaCl IPython kernel.
- */
-colab.loadPNaClKernel = function() {
-  if (colab.globalKernel) {
-    colab.globalKernel.kill();
-    colab.globalKernel.stop_channels();
-  }
-
-  // Waits for promise (of parent window details) before starting kernel
-  // if in app mode, otherwise immediately starts kernel.
-  colab.appKernelDetails.then(function(details) {
-    colab.globalKernel = new colab.PNaClKernel(details.source, details.origin);
-    colab.globalKernel.start();
-  });
-};
 
 /**
  * Dialog box for connecting to a kernel backend.
  */
 colab.openKernelDialogBox = function() {
-  if (colab.app.appMode) {
-    colab.loadPNaClKernel();
-    return;
-  }
-
   var dialog = new goog.ui.Dialog();
   dialog.setDisposeOnHide(true);
 
@@ -474,9 +508,8 @@ colab.openKernelDialogBox = function() {
   var urlInput = goog.dom.createDom('input', {'id': 'backend-url-input'});
 
   goog.style.setWidth(urlInput, 300);
-  if (colab.globalKernel) {
-    urlInput.value = colab.globalKernel[IPythonInterface.KERNEL_URL_KEY];
-  }
+  urlInput.value = colab.globalSession ?
+      colab.globalSession.kernel_host : 'https://127.0.0.1:8888';
   goog.dom.appendChild(contentDiv, urlInput);
 
   dialog.setTitle('Connect to Kernel');
@@ -485,12 +518,13 @@ colab.openKernelDialogBox = function() {
     // TODO(kayur): find right event type.
     if (e.key == 'ok') {
       var url = goog.dom.getElement('backend-url-input').value;
-      colab.loadKernelFromSessionUrl(url, true /* authorize */);
+      colab.loadKernelFromUrl(url, true /* authorize */);
     }
   });
 
   dialog.setVisible(true);
 };
+
 
 /**
  * Registes a listener to provide the access token to the kernel, if the
@@ -498,31 +532,34 @@ colab.openKernelDialogBox = function() {
  */
 colab.services.setKernelRequestListener('get_access_token',
     function(content, callback) {
-  var dialog = new goog.ui.Dialog();
-  dialog.setDisposeOnHide(true);
-  dialog.setContent('The kernel is requesting access to Google Drive.' +
-      ' Do you want to allow python code to access your Google Drive files?');
-  dialog.setTitle('File change detected');
+      var dialog = new goog.ui.Dialog();
+      dialog.setDisposeOnHide(true);
+      dialog.setContent('The kernel is requesting access to Google Drive.' +
+          ' Do you want to allow python code to access your Google Drive' +
+          ' files?');
+      dialog.setTitle('File change detected');
 
-  dialog.setButtonSet(goog.ui.Dialog.ButtonSet.createYesNoCancel());
+      dialog.setButtonSet(goog.ui.Dialog.ButtonSet.createYesNoCancel());
 
-  goog.events.listen(dialog, goog.ui.Dialog.EventType.SELECT, function(e) {
-    var reply = {'error': {'type': 'USER_DENIED_ERROR',
-                           'description': 'The user refused to provide the' +
-                           ' OAuth token'}};
-    if (e.key === goog.ui.Dialog.DefaultButtonKeys.YES) {
-      reply = gapi.auth.getToken()['access_token'];
-    }
-    callback(reply);
-  });
+      goog.events.listen(dialog, goog.ui.Dialog.EventType.SELECT, function(e) {
+        var reply = {'error': {'type': 'USER_DENIED_ERROR',
+          'description': 'The user refused to provide the' +
+              ' OAuth token'}};
+        if (e.key === goog.ui.Dialog.DefaultButtonKeys.YES) {
+          reply = gapi.auth.getToken()['access_token'];
+        }
+        callback(reply);
+      });
 
-  dialog.setVisible(true);
-});
+      dialog.setVisible(true);
+    });
+
 
 /**
  * @type {number}
  */
 colab.userAlarmTimer = 0;
+
 
 /**
  * Contains the timestamp of the last 'not saved' event
@@ -530,17 +567,21 @@ colab.userAlarmTimer = 0;
  */
 colab.notSavedSince = null;
 
+
 /**
  * @type {colab.Notification}
  */
 colab.realtimeSaveFailureNote = colab.notification.createEmptyNotification();
 
+
 /**
- * @param {gapi.drive.realtime.DocumentSaveStateChangedEvent} ev
+ * @param {gapi.drive.realtime.BaseModelEvent} ev
  */
 colab.monitorSaveState = function(ev) {
-  if (!ev.isSaving && !ev.isPending) {
-    colab.saveState = ev;
+  var event =
+      /** @type {gapi.drive.realtime.DocumentSaveStateChangedEvent} */ (ev);
+  if (!event.isSaving && !event.isPending) {
+    colab.saveState = event;
     colab.notSavedSince = null;
     colab.realtimeSaveFailureNote.clear();
     clearInterval(colab.userAlarmTimer);
@@ -556,9 +597,9 @@ colab.monitorSaveState = function(ev) {
       colab.realtimeSaveFailureNote.change(msg, -1);
     }, 60 * 1000);
   }
-  colab.saveState = ev;
+  colab.saveState = event;
   if (Date() - colab.notSavedSince > 30000) {
-    console.log('Save state is (in flight: ', ev.isSaving, ' pending: ',
-        ev.isPending + ')');
+    console.log('Save state is (in flight: ', event.isSaving, ' pending: ',
+        event.isPending + ')');
   }
 };

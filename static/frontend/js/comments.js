@@ -17,11 +17,8 @@ goog.require('goog.dom.forms');
 
 /**
  * Creates a new comments widget object.
+ * @param {colab.drive.NotebookModel} notebook The Realtime Notebook model.
  * @constructor
- * @param {gapi.drive.realtime.CollaborativeList} commentSentinel A realtime
- * list which gets changed whenever a comment is added, deleted, etc.  This
- * allows us to simply detect when another user has posted a comment.
- * @param {colab.drive.Permissions} permissions Drive permissions
  *
  * TODO (kestert): replace this with a more standard mechanism for listenining
  * for changes in the comments by other users.  This mechanism can only detect
@@ -30,9 +27,9 @@ goog.require('goog.dom.forms');
  * TODO(kestert, kayur): When we change the sentinal add comments only
  *    functionality.
  */
-colab.CommentsWidget = function(commentSentinel, permissions) {
+colab.CommentsWidget = function(notebook) {
   /** @private {colab.drive.Permissions} Drive permissions */
-  this.permissions_ = permissions;
+  this.permissions_ = notebook.getPermissions();
 
   var that = this;
   this.comments = [];
@@ -42,7 +39,7 @@ colab.CommentsWidget = function(commentSentinel, permissions) {
    */
   this.user = null;
   this.activityBox = goog.dom.getElement('comments-box');
-  this.commentSentinel = commentSentinel;
+  this.commentSentinel = notebook.getCommentSentinel();
 
   this.commentSentinel.addEventListener(
       gapi.drive.realtime.EventType.VALUES_SET,
@@ -52,16 +49,15 @@ colab.CommentsWidget = function(commentSentinel, permissions) {
               (that.commentSentinel.get(0)));
       });
 
-  // Note, this promise also ensures the Drive API is ready
-  colab.drive.fileId.promise.then(function(fileId) {
-    that.fileId = fileId;
-    var request = gapi.client.drive.about.get();
-    /** @param {gapi.client.drive.about.AboutResponse} response*/
-    var acceptResponse = function(response) {
-      that.user = response.user;
-      that.getCommentsList();
-    };
-    request.execute(acceptResponse);
+  /** @private {string} */
+  this.fileId_ = notebook.getFileId();
+
+  var request = gapi.client.drive.about.get();
+  request.execute(function(response) {
+    var aboutResponse =
+        /** @type {gapi.client.drive.about.AboutResponse} */ (response);
+    that.user = aboutResponse.user;
+    that.getCommentsList();
   });
 
   var commentsButton = goog.dom.getElement('comments');
@@ -76,7 +72,7 @@ colab.CommentsWidget.prototype.getCommentsList = function() {
   var that = this;
   var request = gapi.client.drive.comments.list(
       /** @type {gapi.client.drive.comments.Request} */ ({
-        fileId: this.fileId }));
+        fileId: this.fileId_ }));
   request.execute(function(response) {
     if (response.error) {
       console.log('Unable to execute drive list comments request', response);
@@ -118,12 +114,11 @@ colab.CommentsWidget.prototype.redrawCommentsList = function(comments) {
  * has been acknowledged by the server.
  * @param {string} content The text of the comment.
  */
-
 colab.CommentsWidget.prototype.insertComment = function(content) {
   var that = this;
   var body = {'content': content};
   var request = gapi.client.drive.comments.insert({
-    'fileId': this.fileId,
+    'fileId': this.fileId_,
     'resource': body
   });
   request.execute(function(response) {

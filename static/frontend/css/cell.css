@@ -18,6 +18,10 @@
   width: 50%;
 }
 
+.formview-input {
+  width: 70%
+}
+
 .formview-full {
   width: 100%;
 }
@@ -103,6 +107,25 @@ pre {
 
 .cell.selected > .cell-handle {
   background: #3F80C0;
+}
+
+.execution-count {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background-color: white;
+    border: 1px solid lightgray;
+    display: inline;
+    /* should be less than 20, since this is what header is */
+    z-index: 19;
+
+}
+.execution-count.out-of-date {
+    color: gray;
+}
+
+.execution-count.up-to-date {
+    color: black;
 }
 
 .cell:hover > .cell-handle > .line ,
@@ -276,4 +299,25 @@ div.output-header-content {
 span.output-header-content-time {
     margin-left: 6px;
     color: rgb(53, 53, 53);
+}
+
+div.formview-title {
+    display: inline-flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+div.formview-title-text {
+    font-size: 12pt;
+    font-weight: 700;
+}
+
+div.formview-title > .goog-button {
+    background: white;
+    border: 1px solid black;
+    margin-right: 110px;
+}
+
+div.formview-title > .goog-button:hover {
+    background: lightgrey;
 }

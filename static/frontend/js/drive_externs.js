@@ -45,6 +45,15 @@ gapi.drive.realtime.Document.prototype.getModel = function() { return null; };
 
 
 /**
+ * @param {string} event
+ * @param {function(gapi.drive.realtime.BaseModelEvent): undefined} callback
+ * @param {boolean} opt_capture
+ */
+gapi.drive.realtime.Document.prototype.addEventListener =
+    function(event, callback, opt_capture) { };
+
+
+/**
  * @constructor
  * @struct
  */
@@ -59,6 +68,28 @@ gapi.drive.realtime.Error = function() {
 
 /**
  * @constructor
+ * @struct
+ */
+gapi.drive.realtime.BaseModelEvent = function() {
+  /** @type {boolean} */
+  this.bubbles = false;
+
+  /** @type {boolean} */
+  this.isLocal = false;
+
+  /** @type {string} */
+  this.sessionId = '';
+
+  /** @type {string} */
+  this.userId = '';
+
+  /** @type {string} */
+  this.type = '';
+};
+
+/**
+ * @constructor
+ * @struct
  * @extends {gapi.drive.realtime.BaseModelEvent}
  */
 gapi.drive.realtime.ValuesSetEvent = function() {};
@@ -81,6 +112,7 @@ gapi.drive.realtime.ValuesSetEvent.prototype.index = 0;
 
 /**
  * @constructor
+ * @struct
  * @extends {gapi.drive.realtime.BaseModelEvent}
  */
 gapi.drive.realtime.ValuesAddedEvent = function() {};
@@ -99,6 +131,7 @@ gapi.drive.realtime.ValuesAddedEvent.prototype.index = 0;
 
 /**
  * @constructor
+ * @struct
  * @extends {gapi.drive.realtime.BaseModelEvent}
  */
 gapi.drive.realtime.ValuesRemovedEvent = function() {};
@@ -117,6 +150,7 @@ gapi.drive.realtime.ValuesRemovedEvent.prototype.values = null;
 /**
  * @constructor
  * @struct
+ * @extends {gapi.drive.realtime.BaseModelEvent}
  */
 gapi.drive.realtime.ValueChangedEvent = function() {
   /** @type {string} */
@@ -130,6 +164,7 @@ gapi.drive.realtime.ValueChangedEvent = function() {
 /**
  * @constructor
  * @struct
+ * @extends {gapi.drive.realtime.BaseModelEvent}
  */
 gapi.drive.realtime.CollaboratorLeftEvent = function() {
   /** @type {gapi.drive.realtime.Collaborator} */
@@ -137,23 +172,41 @@ gapi.drive.realtime.CollaboratorLeftEvent = function() {
   /** @type {gapi.drive.realtime.Document} */
   this.document = null;
 };
+
+/**
+ * @constructor
+ * @struct
+ * @extends {gapi.drive.realtime.BaseModelEvent}
+ */
+gapi.drive.realtime.DocumentSaveStateChangedEvent = function() {
+  /** @type {boolean} */
+  this.isPending = false;
+
+  /** @type {boolean} */
+  this.isSaving = false;
+};
+
 /***/
 gapi.drive.realtime.EventType = {};
 
-
-/***/
+/**
+ * @type {string}
+ */
 gapi.drive.realtime.EventType.COLLABORATOR_JOINED = '';
 
-
-/***/
+/**
+ * @type {string}
+ */
 gapi.drive.realtime.EventType.COLLABORATOR_LEFT = '';
 
-
-/***/
+/**
+ * @type {string}
+ */
 gapi.drive.realtime.EventType.UNDO_REDO_STATE_CHANGED = '';
 
-
-/***/
+/**
+ * @type {string}
+ */
 gapi.drive.realtime.EventType.VALUE_CHANGED = '';
 
 /**
@@ -161,9 +214,10 @@ gapi.drive.realtime.EventType.VALUE_CHANGED = '';
  */
 gapi.drive.realtime.EventType.OBJECT_CHANGED = '';
 
-/***/
+/**
+ * @type {string}
+ */
 gapi.drive.realtime.EventType.VALUES_ADDED = '';
-
 
 /**
  * @type {string}
@@ -244,28 +298,6 @@ gapi.drive.realtime.Model.prototype.createList = function(a) { return null; };
  */
 gapi.drive.realtime.Model.prototype.createString = function(opt_t) {
   return null;
-};
-
-/**
- * @constructor
- * @extends goog.events.Event
- */
-gapi.drive.realtime.BaseModelEvent = function() {
-};
-
-/** @type {boolean} */
-gapi.drive.realtime.BaseModelEvent.prototype.isLocal = false;
-
-/**
- * @constructor
- * @struct
- */
-gapi.drive.realtime.DocumentSaveStateChangedEvent = function() {
-  /** @type {boolean} */
-  this.isPending = false;
-
-  /** @type {boolean} */
-  this.isSaving = false;
 };
 
 /**
@@ -649,4 +681,16 @@ gapi.client.drive.permissions.Resource = function() {
   this.id = '';
 
   // Add more as needed
+};
+
+
+/**
+ * @constructor
+ * @struct
+ */
+gapi.client.Error = function() {
+  /** @type {number} */
+  this.code = 0;
+  /** @type {string} */
+  this.message = '';
 };

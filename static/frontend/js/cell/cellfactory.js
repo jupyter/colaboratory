@@ -6,13 +6,16 @@ goog.require('colab.cell.CodeCell');
 goog.require('colab.cell.TextCell');
 
 /**
- * Type of widgets that can be parsed and turned into a FormView.
+ * Type of cells. Both colab types and IPython types.
  * @enum {string}
  */
 colab.cell.CellType = {
-  CODE: 'code',
-  TEXT: 'text'
+  CODE: 'code', // used by both colab and IPython
+  TEXT: 'text', // only used by colab
+  HEADING: 'heading', // used only by IPython
+  MARKDOWN: 'markdown' //used only by IPython
 };
+
 
 /**
  * Factory method for creating cells from a Realtime object.
@@ -30,6 +33,7 @@ colab.cell.cellFromRealtime = function(realtimeCell, permissions) {
   }
   return cell;
 };
+
 
 /**
  * Creates a new blank cell.

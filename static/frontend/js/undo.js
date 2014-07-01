@@ -132,6 +132,20 @@ colab.Undo.prototype.recordSplit = function(position, splitCell1, splitCell2) {
 };
 
 /**
+ * Records cell split, where cell in position, is replaced
+ * by 2 cells, splitCell1 and splitCell2.
+ * User is responsible for populating splitCell1 and splitCell2
+ * @param {number} position
+ * @param {Object} newCell
+ */
+colab.Undo.prototype.recordReplacement = function(position, newCell) {
+  this.record(colab.Undo.OpType.DELETE,
+      /** @type {Object} */ (this.cells.get(position)));
+  this.record(colab.Undo.OpType.INSERT, newCell, position);
+  this.compound(2);
+};
+
+/**
  * Records cell merge, where cell's at position/position+1
  * are merged into mergeCell
  * @param {number} position

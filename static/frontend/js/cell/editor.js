@@ -9,6 +9,7 @@ goog.require('colab.tooltip');
 goog.require('goog.dom');
 goog.require('goog.dom.classes');
 goog.require('goog.events');
+goog.require('goog.events.BrowserEvent.MouseButton');
 goog.require('goog.events.EventType');
 goog.require('goog.ui.Component');
 
@@ -54,7 +55,7 @@ colab.cell.Editor.prototype.blur = function() {
  */
 colab.cell.Editor.prototype.isTrustedContent = function() {
   return this.isLocalContent_ ||
-      !colab.drive.documentShared || (colab.globalNotebook &&
+      !colab.drive.globalNotebook.isShared() || (colab.globalNotebook &&
       !colab.globalSharingState.hasOtherWriters);
 };
 
@@ -181,7 +182,7 @@ colab.cell.Editor.prototype.handleTooltip = function(opt_keepOnInsideFunction) {
     return false;
   }
 
-  /** @param {IPython.ObjectInfoReply=} message */
+  /** @param {{content: IPython.ObjectInfoReply }} message */
   var callback = function(message) {
     var r = message.content;
     var doc = 'Unrecognized request';
@@ -213,22 +214,26 @@ colab.cell.Editor.prototype.handleTooltip = function(opt_keepOnInsideFunction) {
     tooltip.startFollowingCursor(editor);
     that.tooltipFunc = functionToHelpWith;
   };
-  colab.globalKernel.object_info(
-      functionToHelpWith, callback);
+
+  colab.globalKernel.object_info(functionToHelpWith, callback);
   return true;
 };
+
 
 /**
  * Selects appropriate highlight mode
  */
 colab.cell.Editor.prototype.selectHighlightMode = function() {
+  // Don't modify highlight mode if code completion is disabled
+
+  if (!this.codeCompletion_) { return; }
   var firstline = this.editor_.getLine(0).split(/ +/, 1);
   var magic = firstline[0];
   var highlighting = {
     '%%javascript': 'javascript',
     '%%html': 'htmlmixed',
-    '%%dremel_query': 'text/x-sql',   // TODO(sandler): google specific
-    '%dremel_query': 'text/x-sql'   // TODO(sandler): google specific
+    '%%dremel_query': 'text/x-dremel',   // TODO(sandler): google specific
+    '%dremel_query': 'text/x-dremel'   // TODO(sandler): google specific
   };
   var highlightMode = highlighting[magic] || 'text/x-python';
   this.editor_.setOption('mode', highlightMode);
@@ -299,12 +304,11 @@ colab.cell.Editor.prototype.handleCodeCompletion = function() {
   var hintFunc = function(cm, callback) {
     if (!colab.globalKernel || !colab.globalKernel.running) {
       colab.notification.showPrimary(
-          'Autocomple requires live connection to Python!');
+          'Autocomplete requires live connection to Python!');
       return;
     }
-    /**
-     * @param {IPython.CompleterReply} message
-     */
+
+    /** @param {{content: IPython.CompleterReply}} message */
     var finishResponse = function(message) {
       var result = message.content;
       if (cursorPos != cm.getCursor().ch) {
@@ -445,10 +449,7 @@ colab.cell.Editor.prototype.getCursor = function() {
  * Render a CodeMirror object without it being in the document.
  */
 colab.cell.Editor.prototype.refresh = function() {
-//  goog.style.setStyle(this.getElement(),
-  //    'fontSize', colab.preferences.fontSize);
-
-  jQuery(this.getElement()).css('fontSize', colab.preferences.fontSize);
+  jQuery(this.getElement()).css('fontSize', colab.preferences.editorFontSize);
   // Hack to workaround bug in code mirror where we wouldn't size
   // editor properly on initial focus.
   this.editor_.setSize('100%');
@@ -503,6 +504,32 @@ colab.cell.Editor.prototype.tabHandler = function(cm) {
   cm.replaceSelection(spaces, 'end', '+input');
 };
 
+/**
+ * Handles up and down
+ * @param {number} direction
+ * @param {CodeMirror} cm
+ * @return {?}
+ */
+colab.cell.Editor.prototype.handleUpDown = function(direction, cm) {
+  var cur = this.editor_.getCursor();
+  if ((cur.line == 0 && direction == -1) ||
+      (cur.line == this.editor_.lastLine() && direction == 1)) {
+    // Timeout is necessarily here, since
+    // the main keyboard handler in notebook.js is called immediately
+    // after this one, and selecting a text cell,
+    // deselects the editor and that triggers 'up/down' handler in the
+    // notebook, resulting in 2 cell jump.
+    // TODO(sandler): For some reason, codemirror doesn't pass actual
+    // events to this handler, if it is, maybe we could use stopPropagation
+    // instead.
+    setTimeout(goog.bind(
+        colab.globalNotebook.changeSelectedCell, colab.globalNotebook,
+        direction), 1);
+    return false;
+  }
+  return CodeMirror.Pass;
+};
+
 /** @inheritDoc */
 colab.cell.Editor.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
@@ -519,7 +546,9 @@ colab.cell.Editor.prototype.enterDocument = function() {
         // Do our own tab handling. Use for code completion and replace
         // tabs with spaces.
         Tab: goog.bind(this.tabHandler, this),
-        'Ctrl-/': 'toggleComment'
+        'Ctrl-/': 'toggleComment',
+        'Up': goog.bind(this.handleUpDown, this, -1),
+        'Down': goog.bind(this.handleUpDown, this, 1)
       }
   });
 
@@ -556,8 +585,15 @@ colab.cell.Editor.prototype.enterDocument = function() {
       goog.bind(this.updateEditor_, this));
   this.text_.addEventListener(gapi.drive.realtime.EventType.TEXT_DELETED,
       goog.bind(this.updateEditor_, this));
+
   this.editor_.on(goog.events.EventType.BLUR,
       goog.bind(this.tooltip_.hide, this.tooltip_));
+
+  // prevents right click from scrolling the notebook unexpectedly
+  this.editor_.on(goog.events.EventType.MOUSEDOWN, function(cm, e) {
+    if (e.button == goog.events.BrowserEvent.MouseButton.RIGHT) {
+      e.preventDefault();
+    }});
 };
 
 /** @inheritDoc */
@@ -574,4 +610,3 @@ colab.cell.Editor.prototype.exitDocument = function() {
   //     CodeMirror editor.
   this.editor_ = null;
 };
-
