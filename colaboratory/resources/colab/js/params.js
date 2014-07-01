@@ -65,7 +65,7 @@ colab.params.getHashParams = function() {
  */
 colab.params.getNotebookUrl = function(params) {
   // TODO(kestert): make index.html a constant in this file.
-  return '/v2/notebook#' + colab.params.encodeParamString(params);
+  return '/static/colab/notebook.html#' + colab.params.encodeParamString(params);
 };
 
 /**

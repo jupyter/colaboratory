@@ -24,28 +24,25 @@ git clone --recursive https://github.com/ipython/colaboratory
 Run
 ```
 cd colaboratory
-./install.sh
+pip install -r requirements.txt
 ```
-to install the Web App (this creates an IPython profile which uses
-IPython to serve the static web content for the new front end)
+to install the dependencies.
 
-NOTE: both the install and run scripts must be run from the colaboratory directory,
-e.g. running ```colaboratory/install.sh``` will not work.
+NOTE: This must be run from the colaboratory directory.
 
-If you did not use the `--recursive` flag when cloning, you will  get errors like:
+If you did not use the `--recursive` flag when cloning, you will get errors like:
 ```
-cp: cannot stat ‘closure-library/closure/goog/css/*’: No such file or directory
+[tornado.access] WARNING | 404 GET /static/closure/css/common.css
 ```
-To fix this, run `git submodule update`.
+To fix this, run `git submodule init && git submodule update`.
 
 Start IPython notebook:
 ```
-./run.sh
+python -m colaboratory
 ```
-This launches IPython using the profile created in the install step.
+This launches the web application.
 
-Navigate to ```http://127.0.0.1:8888/static/v2/welcome.html``` in
-browser
+Navigate to ```http://127.0.0.1:8888/static/colab/welcome.html``` in your browser.
 
 ## Installing the Colaboratory Chrome App
 Run
