@@ -117,15 +117,6 @@ def load_handlers(name):
 #-----------------------------------------------------------------------------
 from IPython.html.base.handlers import IPythonHandler
 
-class RootHandler(IPythonHandler):
-    """Redirect a request to the corresponding tree URL"""
-
-    @web.authenticated
-    def get(self):
-        # FIXME: get rid of disk-relative paths here!
-        with open(os.path.join(here, '../static/frontend/welcome.html')) as f:
-            self.write(f.read())
-
 class ColaboratoryWebApplication(web.Application):
 
     def __init__(self, ipython_app, kernel_manager, notebook_manager,
@@ -175,14 +166,14 @@ class ColaboratoryWebApplication(web.Application):
     def init_handlers(self, settings):
         # Load the (URL pattern, handler) tuples for each component.
         here = os.path.dirname(__file__)
-        handlers = [(r'/', web.RedirectHandler, {'url':'/static/colab/welcome.html'}),
-                    (r'/static/colab/(.*)', web.StaticFileHandler,
+        handlers = [(r'/', web.RedirectHandler, {'url':'/colab/welcome.html'}),
+                    (r'/colab/(.*)', web.StaticFileHandler,
                         {'path': pjoin(RESOURCES, 'colab')}),
-                    (r'/static/extern/(.*)', web.StaticFileHandler,
+                    (r'/extern/(.*)', web.StaticFileHandler,
                         {'path': pjoin(RESOURCES, 'extern')}),
-                    (r'/static/closure/(.*)', web.StaticFileHandler,
+                    (r'/closure/(.*)', web.StaticFileHandler,
                         {'path': pjoin(RESOURCES, 'closure-library', 'closure', 'goog')}),
-                    (r'/static/ipython/(.*)', FileFindHandler,
+                    (r'/ipython/(.*)', FileFindHandler,
                         {'path': [pjoin(RESOURCES, 'ipython_patch'), DEFAULT_STATIC_FILES_PATH]}),
         ]
         
