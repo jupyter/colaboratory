@@ -17,8 +17,9 @@ fi
 
 # prepare the destination directory
 test -d "$DEST" || mkdir -p "$DEST"
+mkdir -p "$DEST"
 
-for d in colab extern ipython closure; do
+for d in colab extern ipython closure welcome notebook; do
   echo "rm -rf $DEST/$d"
   rm -rf "$DEST/$d"
 done
@@ -34,9 +35,14 @@ pushd $HERE > /dev/null
 git submodule init && git submodule update
 popd > /dev/null
 
+# stage the /, /welcome/, and /notebook/ URLs
+cp -r "$COLAB_STATIC/" "$DEST/"
+for name in welcome notebook; do
+  mkdir "$DEST/$name"
+  cp "$COLAB_RESOURCES/colab/$name.html" "$DEST/$name/index.html"
+done
 
 # stage the basic colab and extern directories
-cp -r "$COLAB_STATIC/" "$DEST/"
 cp -r "$COLAB_RESOURCES/colab/" "$DEST/colab/"
 cp -r "$COLAB_RESOURCES/extern/" "$DEST/extern/"
 
