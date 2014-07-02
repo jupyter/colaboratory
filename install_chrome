@@ -7,7 +7,7 @@ set -x
 DEST=build_chrome
 
 # stage static files
-./bundle_static $DEST
+./bundle_static $DEST/static
 
 # copy chrome app files, putting pnacl files in root
 # as the folder structure is hard coded into the pnacl kernel code
