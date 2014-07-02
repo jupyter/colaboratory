@@ -29,6 +29,7 @@ cp -r "$COLAB_RESOURCES/extern/" "$STATIC/extern/"
 # stage IPython's static files, then clobber them with patched versions
 IPYTHON_STATIC=`python -c 'import IPython.html; print(IPython.html.DEFAULT_STATIC_FILES_PATH)'`
 cp -r "$IPYTHON_STATIC/" "$STATIC/ipython/"
+rm -rf "$STATIC/ipython/components/.git"
 cp -r "$COLAB_RESOURCES/ipython_patch/" "$STATIC/ipython/"
 
 # stage closure from the submodule
