@@ -23,7 +23,7 @@ Kernel.prototype.start = function() {
   this.embed_ = document.createElement('object');
   this.embed_.width = 0;
   this.embed_.height = 0;
-  this.embed_.data = 'kernel.nmf';
+  this.embed_.data = '/pnacl/kernel.nmf';
   this.embed_.type = 'application/x-pnacl';
 
   function addParam(embed, name, value) {

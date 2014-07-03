@@ -1,5 +1,5 @@
 // This must start with a /, otherwise serverOrigin will be wrong.
-var notebookPath = '/static/v2/notebook.html';
+var notebookPath = '/colab/notebook.html';
 var notebookUrl = chrome.runtime.getURL(notebookPath);
 var serverOrigin = notebookUrl.substr(0, notebookUrl.length -
     notebookPath.length);

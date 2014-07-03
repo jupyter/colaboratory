@@ -15,7 +15,7 @@ var launchNotebookWindow = function(params) {
     var value = params[key];
     hashStrings.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
   }
-  var url = 'window.html#' + hashStrings.join('&');
+  var url = '/app/window.html#' + hashStrings.join('&');
   chrome.app.window.create(url, {
     'bounds': {
       'width': 800,
