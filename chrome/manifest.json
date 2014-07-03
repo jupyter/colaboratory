@@ -6,8 +6,8 @@
   "app": {
     "background": {
       "scripts": [
-        "launch.js",
-        "main.js"
+        "app/launch.js",
+        "app/main.js"
       ]
     }
   },
@@ -50,7 +50,7 @@
     "partitions" :[
       {
         "name": "frontend",
-        "accessible_resources": ["static/*"]
+        "accessible_resources": ["notebook/*", "closure/*", "colab/*", "extern/*", "ipython/*"]
       }
     ]
   }
