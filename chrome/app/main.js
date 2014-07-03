@@ -17,7 +17,7 @@ chrome.app.runtime.onLaunched.addListener(function(intentData) {
     }
   } else if (!intentData.id) {
     // Standard 'launch' command.  Launch welcome window
-    chrome.app.window.create('welcome.html', {
+    chrome.app.window.create('app/welcome.html', {
       'bounds': {
         'width': 600,
         'height': 400
