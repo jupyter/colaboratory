@@ -27,6 +27,12 @@ colab.install.CLIENT_ID = '26410270374-q0d0ap400g3mescci580rj5449tg2iq9' +
  */
 colab.install.install = function(immediate, callback) {
   gapi.load('auth:client', function() {
+    // Special procedure for when in Chrome App mode.
+    if (colab.app.appMode) {
+      colab.app.authorize(immediate, /** @type{function()} */ (callback));
+      return;
+    }
+
     // Otherwise, using standard OAuth flow.
     gapi.auth.authorize({
       client_id: colab.install.CLIENT_ID,

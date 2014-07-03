@@ -16,6 +16,11 @@ colab.displayInitialScreen = function() {
 
   var createButton = document.getElementById('create-button');
   createButton.onclick = function() {
+    if (colab.app.appMode) {
+      colab.app.postMessage('launch', {'create': 'true'});
+      return;
+    }
+
     var newUrl = colab.params.getNewNotebookUrl();
     window.location.href = newUrl;
   };

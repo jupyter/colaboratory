@@ -1,5 +1,5 @@
 // This must start with a /, otherwise serverOrigin will be wrong.
-var notebookPath = '/static/v2/notebook.html';
+var notebookPath = '/colab/notebook.html';
 var notebookUrl = chrome.runtime.getURL(notebookPath);
 var serverOrigin = notebookUrl.substr(0, notebookUrl.length -
     notebookPath.length);
@@ -37,8 +37,15 @@ window.addEventListener('message', function(message) {
   }
 });
 
+var loadedOnce = false;
 
 webview.addEventListener('loadstop', function(m) {
+  // Only add listeners after the webview loads for the first time.
+  if (loadedOnce) {
+    return;
+  }
+  loadedOnce = true;
+
   // Send initialization message to webview
   webview.contentWindow.postMessage('initialization_message', serverOrigin);
 
