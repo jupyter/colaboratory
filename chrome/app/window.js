@@ -37,8 +37,15 @@ window.addEventListener('message', function(message) {
   }
 });
 
+var loadedOnce = false;
 
 webview.addEventListener('loadstop', function(m) {
+  // Only add listeners after the webview loads for the first time.
+  if (loadedOnce) {
+    return;
+  }
+  loadedOnce = true;
+
   // Send initialization message to webview
   webview.contentWindow.postMessage('initialization_message', serverOrigin);
 
