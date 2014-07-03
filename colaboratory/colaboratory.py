@@ -115,7 +115,12 @@ def load_handlers(name):
 #-----------------------------------------------------------------------------
 # The Tornado web application
 #-----------------------------------------------------------------------------
-from IPython.html.base.handlers import IPythonHandler
+
+class SingleStaticFileHandler(web.StaticFileHandler):
+    def get_absolute_path(self, root, path):
+        p = os.path.abspath(os.path.join(self.root, self.default_filename))
+        return p
+
 
 class ColaboratoryWebApplication(web.Application):
 
@@ -166,9 +171,14 @@ class ColaboratoryWebApplication(web.Application):
     def init_handlers(self, settings):
         # Load the (URL pattern, handler) tuples for each component.
         here = os.path.dirname(__file__)
-        handlers = [(r'/', web.RedirectHandler, {'url':'/colab/welcome.html'}),
+        colab = pjoin(RESOURCES, 'colab')
+        handlers = [(r'/', web.RedirectHandler, {'url':'/welcome'}),
+                    (r'/welcome(/?)', SingleStaticFileHandler,
+                        {'path': colab, 'default_filename': 'welcome.html'}),
+                    (r'/notebook(/?)', SingleStaticFileHandler,
+                        {'path': colab, 'default_filename': 'notebook.html'}),
                     (r'/colab/(.*)', web.StaticFileHandler,
-                        {'path': pjoin(RESOURCES, 'colab')}),
+                        {'path': colab}),
                     (r'/extern/(.*)', web.StaticFileHandler,
                         {'path': pjoin(RESOURCES, 'extern')}),
                     (r'/closure/(.*)', web.StaticFileHandler,

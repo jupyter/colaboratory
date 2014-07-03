@@ -160,8 +160,8 @@ colab.cell.OutputArea.prototype.clearOutput = function() {
  * @type {string}
  */
 colab.cell.OutputArea.html = '<head>' +
-    '<link rel="stylesheet" href="css/ansi.css"/>' +
-    '<link rel="stylesheet" href="css/main.css"/>' +
+    '<link rel="stylesheet" href="/colab/css/ansi.css"/>' +
+    '<link rel="stylesheet" href="/colab/css/main.css"/>' +
     '<script>' +
     '   IPython  = {};' +
     '   IPython.namespace = function() {};' +
