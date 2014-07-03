@@ -8,6 +8,12 @@ webview.setAttribute('partition', 'frontend');
 webview.setAttribute('src', welcomeUrl + '#' + colab.webview.hashParams);
 
 webview.addEventListener('loadstop', function() {
-  colab.webview.sendInitializationMessaage(webview.contentWindow);
-  colab.webview.provideIdentitiyApiAuth(webview.contentWindow, true);
+  var contentWindow = webview.contentWindow;
+  colab.webview.sendInitializationMessaage(contentWindow);
+  colab.webview.provideIdentitiyApiAuth(contentWindow, true);
+  colab.webview.addMessageListener(contentWindow,
+    'launch',
+    function(messageType, params) {
+      launchNotebookWindow(params);
+  	});
 });

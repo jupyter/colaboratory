@@ -32,6 +32,8 @@ colab.app.extensionOrigin_ = colab.params.getHashParams().extensionOrigin;
  * is recieved.  That function recieves the content of the message
  * (message.data) along with the metadata (source and origin).
  * @param {Function} callback
+ * NOTE: this function is deprecated, use addMessageListener for
+ * new messages.
  */
 colab.app.addChromeAppListener = function(callback) {
   window.addEventListener('message', function(message) {
@@ -39,6 +41,24 @@ colab.app.addChromeAppListener = function(callback) {
       return;
     }
     callback(message.data, {source: message.source, origin: message.origin});
+  });
+};
+
+/**
+ * Registers a callback to be called whenever a message with the specified
+ * type is recieved.  Message types are user defined strings.
+ * @param {string} msgType message type to listen for
+ * @param {Function(string, Object)} callback
+ */
+colab.app.addMessageListener = function(msgType, callback) {
+  window.addEventListener('message', function(message) {
+    if (message.origin != colab.app.extensionOrigin_) {
+      return;
+    }
+
+    if (message.data['type'] == msgType) {
+      callback(msgType, message.data['content']);
+    }
   });
 };
 
@@ -62,13 +82,18 @@ colab.app.parentWindow_ = new goog.Promise(function(resolve, reject) {
 
 /**
  * Posts a message to the Chrome App window.  This message will be
- * cached until 
- * @param {Object} data Data to send
+ * sent once the parent window is known.
+ * @param {string} msgType message type.
+ * @param {Object=} opt_content Data to send
  * @param {function()=} opt_callback Callback when message is sent
  */
-colab.app.postChromeAppMessage = function(data, opt_callback) {
+colab.app.postMessage = function(msgType, opt_content, opt_callback) {
   colab.app.parentWindow_.then(function(app_window) {
-  	app_window['window'].postMessage(data, colab.app.extensionOrigin_);
+    var message = {
+      'type': msgType,
+      'content': opt_content
+    }
+  	app_window['window'].postMessage(message, colab.app.extensionOrigin_);
   	if (opt_callback) {
   	  opt_callback();
   	}
@@ -87,19 +112,21 @@ colab.app.postChromeAppMessage = function(data, opt_callback) {
  * @param {function()=} opt_callback Callback when authorization is complete
  */
 colab.app.authorize = function(immediate, opt_callback) {
-  colab.app.postChromeAppMessage({
-    'request_access_token': {'immediate': immediate}
-  });
-  colab.app.addChromeAppListener(function(data) {
-  	if (data['token']) {
-      gapi.auth.setToken({'access_token': data.token});
-  	  if (opt_callback) {
-        // TODO(kestert): figure out what callback should return.
-  	  	opt_callback('success');
-  	  }
-    } else if (data['request_access_token_failed']) {
+  colab.app.postMessage('access_token', {'immediate': immediate});
+  colab.app.addMessageListener('access_token', function(msgType, content) {
+    // content == null is used to signal an error in authorization
+    if (!content) {
       if (opt_callback) {
         opt_callback();
+      }
+      return;
+    }
+
+    if (content['token']) {
+      gapi.auth.setToken({'access_token': content['token']});
+      if (opt_callback) {
+        // TODO(kestert): figure out which args to pass to callback.
+        opt_callback('success');
       }
     }
   });
