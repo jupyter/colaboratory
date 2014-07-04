@@ -284,6 +284,13 @@ colab.createToolbar = function(permissions) {
         ['connected', 'disconnected'], 'connecting');
   });
 
+  jQuery([IPython.events]).on('status_loading.Kernel', function(ev, data) {
+    buttonElement.text('PNaCl Loading ' + data['progress'] + '\%');
+    goog.dom.classes.addRemove(
+        goog.dom.getElement('backend-connect-toolbar-button'),
+        ['connected', 'disconnected'], 'connecting');
+  });
+
   jQuery([IPython.events]).on('pnacl_loadend.Kernel', function(ev, data) {
     buttonElement.text('PNaCl Initializing');
     goog.dom.classes.addRemove(
