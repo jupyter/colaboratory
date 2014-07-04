@@ -14,6 +14,8 @@ var kernel = new Kernel(function(message) {
   webview.contentWindow.postMessage(message, serverOrigin);
 });
 
+
+
 window.addEventListener('message', function(message) {
   if (message.source !== webview.contentWindow ||
       message.origin !== serverOrigin) {
@@ -24,14 +26,6 @@ window.addEventListener('message', function(message) {
     kernel.start();
   } else if (message.data === 'restart_kernel') {
     kernel.restart();
-  } else if (message.data == 'pick_file') {
-    chrome.fileSystem.chooseEntry({type: 'openDirectory'}, function(theEntry) {
-      if (!theEntry) {
-        return;
-      }
-      kernel.handleMessage({'filesystem_name': theEntry.fullPath,
-                            'filesystem_resource': theEntry.filesystem});
-    });
   } else if (message.data && message.data.json) {
     kernel.handleMessage(message.data);
   }
@@ -45,6 +39,17 @@ webview.addEventListener('loadstop', function(m) {
     return;
   }
   loadedOnce = true;
+
+  colab.webview.addMessageListener(
+    webview.contentWindow, 'pick_file', function(msgType, content) {
+    chrome.fileSystem.chooseEntry({type: 'openDirectory'}, function(theEntry) {
+      if (!theEntry) {
+        return;
+      }
+      kernel.handleMessage({'filesystem_name': theEntry.fullPath,
+                            'filesystem_resource': theEntry.filesystem});
+    });
+  });
 
   // Send initialization message to webview
   webview.contentWindow.postMessage('initialization_message', serverOrigin);
