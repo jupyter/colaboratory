@@ -86,10 +86,10 @@ IPython.Kernel.prototype.stop_channels = function() {};
 /***/
 IPython.Kernel.prototype.restart = function() {};
 
-/***/
+/** @param {*} msg */
 IPython.Kernel.prototype._handle_iopub_message = function(msg) {};
 
-/***/
+/** @param {*} msg */
 IPython.Kernel.prototype._handle_shell_reply = function(msg) {};
 
 /** @type {boolean} */
@@ -489,6 +489,5 @@ jQuery.event = function(eventType) {};
 /**
  * @param {(string|jQuery.event)} arg1
  * @param {Object=} extraParameters
- * @return {jQueryObject}
  */
 jQueryObject.prototype.trigger = function(arg1, extraParameters) {};
