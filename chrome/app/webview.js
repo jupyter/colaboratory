@@ -147,7 +147,6 @@ colab.webview.prototype.provideIdentityApiAuth = function(onDemand) {
     // a message is recieved, perform authorization using the
     // Idenity API, and send the OAuth token back to the webview.
     this.addMessageListener('access_token', function(msgType, content) {
-      console.log(msgType);
       var interactive = !content['immediate'];
       obtainAndSendToken(interactive)
     });
