@@ -1,65 +1,33 @@
-// This must start with a /, otherwise serverOrigin will be wrong.
-var notebookPath = '/colab/notebook.html';
-var notebookUrl = chrome.runtime.getURL(notebookPath);
-var serverOrigin = notebookUrl.substr(0, notebookUrl.length -
-    notebookPath.length);
-var tokenRefreshInterval = 10 * 60 * 1000;  // 10 minutes
+var params = colab.params.decodeParamString(window.location.hash.substr(1));
 
-var webview = document.getElementById('webview');
-
-webview.setAttribute('partition', 'frontend');
-webview.setAttribute('src', notebookUrl + window.location.hash);
+var webview = new colab.webview(document.getElementById('webview'),
+                                '/colab/notebook.html',
+                                params)
 
 var kernel = new Kernel(function(message) {
-  webview.contentWindow.postMessage(message, serverOrigin);
+  webview.postMessage('kernel_message', message);
 });
 
-window.addEventListener('message', function(message) {
-  if (message.source !== webview.contentWindow ||
-      message.origin !== serverOrigin) {
-    return;
-  }
+webview.provideIdentityApiAuth(false);
 
-  if (message.data === 'start_kernel') {
-    kernel.start();
-  } else if (message.data === 'restart_kernel') {
-    kernel.restart();
-  } else if (message.data == 'pick_file') {
-    chrome.fileSystem.chooseEntry({type: 'openDirectory'}, function(theEntry) {
-      if (!theEntry) {
-        return;
-      }
-      kernel.handleMessage({'filesystem_name': theEntry.fullPath,
-                            'filesystem_resource': theEntry.filesystem});
-    });
-  } else if (message.data && message.data.json) {
-    kernel.handleMessage(message.data);
-  }
-});
+webview.addMessageListener('start_kernel', function(msgType, content) {
+  kernel.start();
+})
 
-var loadedOnce = false;
+webview.addMessageListener('restart_kernel', function(msgType, content) {
+  kernel.restart();
+})
 
-webview.addEventListener('loadstop', function(m) {
-  // Only add listeners after the webview loads for the first time.
-  if (loadedOnce) {
-    return;
-  }
-  loadedOnce = true;
+webview.addMessageListener('kernel_message', function(msgType, content) {
+  kernel.handleMessage({json: content});
+})
 
-  // Send initialization message to webview
-  webview.contentWindow.postMessage('initialization_message', serverOrigin);
-
-  // Obtain OAuth token and post to webview
-  chrome.identity.getAuthToken({interactive: true}, function(token) {
-    console.log('recieved token ' + token);
-    webview.contentWindow.postMessage({token: token}, serverOrigin);
+webview.addMessageListener('pick_file', function(msgType, content) {
+  chrome.fileSystem.chooseEntry({type: 'openDirectory'}, function(theEntry) {
+    if (!theEntry) {
+      return;
+    }
+    kernel.handleMessage({'filesystem_name': theEntry.fullPath,
+                          'filesystem_resource': theEntry.filesystem});
   });
-
-  // Periodically refresh token and post to webview
-  setInterval(function() {
-    chrome.identity.getAuthToken({interactive: true}, function(token) {
-      console.log('recieved token ' + token);
-      webview.contentWindow.postMessage({token: token}, serverOrigin);
-    });
-  }, tokenRefreshInterval);
 });

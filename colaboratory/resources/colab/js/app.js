@@ -69,7 +69,6 @@ colab.app.addMessageListener = function(msgType, callback) {
  * since there is no other way to get the parent window of the webview.
  * 
  * @type {goog.Promise}
- * @private
  */
 colab.app.parentWindow_ = new goog.Promise(function(resolve, reject) {
   window.addEventListener('message', function(message) {
