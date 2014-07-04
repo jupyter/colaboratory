@@ -162,6 +162,20 @@ execution_count = 1
 
 shell = PepperKernel().shell
 
+# Taken from IPython 2.x branch, IPython/kernel/zmq/ipykernel.py
+def _complete(msg):
+  c = msg['content']
+  try:
+    cpos = int(c['cursor_pos'])
+  except:
+    # If we don't get something that we can convert to an integer, at
+    # least attempt the completion guessing the cursor is at the end of
+    # the text, if there's any, and otherwise of the line
+    cpos = len(c['text'])
+    if cpos==0:
+      cpos = len(c['line'])
+  return shell.complete(c['text'], c['line'], cpos)
+
 # Special message to indicate the NaCl kernel is ready.
 sendMessage('iopub', 'status', content={'execution_state': 'nacl_ready'})
 
@@ -231,21 +245,25 @@ while 1:
     sendMessage('shell', 'execute_reply', parent_header=request_header,
                 content=content)
   elif msg_type == 'complete_request':
-    c = msg['content']
-    try:
-      cpos = int(c['cursor_pos'])
-    except:
-      cpos = len(c['text'])
-      if cpos == 0:
-        cpos = len(c['line'])
-    txt, matches = shell.complete(c['text'], c['line'], cpos)
+    # Taken from IPython 2.x branch, IPython/kernel/zmq/ipykernel.py
+    txt, matches = _complete(msg)
+    matches = {'matches' : matches,
+               'matched_text' : txt,
+               'status' : 'ok'}
+    matches = json_clean(matches)
     sendMessage('shell', 'complete_reply',
                 parent_header = request_header,
-                content = {
-                    'matches': matches,
-                    'matched_text': txt,
-                    'status': 'ok'
-                    })
+                content = matches)
+  elif msg_type == 'object_info_request':
+    # Taken from IPython 2.x branch, IPython/kernel/zmq/ipykernel.py
+    content = msg['content']
+    object_info = shell.object_inspect(content['oname'],
+                    detail_level = content.get('detail_level', 0))
+    # Before we send this object over, we scrub it for JSON usage
+    oinfo = json_clean(object_info)
+    sendMessage('shell', 'object_info_reply',
+                parent_header = request_header,
+                content = oinfo)
   elif msg_type == 'restart':
     # break out of this loop, ending this program.
     # The main event loop in shell.cc will then
