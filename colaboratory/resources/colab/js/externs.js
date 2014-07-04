@@ -86,6 +86,12 @@ IPython.Kernel.prototype.stop_channels = function() {};
 /***/
 IPython.Kernel.prototype.restart = function() {};
 
+/***/
+IPython.Kernel.prototype._handle_iopub_message = function(msg) {};
+
+/***/
+IPython.Kernel.prototype._handle_shell_reply = function(msg) {};
+
 /** @type {boolean} */
 IPython.Kernel.prototype.running = false;
 
@@ -470,3 +476,19 @@ IPython.KernelCreationOptions .prototype.kernel_origin = '';
  * @type {string}
  */
 IPython.KernelCreationOptions .prototype.kernel_window = '';
+
+// NOTE: used to patch over jQuery externs version mismatch
+/**
+ * @constructor
+ * @param {string} eventType
+ */
+jQuery.event = function(eventType) {};
+
+// NOTE: a slightly different version reflecting how trigger is
+// called in existing IPython code.
+/**
+ * @param {(string|jQuery.event)} arg1
+ * @param {Object=} extraParameters
+ * @return {jQueryObject}
+ */
+jQueryObject.prototype.trigger = function(arg1, extraParameters) {};

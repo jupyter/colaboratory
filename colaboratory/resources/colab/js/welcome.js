@@ -8,6 +8,7 @@ goog.require('goog.dom.classes');
 goog.require('goog.dom.forms');
 goog.require('goog.style');
 
+
 /**
  * Displays the initial screen and attaches event handlers
  */

@@ -13,6 +13,8 @@
 goog.provide('colab.app');
 
 goog.require('colab.params');
+goog.require('goog.Promise');
+
 
 /**
  * Whether this webpage is being run inside a webview in a Chrome App.
@@ -20,12 +22,14 @@ goog.require('colab.params');
  */
 colab.app.appMode = colab.params.getHashParams().mode === 'app';
 
+
 /**
  * Origin of messages from the Chrome App
  * @type {string}
  * @private
  */
 colab.app.extensionOrigin_ = colab.params.getHashParams().extensionOrigin;
+
 
 /**
  * Registers a callback to be called whenever a message from the Chrome App
@@ -44,11 +48,12 @@ colab.app.addChromeAppListener = function(callback) {
   });
 };
 
+
 /**
  * Registers a callback to be called whenever a message with the specified
  * type is recieved.  Message types are user defined strings.
  * @param {string} msgType message type to listen for
- * @param {Function(string, Object)} callback
+ * @param {function(string, Object)} callback
  */
 colab.app.addMessageListener = function(msgType, callback) {
   window.addEventListener('message', function(message) {
@@ -62,22 +67,25 @@ colab.app.addMessageListener = function(msgType, callback) {
   });
 };
 
+
 /**
  * Promise that is fullfilled when the initialization message is sent
  * from the Chrome App.  The source of this message is the Chrome App
  * parent window, and this is needed to send messages to that window,
  * since there is no other way to get the parent window of the webview.
- * 
+ *
  * @type {goog.Promise}
+ * @private
  */
 colab.app.parentWindow_ = new goog.Promise(function(resolve, reject) {
   window.addEventListener('message', function(message) {
-  	if (message.origin != colab.app.extensionOrigin_) {
-  	  return;
-  	}
-  	resolve({'window': message.source});
+    if (message.origin != colab.app.extensionOrigin_) {
+      return;
+    }
+    resolve({'window': message.source});
   });
 });
+
 
 /**
  * Posts a message to the Chrome App window.  This message will be
@@ -91,13 +99,14 @@ colab.app.postMessage = function(msgType, opt_content, opt_callback) {
     var message = {
       'type': msgType,
       'content': opt_content
+    };
+    app_window['window'].postMessage(message, colab.app.extensionOrigin_);
+    if (opt_callback) {
+      opt_callback();
     }
-  	app_window['window'].postMessage(message, colab.app.extensionOrigin_);
-  	if (opt_callback) {
-  	  opt_callback();
-  	}
   });
 };
+
 
 /**
  * Substitute for gapi.auth.authorize, that uses the Chrome Identity
@@ -108,7 +117,7 @@ colab.app.postMessage = function(msgType, opt_content, opt_callback) {
  * scopes other than the full set of scopes granted to the App.
  *
  * @param {boolean} immediate  Whether to return immediately or show prompt
- * @param {function()=} opt_callback Callback when authorization is complete
+ * @param {Function} opt_callback Callback when authorization is complete
  */
 colab.app.authorize = function(immediate, opt_callback) {
   colab.app.postMessage('access_token', {'immediate': immediate});

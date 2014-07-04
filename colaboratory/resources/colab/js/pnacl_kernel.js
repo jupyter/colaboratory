@@ -2,14 +2,17 @@
  *
  * @fileoverview Subclass of IPython.Kernel which uses a PNaCl based kernel.
  *
- * This only works when running inside a webview in the Chrome App.  The Chrome App    
- * contains the code that creates the PNaCl kernel embed element, and messages to the
- * kernel are relayed via the Chrome App.  The postMessage function is used to communicate
- * with the Chrome App that contains the webview that this code is running in.
+ * This only works when running inside a webview in the Chrome App.  The Chrome
+ * App contains the code that creates the PNaCl kernel embed element, and
+ * messages to the kernel are relayed via the Chrome App.  The postMessage
+ * function is used to communicate with the Chrome App that contains the webview
+ * that this code is running in.
  */
 goog.provide('colab.PNaClKernel');
 
 goog.require('colab.app');
+
+
 
 /**
  * A subclass of IPython.Kernel that uses
@@ -21,26 +24,29 @@ colab.PNaClKernel = function() {
 };
 goog.inherits(colab.PNaClKernel, IPython.Kernel);
 
+
 /**
  * Starts the PNaCl IPython Kernel
  * @override
  */
-colab.PNaClKernel.prototype.start = function () {
+colab.PNaClKernel.prototype.start = function() {
   var that = this;
 
-  colab.app.postMessage('start_kernel', this.kernelOrigin_);
+  colab.app.postMessage('start_kernel');
 
   colab.app.addMessageListener('kernel_message', function(msgType, content) {
     that.handleMessage_(content);
   });
 
   // Create 'fake' shell channel that sends data using postmessage.
-  this.shell_channel = {};
-  this.shell_channel.send = function(msg) {
-    colab.app.postMessage('kernel_message', msg);
-  }
-  this.stdin_channel = this.shell_channel;
-}
+  var fake_channel = /** @type {WebSocket} */ ({
+    'send': function(msg) {
+      colab.app.postMessage('kernel_message', msg);
+    }});
+  this.shell_channel = fake_channel;
+  this.stdin_channel = fake_channel;
+};
+
 
 /**
  * Kills the kernel
@@ -49,6 +55,7 @@ colab.PNaClKernel.prototype.start = function () {
 colab.PNaClKernel.prototype.kill = function() {
   // TODO send message to app, to kill the kernel.
 };
+
 
 /**
  * Does nothing as shell channels are just custom objects
@@ -59,13 +66,14 @@ colab.PNaClKernel.prototype.stop_channels = function() {
   this.shell_channel = null;
 };
 
+
 /**
  * Handles a message from the PNaCl kernel or parent App.
  *
- * @param {object} message
+ * @param {Object} message
  * @private
  */
-colab.PNaClKernel.prototype.handleMessage_ = function (message) {
+colab.PNaClKernel.prototype.handleMessage_ = function(message) {
   var that = this;
   var tty_prefix = 'tty';
 
@@ -82,8 +90,8 @@ colab.PNaClKernel.prototype.handleMessage_ = function (message) {
     if (!that.running) {
       var progress = Math.round(100 * message.loaded / message.total);
       if (isNaN(progress)) { progress = 0; }
-        $([IPython.events]).trigger('status_loading.Kernel',
-                                    {kernel: that, progress: progress});
+      $([IPython.events]).trigger('status_loading.Kernel',
+                                  {kernel: that, progress: progress});
     }
   } else if (message.type === 'loadend') {
     $([IPython.events]).trigger('pnacl_loadend.Kernel',

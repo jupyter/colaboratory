@@ -1,14 +1,17 @@
 
 goog.provide('colab.install');
 
+
 /**
  * OAuth 2.0 scope for installing Drive Apps.
  * @const
  */
 colab.install.OAUTH_SCOPE = 'https://www.googleapis.com/auth/drive.install';
 
+
 /** @const */
 colab.install.FILE_SCOPE = 'https://www.googleapis.com/auth/drive';
+
 
 /**
  * Google cloud services client id. Found in the project console for CoLab
@@ -29,7 +32,7 @@ colab.install.install = function(immediate, callback) {
   gapi.load('auth:client', function() {
     // Special procedure for when in Chrome App mode.
     if (colab.app.appMode) {
-      colab.app.authorize(immediate, /** @type{function()} */ (callback));
+      colab.app.authorize(immediate, callback);
       return;
     }
 
