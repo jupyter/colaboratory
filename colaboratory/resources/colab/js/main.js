@@ -47,20 +47,6 @@ colab.NACL_KERNEL_URL = 'nacl://';
 
 
 /**
- * A promse that is fullfilled with details needed to communicate with in-app
- * kernel.
- * @type {goog.Promise}
- */
-colab.appKernelDetails = new goog.Promise(function(resolve, reject) {
-  colab.app.addChromeAppListener(function(data, metadata) {
-    if (data === 'initialization_message') {
-      resolve(metadata);
-    }
-  });
-});
-
-
-/**
  * Records custom analytics about this request
  * @param {colab.drive.NotebookModel} notebook
  * @param {Error|Object=} opt_error an exception object, if available.
@@ -498,10 +484,8 @@ colab.loadPNaClKernel = function() {
 
   // Waits for promise (of parent window details) before starting kernel
   // if in app mode, otherwise immediately starts kernel.
-  colab.appKernelDetails.then(function(details) {
-    colab.globalKernel = new colab.PNaClKernel(details.source, details.origin);
-    colab.globalKernel.start();
-  });
+  colab.globalKernel = new colab.PNaClKernel();
+  colab.globalKernel.start();
 };
 
 
