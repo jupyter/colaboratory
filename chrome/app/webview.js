@@ -9,35 +9,95 @@
 
 var colab = colab || {};
 
-colab.webview = {};
+/**
+ * A wrapper around a webview that contains colab code.  The webview
+ * should run the script colab/js/app.js at load time.  This will
+ * set up the webview to listen for messages from this class.
+ * @constructor
+ * @param {Element} el The HTML element of the webview.
+ * @param {string} url The url to load the webview from.
+ * @param {Object=} opt_hashParams key-value pairs for hash params to
+ *   pass to webview.
+ */
+colab.webview = function(el, url, opt_hashParams) {
+  var that = this;
+
+  /**
+   * @type {Element} 
+   * @private
+   */
+  this.element_ = el;
+
+  /**
+   * @type {string}
+   * @private
+   */
+  this.extensionOrigin_ = chrome.runtime.getURL('/').replace(/\/$/, '');
+
+  /**
+   * @type {boolean}
+   * @private
+   */
+  this.loaded_ = false;
+
+  /**
+   * @type {Array.<Function>}
+   * @private
+   */
+  this.onFirstLoadCallbacks_ = [];
+
+  this.element_.addEventListener('loadstop', function() {
+    if (!that.loaded_) {
+      for (var i = 0; i < that.onFirstLoadCallbacks_.length; i++) {
+        that.onFirstLoadCallbacks_[i]();
+      }
+      that.loaded_ = true;
+    }
+  });
+
+  // Post a message that is used by the webview to determine
+  // this window of this app, so that it can send messages the
+  // other way.
+  this.addFirstLoadListener(function() {
+    that.postMessage('initialization');
+  });
+
+  var hashParams = opt_hashParams || {};
+  hashParams['mode'] = 'app';
+  hashParams['extensionOrigin'] = this.extensionOrigin_;
+
+  var fullUrl = url + '#' + colab.params.encodeParamString(hashParams);
+  this.element_.setAttribute('partition', 'frontend');
+  this.element_.setAttribute('src', fullUrl);
+
+};
 
 /**
- * The origin for this Chrome App's resources.
- * @type {string}
- * @private
+ * Adds a callback for when the webview loads for the first time.
+ * If the webview has already loaded, the callback is executed
+ * immediately.
+ *
+ * @param {Function} callback called with message type and content.
  */
-colab.webview.extensionOrigin_ = chrome.runtime.getURL('/').replace(/\/$/, '');
-
-/**
- * Hash params (in format key=value&key=value, without any leading or
- * trailing &'s) that is used to indicate to the webview that it is
- * running in a webview and not as a regular webpage.
- */
-colab.webview.hashParams = 'mode=app&extensionOrigin=' +
-    encodeURIComponent(colab.webview.extensionOrigin_);
-
+colab.webview.prototype.addFirstLoadListener = function(callback) {
+  if (this.loaded_) {
+    callback();
+  } else {
+    this.onFirstLoadCallbacks_.push(callback);
+  }
+};
 
 /**
  * Adds a listener for a given message type from the webview.
  * Message types are user defined strings.
- * @param {Window} contentWindow Content window of webview
  * @param {string} messageType message type to listen for
  * @param {function{string, Object}} callback called with message type and content.
  */
-colab.webview.addMessageListener = function(contentWindow, messageType, callback) {
+colab.webview.prototype.addMessageListener = function(messageType, callback) {
+  var that = this;
   window.addEventListener('message', function(message) {
-    if (message.source != contentWindow ||
-      message.origin != colab.webview.extensionOrigin_) {
+    if (message.source != that.element_.contentWindow ||
+      message.origin != that.extensionOrigin_) {
       return;
     }
 
@@ -50,27 +110,18 @@ colab.webview.addMessageListener = function(contentWindow, messageType, callback
 /**
  * Posts a message of given type to the webview.
  * Message types are user defined strings.
- * @param {Window} contentWindow Content window of webview
+ *
  * @param {string} messageType message type to listen for
  * @param {Object=} opt_content The data to send
  * NOTE: the corresponding code in app.js is not implemented yet
  * so this function does nothing.
  */
-colab.webview.postMessage = function(contentWindow, messageType, opt_content) {
-  contentWindow.postMessage({
+colab.webview.prototype.postMessage = function(messageType, opt_content) {
+  this.element_.contentWindow.postMessage({
     'type': messageType,
     'content': opt_content
-  }, colab.webview.extensionOrigin_);
+  }, this.extensionOrigin_);
 }
-
-/**
- * Sends initialization message, which allows the Chrome App to
- * send messages.
- */
-colab.webview.sendInitializationMessaage = function(contentWindow) {
-  contentWindow.postMessage('initialization_message',
-    colab.webview.extensionOrigin_);
-};
 
 /**
  * Provides a service where a webview can request an OAuth token created
@@ -78,35 +129,38 @@ colab.webview.sendInitializationMessaage = function(contentWindow) {
  * have the same origin as this app.  This is only possible for
  * webviews created using the app resource URL.
  *
- * @param {Window} contentWindow the content window of the webview.
  * @param {boolean} onDemand Whether to make identity API requests
  *     and send tokens on demand, or make the request immediately.
  */
-colab.webview.provideIdentitiyApiAuth = function(contentWindow, onDemand) {
+colab.webview.prototype.provideIdentityApiAuth = function(onDemand) {
+  var that = this;
+  var obtainAndSendToken = function(interactive) {
+    chrome.identity.getAuthToken(
+      {interactive: interactive}, function(token) {
+      var reply = token ? {'token': token} : null;
+      that.postMessage('access_token', reply);
+    });
+  }
+
   if (onDemand) {
-    // Listen for a 'request_access_token' message.  If such
+    // Listen for a 'access_token' message.  If such
     // a message is recieved, perform authorization using the
     // Idenity API, and send the OAuth token back to the webview.
-    colab.webview.addMessageListener(contentWindow, 'access_token', function(msgType, content) {
+    this.addMessageListener('access_token', function(msgType, content) {
+      console.log(msgType);
       var interactive = !content['immediate'];
-      chrome.identity.getAuthToken({interactive: interactive}, function(token) {
-        var reply = token ? {'token': token} : null;
-        colab.webview.postMessage(contentWindow, 'access_token', reply);
-      });
+      obtainAndSendToken(interactive)
     });
   } else {
     // Obtain OAuth tokens from the Identity and send to the webview.
-    chrome.identity.getAuthToken({interactive: true}, function(token) {
-      console.log('recieved token ' + token);
-      webview.contentWindow.postMessage({token: token}, extensionOrigin);
-    });
-
+    this.addFirstLoadListener(function() {
+      obtainAndSendToken(true);
+    })
+    
     // Periodically obtain fresh token and post to webview
+    var tokenRefreshInterval = 10 * 60 * 1000;  // 10 minutes
     setInterval(function() {
-      chrome.identity.getAuthToken({interactive: true}, function(token) {
-        console.log('recieved token ' + token);
-        webview.contentWindow.postMessage({token: token}, extensionOrigin);
-      });
+      obtainAndSendToken(true);
     }, tokenRefreshInterval);
   }    
 };
