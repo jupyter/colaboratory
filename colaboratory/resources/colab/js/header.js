@@ -59,8 +59,8 @@ colab.setupHeader = function(notebook) {
     };
 
     // activate comments button
-    var commentsButton = goog.dom.getElement('comments');
-    goog.style.setElementShown(commentsButton, true);
+    // var commentsButton = goog.dom.getElement('comments');
+    // goog.style.setElementShown(commentsButton, true);
   }
 };
 
@@ -168,13 +168,19 @@ colab.createMenubar = function(notebook) {
         break;
 
       case 'restart-menuitem':
-        colab.globalKernel.restart();
+        colab.globalSession.restart_kernel();
         break;
       case 'kill-menuitem':
-        colab.globalKernel.kill();
+        // TODO(colab-team): websocket_closed.Kernel is not fired anymore. May
+        // not be a new kernel closed event in IPython 2.0.
+        jQuery('#backend-connect-toolbar-button').children().children().text(
+          'Connect to Python');
+        goog.dom.classes.addRemove(
+            goog.dom.getElement('backend-connect-toolbar-button'),
+            ['connected', 'connecting'], 'disconnected');
         break;
       case 'interrupt-menuitem':
-        colab.globalKernel.interrupt();
+        colab.globalSession.interrupt_kernel();
         break;
 
       case 'connect-menuitem':
@@ -182,11 +188,7 @@ colab.createMenubar = function(notebook) {
         break;
 
       case 'report-bug-menuitem':
-        window.open('https://b.corp.google.com/createIssue?component=102164',
-            'Colab Bugs');
-        break;
-      case 'send-feedback-menuitem':
-        userfeedback.api.startFeedback({productId: 101049});
+        window.open('https://github.com/ipython/colaboratory/issues');
         break;
 
       case 'shortcuts-menuitem':
@@ -269,6 +271,8 @@ colab.createToolbar = function(permissions) {
         ['connected', 'connecting'], 'disconnected');
   });
 
+  // TODO(colab-team): starting.Kernel is not fired anymore. Confirmed by Min.
+  // register callback when event is fired.
   jQuery([IPython.events]).on('starting.Kernel', function(ev, data) {
     buttonElement.text('Connecting');
     goog.dom.classes.addRemove(
