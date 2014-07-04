@@ -7,29 +7,16 @@
  * kernel are relayed via the Chrome App.  The postMessage function is used to communicate
  * with the Chrome App that contains the webview that this code is running in.
  */
-
 goog.provide('colab.PNaClKernel');
+
+goog.require('colab.app');
 
 /**
  * A subclass of IPython.Kernel that uses
  * @constructor
- * @param {string} kernelOrigin origin of window to send kernel messages to
- * @param {Window} kernelWindow window to send kernel messages to
  * @extends {IPython.Kernel}
  */
-colab.PNaClKernel = function(kernelWindow, kernelOrigin) {
-  /**
-   * @type {Window}
-   * @private
-   */
-  this.kernelWindow_ = kernelWindow;
-
-  /**
-   * @type {string}
-   * @private
-   */
-  this.kernelOrigin_ = kernelOrigin;
-
+colab.PNaClKernel = function() {
   goog.base(this, '');
 };
 goog.inherits(colab.PNaClKernel, IPython.Kernel);
@@ -41,19 +28,16 @@ goog.inherits(colab.PNaClKernel, IPython.Kernel);
 colab.PNaClKernel.prototype.start = function () {
   var that = this;
 
-  this.kernelWindow_.postMessage('start_kernel', this.kernelOrigin_);
+  colab.app.postMessage('start_kernel', this.kernelOrigin_);
 
-  window.addEventListener('message', function(e) {
-    if (e.data && e.origin === that.kernelOrigin_ &&
-      e.source === that.kernelWindow_) {
-      that.handleMessage_(e.data);
-    }
+  colab.app.addMessageListener('kernel_message', function(msgType, content) {
+    that.handleMessage_(content);
   });
 
   // Create 'fake' shell channel that sends data using postmessage.
   this.shell_channel = {};
   this.shell_channel.send = function(msg) {
-    that.kernelWindow_.postMessage({json: msg}, that.kernelOrigin_);
+    colab.app.postMessage('kernel_message', msg);
   }
   this.stdin_channel = this.shell_channel;
 }

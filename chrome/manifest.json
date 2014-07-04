@@ -6,6 +6,7 @@
   "app": {
     "background": {
       "scripts": [
+        "app/params.js",
         "app/launch.js",
         "app/main.js"
       ]

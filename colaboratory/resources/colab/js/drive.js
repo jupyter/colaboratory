@@ -702,9 +702,9 @@ colab.drive.authorized = new goog.Promise(function(resolve, reject) {
   if (colab.app.appMode) {
     // In app mode, set auth token that is passed in by postMessage
     var receivedToken = false;
-    colab.app.addChromeAppListener(function(data, metadata) {
-      if (data.token) {
-        gapi.auth.setToken({'access_token': data.token});
+    colab.app.addMessageListener('access_token', function(msgType, content) {
+      if (content.token) {
+        gapi.auth.setToken({'access_token': content.token});
         if (!receivedToken) {
           // TODO(kestert): Should this be reject?
           resolve(null);
