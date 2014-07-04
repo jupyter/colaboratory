@@ -232,7 +232,7 @@ window.addEventListener('load', function() {
 
       // load kernel (default to localhost, and store in cookie 'kernelUrl')
       if (!goog.net.cookies.containsKey('kernelUrl')) {
-        var kernelUrl = 'https://127.0.0.1:8888/';
+        var kernelUrl = 'https://127.0.0.1:8888';
         if (colab.app.appMode) {
           // If in app mode, connect to in-browser kernel by default
           kernelUrl = colab.IN_BROWSER_KERNEL_URL;
@@ -242,7 +242,7 @@ window.addEventListener('load', function() {
       if (colab.app.appMode) {
         colab.loadPNaClKernel();
       } else {
-        colab.loadKernelFromUrl(goog.net.cookies.get('kernelUrl') || '');
+        colab.loadKernelFromUrl(goog.net.cookies.get('kernelUrl') || '', false);
       }
 
       // set up the header: docname input, menubar, toolbar, share button
@@ -450,10 +450,6 @@ colab.authorizeKernel = function(url, callback) {
  *  of not being authorized.
  */
 colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
-  url = url.replace(/^http:\/\//, 'https://');
-  // Adds /kernel suffix.
-//   url = url.replace(/\/kernels$/, '') + '/kernels';
-
   if (opt_forceAuthorization) {
     var authorizeCallback = goog.partial(colab.loadKernelFromUrl, url, false);
     colab.authorizeKernel(url, authorizeCallback);
@@ -461,9 +457,8 @@ colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
   }
 
   goog.net.cookies.set('kernelUrl', url, 10000);
-  if (colab.globalKernel) {
-    colab.globalKernel.kill();
-    colab.globalKernel.stop_channels();
+  if (colab.globalSession) {
+    colab.globalSession.delete();
   }
 
   var notebook_id = colab.globalNotebook && colab.globalNotebook.getId();
@@ -543,7 +538,7 @@ colab.openKernelDialogBox = function() {
     // TODO(kayur): find right event type.
     if (e.key == 'ok') {
       var url = goog.dom.getElement('backend-url-input').value;
-      colab.loadKernelFromUrl(url, true /* authorize */);
+      colab.loadKernelFromUrl(url, false);
     }
   });
 

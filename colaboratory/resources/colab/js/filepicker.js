@@ -32,8 +32,10 @@ colab.filepicker.selectFile = function(cb) {
     view.setLabel('Everything');
     var samples = new google.picker.DocsView();
     samples.setMode(google.picker.DocsViewMode.LIST);
+
     // List sample notebooks
-    samples.setParent('0B0T--Ij9EBKoY3J0Ri05cTZxRG8');
+// TODO(colab-team): add sample notebooks for open repo. Put directory link here.
+//    samples.setParent('Parent ID');
     samples.setLabel('Sample Notebooks');
     var byMe = new google.picker.DocsView();
     byMe.setOwnedByMe(true);
@@ -56,7 +58,7 @@ colab.filepicker.selectFile = function(cb) {
         .addView(recentlyPicked)
         .addView(view)
         .addView(byMe)
-        .addView(samples)
+        // .addView(samples)
         .addView(upload)
         .setOAuthToken(gapi.auth.getToken().access_token)
         .setDeveloperKey(colab.filepicker.PUBLIC_DEVELOPER_KEY)
