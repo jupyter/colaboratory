@@ -172,16 +172,24 @@ colab.createMenubar = function(notebook) {
         break;
 
       case 'restart-menuitem':
-        colab.globalSession.restart_kernel();
+        if (colab.app.appMode) {
+          colab.globalKernel.restart();
+        } else {
+          colab.globalSession.restart_kernel();
+        }
         break;
       case 'kill-menuitem':
-        // TODO(colab-team): websocket_closed.Kernel is not fired anymore. May
-        // not be a new kernel closed event in IPython 2.0.
-        jQuery('#backend-connect-toolbar-button').children().children().text(
-          'Connect to Python');
-        goog.dom.classes.addRemove(
-            goog.dom.getElement('backend-connect-toolbar-button'),
-            ['connected', 'connecting'], 'disconnected');
+        if (colab.app.appMode) {
+          colab.globalKernel.kill();
+        } else {
+          // TODO(colab-team): websocket_closed.Kernel is not fired anymore. May
+          // not be a new kernel closed event in IPython 2.0.
+          jQuery('#backend-connect-toolbar-button').children().children().text(
+            'Connect to Python');
+          goog.dom.classes.addRemove(
+              goog.dom.getElement('backend-connect-toolbar-button'),
+              ['connected', 'connecting'], 'disconnected');
+        }
         break;
       case 'interrupt-menuitem':
         colab.globalSession.interrupt_kernel();
@@ -269,6 +277,13 @@ colab.createToolbar = function(permissions) {
 
   // TODO(kayur): add distinct behavior for start failed
   jQuery([IPython.events]).on('start_failed.Kernel', function(ev, data) {
+    buttonElement.text('Connect to Python');
+    goog.dom.classes.addRemove(
+        goog.dom.getElement('backend-connect-toolbar-button'),
+        ['connected', 'connecting'], 'disconnected');
+  });
+
+  jQuery([IPython.events]).on('status_dead.Kernel', function(ev, data) {
     buttonElement.text('Connect to Python');
     goog.dom.classes.addRemove(
         goog.dom.getElement('backend-connect-toolbar-button'),

@@ -1,22 +1,78 @@
 /**
+ *
+ * @fileoverview Class to handler PNaCl kernel
+ *
+ * This provides a class for constructing a PNaCl kernel and
+ * relaying it's messages to a webview.
+ */
+
+var colab = colab || {};
+
+/**
  * Singleton object to handle PNaCl kernel.
  *
  * @constructor
- * @param {Function} sendMessage function to post message to webview
+ * @param {colab.Webview} webview Webview interface used to communicate
  */
-Kernel = function(sendMessage) {
-  /** @private {Element} Embed element for the PNaCl kernel */
+colab.Kernel = function(webview) {
+  /**
+   * Embed element for the PNaCl kernel
+   * @type {Element}
+   * @private
+   */
   this.embed_ = null;
 
-  /** @private {Function} callback to post messages */
-  this.sendMessage_ = sendMessage;
+  /**
+   * Listeners for embed messages
+   * @type {Array.<Function>}
+   * @private
+   */
+  this.embedListeners_ = [];
+
+  /**
+   * @type {Webview}
+   * @private
+   */
+  this.webview_ = webview;
+
+  this.addWebviewListeners_();
 };
 
+/**
+ * Adds listeners for messages from webview
+ * @private
+ */
+colab.Kernel.prototype.addWebviewListeners_ = function() {
+  var that = this;
+  this.webview_.addMessageListener('start_kernel', function(msgType, content) {
+    that.start_();
+  });
+
+  this.webview_.addMessageListener('restart_kernel', function(msgType, content) {
+    that.restart_();
+  });
+
+  this.webview_.addMessageListener('kill_kernel', function(msgType, content) {
+    that.kill_();
+  });
+
+  this.webview_.addMessageListener('pick_file', function(msgType, content) {
+    that.pickFile_();
+  });
+
+  webview.addMessageListener('kernel_message', function(msgType, content) {
+    if (that.embed_) {
+      that.embed_.postMessage({json: content});
+    }
+  });
+
+}
 
 /**
  * Starts the kernel
+ * @private
  */
-Kernel.prototype.start = function() {
+colab.Kernel.prototype.start_ = function() {
   var that = this;
   var tty_prefix = 'tty';
 
@@ -50,34 +106,67 @@ Kernel.prototype.start = function() {
                     'crash': []};
 
   for (type in eventTypes) {
-    (function(type) {
-      that.embed_.addEventListener(type, function(event) {
+    var listener = (function(type) {
+      return function(event) {
         var message = {'type': type};
         var fields = eventTypes[type];
         for (var i = 0; i < fields.length; i++) {
           var field = fields[i];
           message[field] = event[field];
         }
-        that.sendMessage_(message);
-      });
+        that.webview_.postMessage('kernel_message', message);
+      }
     })(type);
+    that.embedListeners_.push(listener);
+    that.embed_.addEventListener(type, listener);
   }
 
   document.body.appendChild(this.embed_);
 };
 
-
 /**
- * Starts the kernel
+ * Restarts the kernel
  */
-Kernel.prototype.restart = function() {
-  // TODO(kestert): handle this
+colab.Kernel.prototype.restart_ = function() {
+  this.kill_();
+  this.start_();
 };
 
 /**
- * Handle a message for the kernel
- * @param {Object} message Message for the kernel.
+ * Restarts the kernel
  */
-Kernel.prototype.handleMessage = function(message) {
-  this.embed_.postMessage(message);
+colab.Kernel.prototype.kill_ = function() {
+  if (!this.embed_) {
+    return;
+  }
+
+  for (var i = 0; i < this.embedListeners_.length; i++) {
+    this.embed_.removeEventListener(this.embedListeners_[i]);
+  }
+  this.embed_.embedListeners_ = [];
+
+  document.body.removeChild(this.embed_);
+
+  this.embed_ = null;
+
+  this.webview_.postMessage('kernel_message', {'type': 'crash'});
 };
+
+/**
+ * Picks a directory and passes that to the kernel to mount
+ */
+colab.Kernel.prototype.pickFile_ = function() {
+  var that = this;
+
+  if (!this.embed_) {
+    return;
+  }
+
+  chrome.fileSystem.chooseEntry({type: 'openDirectory'}, function(theEntry) {
+    if (!theEntry) {
+      return;
+    }
+    that.embed_.postMessage({'filesystem_name': theEntry.fullPath,
+                             'filesystem_resource': theEntry.filesystem});
+  });
+}

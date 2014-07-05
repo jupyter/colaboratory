@@ -2,7 +2,7 @@
  *
  * @fileoverview Interface for with webview
  *
- * This provides utilities for communication with a webview.  The
+ * This provides a class for communication with a webview.  The
  * file colab/js/app.js contains the corresponding code that is run
  * in the webview to recieve these messages.
  */
@@ -19,7 +19,7 @@ var colab = colab || {};
  * @param {Object=} opt_hashParams key-value pairs for hash params to
  *   pass to webview.
  */
-colab.webview = function(el, url, opt_hashParams) {
+colab.Webview = function(el, url, opt_hashParams) {
   var that = this;
 
   /**
@@ -55,6 +55,16 @@ colab.webview = function(el, url, opt_hashParams) {
     }
   });
 
+  window.addEventListener('message', function(message) {
+    if (message.source != that.element_.contentWindow ||
+      message.origin != that.extensionOrigin_) {
+      return;
+    }
+    console.log('recieved message of type: ' + message.data['type']);
+    console.log(message.data['content']);
+  });
+
+
   // Post a message that is used by the webview to determine
   // this window of this app, so that it can send messages the
   // other way.
@@ -79,7 +89,7 @@ colab.webview = function(el, url, opt_hashParams) {
  *
  * @param {Function} callback called with message type and content.
  */
-colab.webview.prototype.addFirstLoadListener = function(callback) {
+colab.Webview.prototype.addFirstLoadListener = function(callback) {
   if (this.loaded_) {
     callback();
   } else {
@@ -93,7 +103,7 @@ colab.webview.prototype.addFirstLoadListener = function(callback) {
  * @param {string} messageType message type to listen for
  * @param {function{string, Object}} callback called with message type and content.
  */
-colab.webview.prototype.addMessageListener = function(messageType, callback) {
+colab.Webview.prototype.addMessageListener = function(messageType, callback) {
   var that = this;
   window.addEventListener('message', function(message) {
     if (message.source != that.element_.contentWindow ||
@@ -116,7 +126,9 @@ colab.webview.prototype.addMessageListener = function(messageType, callback) {
  * NOTE: the corresponding code in app.js is not implemented yet
  * so this function does nothing.
  */
-colab.webview.prototype.postMessage = function(messageType, opt_content) {
+colab.Webview.prototype.postMessage = function(messageType, opt_content) {
+  console.log('sending message of type: ' + messageType);
+  console.log(opt_content);
   this.element_.contentWindow.postMessage({
     'type': messageType,
     'content': opt_content
@@ -132,7 +144,7 @@ colab.webview.prototype.postMessage = function(messageType, opt_content) {
  * @param {boolean} onDemand Whether to make identity API requests
  *     and send tokens on demand, or make the request immediately.
  */
-colab.webview.prototype.provideIdentityApiAuth = function(onDemand) {
+colab.Webview.prototype.provideIdentityApiAuth = function(onDemand) {
   var that = this;
   var obtainAndSendToken = function(interactive) {
     chrome.identity.getAuthToken(

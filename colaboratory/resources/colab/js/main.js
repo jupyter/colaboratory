@@ -494,7 +494,9 @@ colab.loadPNaClKernel = function() {
  */
 colab.openKernelDialogBox = function() {
   if (colab.app.appMode) {
-    colab.loadPNaClKernel();
+    if (!colab.globalKernel.running) {
+      colab.loadPNaClKernel();
+    }
     return;
   }
   var dialog = new goog.ui.Dialog();

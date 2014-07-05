@@ -53,7 +53,16 @@ colab.PNaClKernel.prototype.start = function() {
  * @override
  */
 colab.PNaClKernel.prototype.kill = function() {
-  // TODO send message to app, to kill the kernel.
+  colab.app.postMessage('kill_kernel');
+};
+
+
+/**
+ * Restarts the kernel
+ * @override
+ */
+colab.PNaClKernel.prototype.restart = function() {
+  colab.app.postMessage('restart_kernel');
 };
 
 
@@ -97,7 +106,6 @@ colab.PNaClKernel.prototype.handleMessage_ = function(message) {
     $([IPython.events]).trigger('pnacl_loadend.Kernel',
                                 {kernel: that});
   } else if (message.type === 'crash') {
-    that.embed = null;
     that.running = false;
     $([IPython.events]).trigger('status_dead.Kernel', {kernel: that});
   }
