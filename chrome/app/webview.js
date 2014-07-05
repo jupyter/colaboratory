@@ -55,16 +55,6 @@ colab.Webview = function(el, url, opt_hashParams) {
     }
   });
 
-  window.addEventListener('message', function(message) {
-    if (message.source != that.element_.contentWindow ||
-      message.origin != that.extensionOrigin_) {
-      return;
-    }
-    console.log('recieved message of type: ' + message.data['type']);
-    console.log(message.data['content']);
-  });
-
-
   // Post a message that is used by the webview to determine
   // this window of this app, so that it can send messages the
   // other way.
@@ -128,7 +118,6 @@ colab.Webview.prototype.addMessageListener = function(messageType, callback) {
  */
 colab.Webview.prototype.postMessage = function(messageType, opt_content) {
   console.log('sending message of type: ' + messageType);
-  console.log(opt_content);
   this.element_.contentWindow.postMessage({
     'type': messageType,
     'content': opt_content
