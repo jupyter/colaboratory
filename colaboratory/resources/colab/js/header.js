@@ -193,19 +193,6 @@ colab.createMenubar = function(notebook) {
           colab.globalSession.restart_kernel();
         }
         break;
-      case 'kill-menuitem':
-        if (colab.app.appMode) {
-          colab.globalKernel.kill();
-        } else {
-          // TODO(colab-team): websocket_closed.Kernel is not fired anymore. May
-          // not be a new kernel closed event in IPython 2.0.
-          jQuery('#backend-connect-toolbar-button').children().children().text(
-            'Connect to Python');
-          goog.dom.classes.addRemove(
-              goog.dom.getElement('backend-connect-toolbar-button'),
-              ['connected', 'connecting'], 'disconnected');
-        }
-        break;
       case 'interrupt-menuitem':
         colab.globalSession.interrupt_kernel();
         break;
@@ -267,67 +254,48 @@ colab.createToolbar = function(permissions) {
   var buttonElement = jQuery('#backend-connect-toolbar-button')
       .children().children();
 
+
+
+  var all_classes = ['connecting', 'disconnected', 'connected'];
+  var updateButton = function(text, cls) {
+    buttonElement.text(text);
+    goog.dom.classes.addRemove(
+        goog.dom.getElement('backend-connect-toolbar-button'),
+        all_classes, cls);
+  };
+
   // TODO(kayur): The code below is horrible. Make it less horrible.
   // jQuery command for listening to kernel messages
   jQuery([IPython.events]).on('status_started.Kernel', function() {
-    buttonElement.text('Connected');
-    goog.dom.classes.addRemove(
-        goog.dom.getElement('backend-connect-toolbar-button'),
-        ['connecting', 'disconnected'], 'connected');
+    updateButton('Connected', 'connected');
   });
 
   jQuery([IPython.events]).on('status_restarting.Kernel', function() {
-    buttonElement.text('Restarting');
-    goog.dom.classes.addRemove(
-        goog.dom.getElement('backend-connect-toolbar-button'),
-        ['connected', 'disconnected'], 'connecting');
+    updateButton('Restarting', 'connecting');
   });
 
-  jQuery([IPython.events]).on('websocket_closed.Kernel', function() {
-    buttonElement.text('Connect to Python');
-    goog.dom.classes.addRemove(
-        goog.dom.getElement('backend-connect-toolbar-button'),
-        ['connected', 'connecting'], 'disconnected');
+
+ jQuery([IPython.events]).on('status_dead.Kernel websocket_closed.Kernel',
+     function() {
+    updateButton('Connect to Python', 'disconnected');
   });
 
   // TODO(kayur): add distinct behavior for start failed
   jQuery([IPython.events]).on('start_failed.Kernel', function(ev, data) {
-    buttonElement.text('Connect to Python');
-    goog.dom.classes.addRemove(
-        goog.dom.getElement('backend-connect-toolbar-button'),
-        ['connected', 'connecting'], 'disconnected');
+    updateButton('Connect to Python', 'disconnected');
   });
 
-  jQuery([IPython.events]).on('status_dead.Kernel', function(ev, data) {
-    buttonElement.text('Connect to Python');
-    goog.dom.classes.addRemove(
-        goog.dom.getElement('backend-connect-toolbar-button'),
-        ['connected', 'connecting'], 'disconnected');
-  });
-
-  // TODO(colab-team): starting.Kernel is not fired anymore. Confirmed by Min.
-  // register callback when event is fired.
   jQuery([IPython.events]).on('starting.Kernel', function(ev, data) {
-    buttonElement.text('Connecting');
-    goog.dom.classes.addRemove(
-        goog.dom.getElement('backend-connect-toolbar-button'),
-        ['connected', 'disconnected'], 'connecting');
+    updateButton('Connecting', 'connecting');
   });
 
-  jQuery([IPython.events]).on('status_loading.Kernel', function(ev, data) {
-    buttonElement.text('PNaCl Loading ' + data['progress'] + '\%');
-    goog.dom.classes.addRemove(
-        goog.dom.getElement('backend-connect-toolbar-button'),
-        ['connected', 'disconnected'], 'connecting');
+  jQuery([IPython.events]).on('pnacl_loading.Kernel', function(ev, data) {
+    updateButton('PNaCl Loading ' + data['progress'] + '\%', 'connecting');
   });
 
   jQuery([IPython.events]).on('pnacl_loadend.Kernel', function(ev, data) {
-    buttonElement.text('PNaCl Initializing');
-    goog.dom.classes.addRemove(
-        goog.dom.getElement('backend-connect-toolbar-button'),
-        ['connected', 'disconnected'], 'connecting');
+    updateButton('PNaCl Initializing', 'connecting');
   });
-
 
   // on autorestart or restart clear
   jQuery([IPython.events]).on('status_autorestarting.Kernel', function() {

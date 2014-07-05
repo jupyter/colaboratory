@@ -99,7 +99,7 @@ colab.PNaClKernel.prototype.handleMessage_ = function(message) {
     if (!that.running) {
       var progress = Math.round(100 * message.loaded / message.total);
       if (isNaN(progress)) { progress = 0; }
-      $([IPython.events]).trigger('status_loading.Kernel',
+      $([IPython.events]).trigger('pnacl_loading.Kernel',
                                   {kernel: that, progress: progress});
     }
   } else if (message.type === 'loadend') {

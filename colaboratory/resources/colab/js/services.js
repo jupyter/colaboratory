@@ -61,20 +61,30 @@ colab.services.handleKernelRequest = function(request) {
 
 
 /**
- * Provide a service that displays a dialog and returns the response
+ * Handles request from kernel to display a dialog to the user
+ * @param {{content: string, title:string}} params Dialog parameters
+ * @param {function(boolean)} callback Callback with result
+ * @private
  */
-colab.services.setKernelRequestListener('dialog', function(content, callback) {
+colab.services.dialogServiceCallback_ = function(params, callback) {
   var dialog = new goog.ui.Dialog();
   dialog.setDisposeOnHide(true);
-  dialog.setContent(content['content']);
-  dialog.setTitle(content['title']);
+  dialog.setContent(params['content']);
+  dialog.setTitle(params['title']);
 
   dialog.setButtonSet(goog.ui.Dialog.ButtonSet.createYesNoCancel());
 
   goog.events.listen(dialog, goog.ui.Dialog.EventType.SELECT, function(e) {
-    var reply = e.key === goog.ui.Dialog.DefaultButtonKeys.YES;
+    var reply = e.key == goog.ui.Dialog.DefaultButtonKeys.YES;
     callback(reply);
   });
 
   dialog.setVisible(true);
-});
+};
+
+/**
+ * Provide a service that displays a dialog and returns the response
+ */
+colab.services.setKernelRequestListener('dialog',
+    /** @type {function(Object, function(*))} */
+    (colab.services.dialogServiceCallback_));
