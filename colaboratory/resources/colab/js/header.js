@@ -113,8 +113,12 @@ colab.createMenubar = function(notebook) {
         break;
 
       case 'new-menuitem':
-        var tab = window.open(colab.params.getNewNotebookUrl(), '_blank');
-        tab.focus();
+        if (colab.app.appMode) {
+          colab.app.postMessage('launch', {'create': 'true'});
+        } else {
+          var tab = window.open(colab.params.getNewNotebookUrl(), '_blank');
+          tab.focus();
+        }
         break;
 
       case 'open-menuitem':
