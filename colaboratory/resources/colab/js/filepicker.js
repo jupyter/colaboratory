@@ -6,6 +6,8 @@
 
 goog.provide('colab.filepicker');
 
+goog.require('colab.app');
+
 /**
  * Public developer key. Used by picker.
  *
@@ -16,6 +18,17 @@ goog.provide('colab.filepicker');
  */
 colab.filepicker.PUBLIC_DEVELOPER_KEY =
     'AIzaSyCoDfWuxLxqqLWfKVNqfHy7DIWudoPTeuk';
+
+/**
+ * App ID for Chrome App (this is a substring of the client ID.
+ *
+ * @see https://console.developers.google.com/\
+ *   project/apps~windy-ellipse-510/apiui/credential
+ * @type {string}
+ * @const
+ */
+colab.filepicker.CHROME_APP_KEY =
+    '8t1sdq48rr7hg22tadd8amelo3tcsd3a';
 
 /**
  * Upon successful file selection calls callback with
@@ -61,9 +74,15 @@ colab.filepicker.selectFile = function(cb) {
         // .addView(samples)
         .addView(upload)
         .setOAuthToken(gapi.auth.getToken().access_token)
-        .setDeveloperKey(colab.filepicker.PUBLIC_DEVELOPER_KEY)
         .setSelectableMimeTypes(mimeTypes)
         .setCallback(cb);
+
+    if (colab.app.appMode) {
+      picker.setAppId(colab.filepicker.CHROME_APP_KEY);
+    } else {
+      setDeveloperKey(colab.filepicker.PUBLIC_DEVELOPER_KEY);
+    }
+
     var dlg = picker.build();
     dlg.setVisible(true);
   });
@@ -84,9 +103,15 @@ colab.filepicker.selectDir = function(cb) {
 
     var picker = new google.picker.PickerBuilder()
       .setOAuthToken(gapi.auth.getToken().access_token)
-      .setDeveloperKey(colab.filepicker.PUBLIC_DEVELOPER_KEY)
       .addView(docsView)
       .setCallback(cb);
+
+    if (colab.app.appMode) {
+      picker.setAppId(colab.filepicker.CHROME_APP_KEY);
+    } else {
+      setDeveloperKey(colab.filepicker.PUBLIC_DEVELOPER_KEY);
+    }
+
     var dlg = picker.build();
     dlg.setVisible(true);
   });
@@ -107,14 +132,18 @@ colab.filepicker.selectFileAndReload = function() {
     var doc = ev[response.DOCUMENTS][0];
     if (!doc || doc.length) return;
     var fileId = doc[google.picker.Document.ID];
-    var url = colab.params.getNotebookUrl({'fileId': fileId });
-    // If we are on notebook page, do proper reloading
-    if (colab.reload) {
-      window.location.href = url;
-      colab.reload();
+    if (colab.app.appMode) {
+      colab.app.postMessage('launch', {'fileId': fileId});
     } else {
-      // This will reload the page once we exit this function.
-      window.location.href = url;
+      var url = colab.params.getNotebookUrl({'fileId': fileId });
+      // If we are on notebook page, do proper reloading
+      if (colab.reload) {
+        window.location.href = url;
+        colab.reload();
+      } else {
+        // This will reload the page once we exit this function.
+        window.location.href = url;
+      }
     }
   };
   colab.filepicker.selectFile(cb);
