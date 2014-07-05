@@ -507,7 +507,7 @@ colab.cell.CodeCell.prototype.execute = function(opt_isManual) {
         var content = msg['content'];
         // Handle special requests by the kernel.  These are answered on the
         // stdin channel.
-        var metadata = msg['metadata'];
+        var metadata = content['metadata'];
         if (metadata && metadata[colab.services.REQUEST_TYPE_KEY]) {
           colab.services.handleKernelRequest(metadata);
           return;

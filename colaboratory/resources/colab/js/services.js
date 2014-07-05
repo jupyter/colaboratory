@@ -26,9 +26,10 @@ colab.services.kernelRequestCallbacks_ = {};
 /**
  * Adds a listener for requests from drive
  * @param {string} requestType the type of request to register for
- * @param {function(Object,  function(string))} callback the callback function
- *     to register.  This function should take two arguments, the first is the
- *     request message, and the second is a callback to call with the reply.
+ * @param {function(Object,  function(*))} callback the callback
+ *     function to register.  This function should take two arguments, the first
+ *     is the request message, and the second is a callback to call with the
+ *     reply.
  */
 colab.services.setKernelRequestListener = function(requestType, callback) {
   colab.services.kernelRequestCallbacks_[requestType] = callback;
@@ -58,3 +59,22 @@ colab.services.handleKernelRequest = function(request) {
       colab.globalKernel));
 };
 
+
+/**
+ * Provide a service that displays a dialog and returns the response
+ */
+colab.services.setKernelRequestListener('dialog', function(content, callback) {
+  var dialog = new goog.ui.Dialog();
+  dialog.setDisposeOnHide(true);
+  dialog.setContent(content['content']);
+  dialog.setTitle(content['title']);
+
+  dialog.setButtonSet(goog.ui.Dialog.ButtonSet.createYesNoCancel());
+
+  goog.events.listen(dialog, goog.ui.Dialog.EventType.SELECT, function(e) {
+    var reply = e.key === goog.ui.Dialog.DefaultButtonKeys.YES;
+    callback(reply);
+  });
+
+  dialog.setVisible(true);
+});
