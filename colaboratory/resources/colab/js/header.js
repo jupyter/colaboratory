@@ -101,10 +101,14 @@ colab.createMenubar = function(notebook) {
             'Creating a copy...', -1);
           notebook.clone(function(response) {
             colab.notification.showPrimary('Done');
-            window.location.hash = colab.params.existingNotebookHash(
-              response.id);
-            // Would be nice if we could reload in-place.
-            window.location.reload();
+            if (colab.app.appMode) {
+              colab.app.postMessage('launch', {'fileId': response.id});
+            } else {
+              window.location.hash = colab.params.existingNotebookHash(
+                response.id);
+              // Would be nice if we could reload in-place.
+              window.location.reload();
+            }
           }, function(response) {
             colab.notification.clearPrimary();
             colab.dialog.displayError('Unable to clone notebook', response);
