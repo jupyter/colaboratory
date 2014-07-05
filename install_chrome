@@ -14,3 +14,13 @@ DEST=build_chrome
 # right now
 cp -r chrome/* $DEST
 cp chrome/pnacl/* $DEST
+
+# Unzip resources file for PNaCl kernel, add extra modules, and zip.
+PNACL_RESOURCES_FILE="zeropy_20140520.tar.gz"
+PYTHON_LIBRARIES_PATH="lib/python2.7/site-packages"
+TMP_RESOURCES_DIR="$DEST/pnacl_resources"
+mkdir -p "$TMP_RESOURCES_DIR"
+tar -zxvf "chrome/pnacl/$PNACL_RESOURCES_FILE" -C "$TMP_RESOURCES_DIR"
+cp -r modules/* "$TMP_RESOURCES_DIR/$PYTHON_LIBRARIES_PATH"
+tar -zcvf "$DEST/$PNACL_RESOURCES_FILE" -C "$TMP_RESOURCES_DIR" .
+rm -rf "$TMP_RESOURCES_DIR"
