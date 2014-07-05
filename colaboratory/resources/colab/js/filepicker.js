@@ -80,7 +80,7 @@ colab.filepicker.selectFile = function(cb) {
     if (colab.app.appMode) {
       picker.setAppId(colab.filepicker.CHROME_APP_KEY);
     } else {
-      setDeveloperKey(colab.filepicker.PUBLIC_DEVELOPER_KEY);
+      picker.setDeveloperKey(colab.filepicker.PUBLIC_DEVELOPER_KEY);
     }
 
     var dlg = picker.build();
@@ -109,7 +109,7 @@ colab.filepicker.selectDir = function(cb) {
     if (colab.app.appMode) {
       picker.setAppId(colab.filepicker.CHROME_APP_KEY);
     } else {
-      setDeveloperKey(colab.filepicker.PUBLIC_DEVELOPER_KEY);
+      picker.setDeveloperKey(colab.filepicker.PUBLIC_DEVELOPER_KEY);
     }
 
     var dlg = picker.build();

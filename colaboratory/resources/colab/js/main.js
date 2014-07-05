@@ -98,7 +98,6 @@ colab.globalKernel = null;
 colab.globalSession = null;
 
 
-
 /**
  * Global Sharing state.
  * TODO(kayur): move global to notebook, since it is the sharing state for the
@@ -218,7 +217,7 @@ window.addEventListener('load', function() {
 
       // load kernel (default to localhost, and store in cookie 'kernelUrl')
       if (!goog.net.cookies.containsKey('kernelUrl')) {
-        var kernelUrl = 'https://127.0.0.1:8888';
+        var kernelUrl = 'http://127.0.0.1:8888';
         if (colab.app.appMode) {
           // If in app mode, connect to in-browser kernel by default
           kernelUrl = colab.IN_BROWSER_KERNEL_URL;

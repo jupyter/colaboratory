@@ -56,10 +56,14 @@ IPython.Session.prototype.start = function(callback) {};
 /** @type {IPython.Kernel} */
 IPython.Session.prototype.kernel = null;
 
+/***/
+IPython.Session.prototype.restart_kernel = function() {};
+
+/***/
+IPython.Session.prototype.interrupt_kernel = function() {};
+
 /** @type {string} */
 IPython.Session.prototype.kernel_host = '';
-
-
 
 /**
  * @param {string} url
@@ -82,6 +86,9 @@ IPython.Kernel.prototype.kill = function() {};
 
 /***/
 IPython.Kernel.prototype.stop_channels = function() {};
+
+/***/
+IPython.Kernel.prototype.start = function() {};
 
 /***/
 IPython.Kernel.prototype.restart = function() {};
