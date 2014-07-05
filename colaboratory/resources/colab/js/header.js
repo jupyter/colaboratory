@@ -171,12 +171,19 @@ colab.createMenubar = function(notebook) {
         var data = colab.nbformat.convertRealtimeToJsonNotebook(
             colab.drive.globalNotebook.getTitle(),
             colab.drive.globalNotebook.getDocument().getModel());
-        a.href = window.URL.createObjectURL(new Blob([data]));
+        if (colab.app.appMode) {
+          colab.app.postMessage('download_ipynb', {
+            'data': data,
+            'suggestedName': colab.drive.globalNotebook.getTitle() + '.ipynb'
+          });
+        } else {
+          a.href = window.URL.createObjectURL(new Blob([data]));
 
-        // get filename and remove extention(s)
-        var filename = goog.dom.getElement('doc-name').value.split('.')[0];
-        a.download = filename + '.ipynb';
-        a.click();
+          // get filename and remove extention(s)
+          var filename = goog.dom.getElement('doc-name').value.split('.')[0];
+          a.download = filename + '.ipynb';
+          a.click();
+        }
         break;
 
       case 'restart-menuitem':
