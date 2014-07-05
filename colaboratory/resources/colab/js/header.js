@@ -50,7 +50,8 @@ colab.setupHeader = function(notebook) {
     colab.createToolbar(permissions);
   }
 
-  if (document) {
+  // Sharing does not work on app mode, so do not show button.
+  if (document && !colab.app.appMode) {
     // activate share button
     var shareButton = goog.dom.getElement('share');
     goog.style.setElementShown(shareButton, true);
@@ -74,14 +75,26 @@ colab.createMenubar = function(notebook) {
   var menubarElement = goog.dom.getElement('top-menubar');
   goog.style.setElementShown(menubarElement, true);
   var menubar = goog.ui.decorate(menubarElement);
+  var fileMenu = menubar.getChild('file-button').getMenu();
   if (!permissions.isEditable()) {
     menubar.getChild('edit-menu-button').setEnabled(false);
     menubar.getChild('run-menu-button').setEnabled(false);
     menubar.getChild('backend-menu-button').setEnabled(false);
-    var fileMenu = menubar.getChild('file-button').getMenu();
     fileMenu.getChild('download-ipynb-menuitem').setEnabled(!!document);
     fileMenu.getChild('save-menuitem').setEnabled(false);
   }
+
+  if (colab.app.appMode) {
+    // Disable sharing in Chrome App mode, as this feature is not working yet.
+    fileMenu.getChild('share-menuitem').setVisible(false);
+
+  } else {
+    // Remove "Open local directory" in web app mode as this feature
+    // only applies to Chrome App.
+    fileMenu.getChild('openlocalfs-separator').setVisible(false);
+    fileMenu.getChild('openlocalfs-menuitem').setVisible(false);
+  }
+
   // TODO(kayur): And handlers for other actions.
   goog.events.listen(menubar, goog.ui.Component.EventType.ACTION, function(e) {
     switch (e.target.getId()) {
@@ -274,8 +287,7 @@ colab.createToolbar = function(permissions) {
     updateButton('Restarting', 'connecting');
   });
 
-
- jQuery([IPython.events]).on('status_dead.Kernel websocket_closed.Kernel',
+  jQuery([IPython.events]).on('status_dead.Kernel websocket_closed.Kernel',
      function() {
     updateButton('Connect to Python', 'disconnected');
   });
