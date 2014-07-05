@@ -1,6 +1,6 @@
 var el = document.getElementById('webview');
 
-var webview = new colab.webview(document.getElementById('webview'),
+var webview = new colab.Webview(document.getElementById('webview'),
                                 '/colab/welcome.html')
 
 webview.provideIdentityApiAuth(true);
