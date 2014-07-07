@@ -6,15 +6,18 @@
 
 goog.provide('colab.services');
 
+
 /**
  * Message metadata key for message type
  */
 colab.services.REQUEST_TYPE_KEY = 'colabtools_input_request_type';
 
+
 /**
  * Message metadata key for message content
  */
 colab.services.REQUEST_JSON_KEY = 'colabtools_request_json';
+
 
 /**
  * Callbacks for requests from kernel
@@ -22,6 +25,7 @@ colab.services.REQUEST_JSON_KEY = 'colabtools_request_json';
  * @private
  */
 colab.services.kernelRequestCallbacks_ = {};
+
 
 /**
  * Adds a listener for requests from drive
@@ -34,6 +38,7 @@ colab.services.kernelRequestCallbacks_ = {};
 colab.services.setKernelRequestListener = function(requestType, callback) {
   colab.services.kernelRequestCallbacks_[requestType] = callback;
 };
+
 
 /**
  * Handles a request from the kernel.  This function is called when a
@@ -81,6 +86,7 @@ colab.services.dialogServiceCallback_ = function(params, callback) {
 
   dialog.setVisible(true);
 };
+
 
 /**
  * Provide a service that displays a dialog and returns the response

@@ -1066,9 +1066,9 @@ colab.drive.notebook = new goog.Promise(function(resolve, reject) {
         // Change hash param to correspond to newly created notebook, preserving
         // all hash params except those used to create the file.
         // NOTE: this doesn't cause reload because we stay on same page
-        delete params['create'];
-        delete params['folderId'];
-        params['fileId'] = fileId;
+        delete params.create;
+        delete params.folderId;
+        params.fileId = fileId;
         window.location.hash = '#' + colab.params.encodeParamString(params);
         load(fileId);
       }, reject, params.folderId);
