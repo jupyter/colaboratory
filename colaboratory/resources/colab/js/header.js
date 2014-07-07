@@ -7,6 +7,7 @@
 
 goog.provide('colab.Header');
 
+goog.require('colab.app');
 goog.require('colab.dialog');
 goog.require('colab.filepicker');
 goog.require('colab.nbformat');
@@ -118,7 +119,7 @@ colab.createMenubar = function(notebook) {
               colab.app.postMessage('launch', {'fileId': response.id});
             } else {
               window.location.hash = colab.params.existingNotebookHash(
-                response.id);
+                  response.id);
               // Would be nice if we could reload in-place.
               window.location.reload();
             }
@@ -184,16 +185,16 @@ colab.createMenubar = function(notebook) {
         var data = colab.nbformat.convertRealtimeToJsonNotebook(
             colab.drive.globalNotebook.getTitle(),
             colab.drive.globalNotebook.getDocument().getModel());
+        // get filename and remove extention(s)
+        var filename = goog.dom.getElement('doc-name').value.split('.')[0];
+
         if (colab.app.appMode) {
           colab.app.postMessage('download_ipynb', {
             'data': data,
-            'suggestedName': colab.drive.globalNotebook.getTitle() + '.ipynb'
+            'suggestedName': filename
           });
         } else {
           a.href = window.URL.createObjectURL(new Blob([data]));
-
-          // get filename and remove extention(s)
-          var filename = goog.dom.getElement('doc-name').value.split('.')[0];
           a.download = filename + '.ipynb';
           a.click();
         }
@@ -267,8 +268,6 @@ colab.createToolbar = function(permissions) {
   var buttonElement = jQuery('#backend-connect-toolbar-button')
       .children().children();
 
-
-
   var all_classes = ['connecting', 'disconnected', 'connected'];
   var updateButton = function(text, cls) {
     buttonElement.text(text);
@@ -287,17 +286,24 @@ colab.createToolbar = function(permissions) {
     updateButton('Restarting', 'connecting');
   });
 
-  jQuery([IPython.events]).on('status_dead.Kernel websocket_closed.Kernel',
+  jQuery([IPython.events]).on('authorizing.Session',
+      function(ev, data) {
+    updateButton('Authorizing', 'connecting');
+ });
+
+ jQuery([IPython.events]).on('status_dead.Kernel websocket_closed.Kernel',
      function() {
     updateButton('Connect to Python', 'disconnected');
   });
 
   // TODO(kayur): add distinct behavior for start failed
-  jQuery([IPython.events]).on('start_failed.Kernel', function(ev, data) {
+  jQuery([IPython.events]).on('start_failed.Kernel start_failed.Session',
+      function(ev, data) {
     updateButton('Connect to Python', 'disconnected');
   });
 
-  jQuery([IPython.events]).on('starting.Kernel', function(ev, data) {
+  jQuery([IPython.events]).on('starting.Kernel starting.Session',
+      function(ev, data) {
     updateButton('Connecting', 'connecting');
   });
 
@@ -307,16 +313,6 @@ colab.createToolbar = function(permissions) {
 
   jQuery([IPython.events]).on('pnacl_loadend.Kernel', function(ev, data) {
     updateButton('PNaCl Initializing', 'connecting');
-  });
-
-  // on autorestart or restart clear
-  jQuery([IPython.events]).on('status_autorestarting.Kernel', function() {
-    colab.globalNotebook.reset();
-  });
-
-  // on autorestart or restart clear
-  jQuery([IPython.events]).on('status_restarting.Kernel', function() {
-    colab.globalNotebook.reset();
   });
 
 };
