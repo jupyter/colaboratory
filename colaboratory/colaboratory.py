@@ -512,7 +512,16 @@ class ColaboratoryApp(BaseIPythonApplication):
         elif status == 'unclean':
             self.log.warn("components submodule unclean, you may see 404s on static/components")
             self.log.warn("run `setup.py submodule` or `git submodule update` to update")
-
+    
+    def init_environment(self):
+        """add colabtools modules to PYTHONPATH for subprocesses"""
+        
+        modules = os.path.abspath(os.path.join(here, '..', 'modules'))
+        if 'PYTHONPATH' in os.environ:
+            os.environ['PYTHONPATH'] = '%s:%s' % (modules, os.environ['PYTHONPATH'])
+        else:
+            os.environ['PYTHONPATH'] = modules
+    
     @catch_config_error
     def initialize(self, argv=None):
         super(ColaboratoryApp, self).initialize(argv)
@@ -522,6 +531,7 @@ class ColaboratoryApp(BaseIPythonApplication):
         self.init_components()
         self.init_webapp()
         self.init_signal()
+        self.init_environment()
 
     def cleanup_kernels(self):
         """Shutdown all kernels.
