@@ -435,23 +435,22 @@ colab.authorizeKernel = function(url, callback) {
  *  of not being authorized.
  */
 colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
+  url = url.replace(/\/$/, '');
   if (opt_forceAuthorization) {
     var authorizeCallback = goog.partial(colab.loadKernelFromUrl, url, false);
     colab.authorizeKernel(url, authorizeCallback);
+    jQuery([IPython.events]).trigger('authorizing.Session');
     return;
   }
 
   goog.net.cookies.set('kernelUrl', url, 10000);
-  if (colab.globalSession) {
-    colab.globalSession.delete();
-  }
-
   var notebook_id = colab.globalNotebook && colab.globalNotebook.getId();
   if (!notebook_id) {
     console.error('Can not connect to kernel. No unique id for notebook.');
     return;
   }
 
+  colab.globalKernel = null;
   colab.globalSession = new IPython.Session({
     notebook_name: notebook_id || '',
     notebook_path: 'n/a',
@@ -460,6 +459,14 @@ colab.loadKernelFromUrl = function(url, opt_forceAuthorization) {
     kernel_host: url
   });
 
+  jQuery([IPython.events]).on('start_failed.Session start_failed.Kernel',
+      function() {
+    colab.notification.showPrimary('Unable to connect to kernel', 1000);
+    colab.globalSession = null;
+  });
+  // For whatever reason kernel no longer triggers starting.Kernel event
+  // So we do it here instead.
+  jQuery([IPython.events]).trigger('starting.Session');
   colab.globalSession.start(function() {
     colab.globalKernel = colab.globalSession.kernel;
   });
@@ -514,7 +521,8 @@ colab.openKernelDialogBox = function() {
 
   goog.style.setWidth(urlInput, 300);
   urlInput.value = colab.globalSession ?
-      colab.globalSession.kernel_host : 'https://127.0.0.1:8888';
+      colab.globalSession.kernel_host :
+      goog.net.cookies.get('kernelUrl', 'https://127.0.0.1:8888');
   goog.dom.appendChild(contentDiv, urlInput);
 
   dialog.setTitle('Connect to Kernel');
