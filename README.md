@@ -70,6 +70,8 @@ The Chrome App requires Chrome Beta (or Dev, Unstable or Canary), as it relies o
 Currently there is no way to install new apps in the PNaCl kernel.
 
 ### The Collaboration Model
-CoLaboratory's collaboration model is getting better. Right now the model involves a single collaborative notebook with separate kernels. This can lead to a mismatch between a user's kernel state and the state of the notebook.
+CoLaboratory's collaboration model is evolving. The current model is a single collaborative notebook with separate kernels. This can lead to a mismatch between a user's kernel state and the state of the notebook. 
 
-To understand how a state mismatch can manifest, consider the scenario where two people, Bob and Sue, are working on the same notebook at the same time. Both Bob and Sue will have their own kernel state.
+To understand how a state mismatch can manifest, consider the scenario below. Bob and Sue are working on the same notebook at the same time. Both Bob and Sue will have their own kernel state. Bobs changes will change the notebook Sue sees, but Sue's state is unchanged. If sue tries to access the variable Bob created, she will get an error. 
+
+![Collaboration Error](https://github.com/jupyter/colaboratory/raw/master/documentation/img/collaboration-error.png)
