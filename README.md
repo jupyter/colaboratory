@@ -1,16 +1,16 @@
-# Colaboratory
+# CoLaboratory
 
 This repo contains two related tools:
 
-1. The Colaboratory Chrome App.
+1. The CoLaboratory Chrome App.
 
-2. Colaboratory with Classic Jupyter Kernels.
+2. CoLaboratory with Classic Jupyter Kernels.
 
 Both of these create and store notebooks in Google Drive and allow for
-colaborative editing of notebooks.  The difference is that the Chrome
+collaborative editing of notebooks.  The difference is that the Chrome
 App executes all code inside the Chrome browser using the
 [PNaCl Sandbox](https://developer.chrome.com/native-client/nacl-and-pnacl)),
-while Colaboratory Classic executes code via local Jupyter kernels
+while coLaboratory Classic executes code via local Jupyter kernels
 (such as the IPython kernel) that have complete access to the host
 system and files.
 
@@ -20,7 +20,7 @@ First clone this repo:
 git clone --recursive https://github.com/ipython/colaboratory
 ```
 
-## Installing Colaboratory Classic frontend for local IPython Kernels
+## Installing CoLaboratory Classic Frontend for Local IPython Kernels
 Run
 ```
 cd colaboratory
@@ -44,7 +44,7 @@ This launches the web application.
 
 Navigate to ```http://127.0.0.1:8888/static/colab/welcome.html``` in your browser.
 
-## Installing the Colaboratory Chrome App
+## Installing the CoLaboratory Chrome App
 Run
 ```
 cd colaboratory
@@ -68,3 +68,8 @@ The Chrome App requires Chrome Beta (or Dev, Unstable or Canary), as it relies o
 
 ### Loading Python Libraries
 Currently there is no way to install new apps in the PNaCl kernel.
+
+### The Collaboration Model
+CoLaboratory's collaboration model is getting better. Right now the model involves a single collaborative notebook with separate kernels. This can lead to a mismatch between a user's kernel state and the state of the notebook.
+
+To understand how a state mismatch can manifest, consider the scenario where two people, Bob and Sue, are working on the same notebook at the same time. Both Bob and Sue will have their own kernel state.
