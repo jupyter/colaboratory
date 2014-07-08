@@ -44,6 +44,11 @@ var IPython = (function (IPython) {
                     callback(data, status, xhr);
                 }
             },
+            error : function(XMLHttpRequest, textStatus, errorThrown) {
+                // Alerts in the event of an error.
+                // TODO(colab-team): should be a session event.
+                jQuery([IPython.events]).trigger('status_dead.Kernel');
+            }
         };
         var url = this.kernel_host + utils.url_join_encode(this.base_url, 'api/sessions');
         $.ajax(url, settings);
@@ -70,6 +75,9 @@ var IPython = (function (IPython) {
     };
 
     Session.prototype.delete = function() {
+        if (this.kernel === null) {
+            return;
+        }
         var settings = {
             processData : false,
             cache : false,
