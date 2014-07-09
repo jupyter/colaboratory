@@ -191,7 +191,7 @@ colab.createMenubar = function(notebook) {
         if (colab.app.appMode) {
           colab.app.postMessage('download_ipynb', {
             'data': data,
-            'suggestedName': filename + '.ipynb';
+            'suggestedName': filename + '.ipynb'
           });
         } else {
           a.href = window.URL.createObjectURL(new Blob([data]));
@@ -216,7 +216,12 @@ colab.createMenubar = function(notebook) {
         break;
 
       case 'report-bug-menuitem':
-        window.open('https://github.com/ipython/colaboratory/issues');
+        var url = 'https://github.com/ipython/colaboratory/issues';
+        if (colab.app.appMode) {
+          colab.app.postMessage('launch_browser_tab', {'url': url});
+        } else {
+          window.open(url);
+        }
         break;
 
       case 'shortcuts-menuitem':

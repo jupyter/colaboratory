@@ -15,6 +15,16 @@ goog.require('goog.style');
 colab.displayInitialScreen = function() {
   console.log('Displaying initial screen.');
 
+  if (colab.app.appMode) {
+    // in app mode, override hyperlinks to open links in new tabs.
+    goog.array.forEach(document.getElementsByTagName('a'), function(element) {
+      element.onclick = function() {
+        colab.app.postMessage('launch_browser_tab', {'url': element.href});
+        return false;
+      };
+    });
+  }
+
   var createButton = document.getElementById('create-button');
   createButton.onclick = function() {
     if (colab.app.appMode) {

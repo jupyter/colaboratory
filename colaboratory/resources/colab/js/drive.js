@@ -283,7 +283,11 @@ colab.drive.NotebookModel.prototype.checkIfReadOnly_ =
  *
  */
 colab.drive.NotebookModel.prototype.openDriveViewer = function() {
-  window.open(this.fileDriveUrl_);
+  if (colab.app.appMode) {
+    colab.app.postMessage('launch_browser_tab', {'url': this.fileDriveUrl_});
+  } else {
+    window.open(this.fileDriveUrl_);
+  }
 };
 
 
