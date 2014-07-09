@@ -17,7 +17,7 @@ system and files.
 ## Setup
 First clone this repo:
 ```
-git clone --recursive https://github.com/ipython/colaboratory
+git clone --recursive https://github.com/jupyter/colaboratory
 ```
 
 ## Installing CoLaboratory Classic Frontend for Local IPython Kernels
