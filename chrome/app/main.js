@@ -1,4 +1,4 @@
-var driveRedirectAddress = 'http://iteractivenb.appspot.com/drive';
+var driveRedirectAddress = 'http://colaboratory.jupyter.org/drive';
 
 chrome.app.runtime.onLaunched.addListener(function(intentData) {
   console.log(intentData);
