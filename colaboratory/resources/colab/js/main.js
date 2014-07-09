@@ -217,7 +217,7 @@ window.addEventListener('load', function() {
 
       // load kernel (default to localhost, and store in cookie 'kernelUrl')
       if (!goog.net.cookies.containsKey('kernelUrl')) {
-        var kernelUrl = 'http://127.0.0.1:8888';
+        var kernelUrl = location.protocol + '//127.0.0.1:8888';
         if (colab.app.appMode) {
           // If in app mode, connect to in-browser kernel by default
           kernelUrl = colab.IN_BROWSER_KERNEL_URL;
@@ -512,9 +512,11 @@ colab.openKernelDialogBox = function() {
   goog.style.setWidth(contentDiv, 400);
 
   var textDiv = goog.dom.createDom('div');
-  textDiv.innerHTML = 'Enter the url for a python backend (kernel).' +
-      'See <a href="http://goto.google.com/colab-external-kernel" ' +
-      ' target="_blank"/> for how to setup your own python backend.';
+  textDiv.innerHTML = 'To run code you need to connect to a Jupyter kernel. ' +
+    'Enter the url for a running Jupyter kernel below. Keep in mind this ' +
+    'will allow coLaboratory to execute code on the machine where the ' +
+    'Juptyer kernel is located.';
+
   goog.dom.appendChild(contentDiv, textDiv);
 
   var urlInput = goog.dom.createDom('input', {'id': 'backend-url-input'});
@@ -522,7 +524,8 @@ colab.openKernelDialogBox = function() {
   goog.style.setWidth(urlInput, 300);
   urlInput.value = colab.globalSession ?
       colab.globalSession.kernel_host :
-      goog.net.cookies.get('kernelUrl', 'https://127.0.0.1:8888');
+      goog.net.cookies.get('kernelUrl',
+        location.protocol + '//127.0.0.1:8888');
   goog.dom.appendChild(contentDiv, urlInput);
 
   dialog.setTitle('Connect to Kernel');
