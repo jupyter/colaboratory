@@ -3,6 +3,12 @@
 
 set -x
 
+if [ ! -z "$1" ]; then
+  CHROME_APP_VERSION="$1"
+else
+  CHROME_APP_VERSION="DEBUG"
+fi
+
 # make directory for Chrome app build
 DEST=build_chrome
 
@@ -25,5 +31,10 @@ mkdir -p "$TMP_RESOURCES_DIR"
 tar -zxvf "chrome/pnacl/$PNACL_RESOURCES_FILE" -C "$TMP_RESOURCES_DIR"
 mkdir -p "$COLABTOOLS_DEST"
 cp -f $COLABTOOLS_DIR/* "$COLABTOOLS_DEST"
-#tar -zcvf "$DEST/$PNACL_RESOURCES_FILE" -C "$TMP_RESOURCES_DIR" .
-#rm -rf "$TMP_RESOURCES_DIR"
+tar -zcvf "$DEST/$PNACL_RESOURCES_FILE" -C "$TMP_RESOURCES_DIR" .
+rm -rf "$TMP_RESOURCES_DIR"
+
+# Override client ID's in manifest
+if [ "$CHROME_APP_VERSION" == "RELEASE" ]; then
+  python generate_release_manifest.py "$DEST/manifest.json"
+fi
