@@ -191,7 +191,7 @@ colab.createMenubar = function(notebook) {
         if (colab.app.appMode) {
           colab.app.postMessage('download_ipynb', {
             'data': data,
-            'suggestedName': filename
+            'suggestedName': filename + '.ipynb';
           });
         } else {
           a.href = window.URL.createObjectURL(new Blob([data]));
