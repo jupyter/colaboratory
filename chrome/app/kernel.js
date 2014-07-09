@@ -60,7 +60,7 @@ colab.Kernel.prototype.addWebviewListeners_ = function() {
     that.pickFile_();
   });
 
-  webview.addMessageListener('kernel_message', function(msgType, content) {
+  this.webview_.addMessageListener('kernel_message', function(msgType, content) {
     if (that.embed_) {
       that.embed_.postMessage({json: content});
     }
@@ -82,7 +82,7 @@ colab.Kernel.prototype.start_ = function() {
   this.embed_.data = '/pnacl/kernel.nmf';
   this.embed_.type = 'application/x-pnacl';
 
-  function addParam(embed, name, value) {
+  function addParam(name, value) {
     var param = document.createElement('param');
     param.name = name;
     param.value = value;
