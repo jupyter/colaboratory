@@ -21,12 +21,20 @@ var IPython = (function (IPython) {
      * A Kernel Class to communicate with the Python kernel
      * @Class Kernel
      */
-    var Kernel = function (kernel_service_url) {
+    var Kernel = function (kernel_service_url, kernel_host) {
         this.kernel_id = null;
         this.shell_channel = null;
         this.iopub_channel = null;
         this.stdin_channel = null;
         this.kernel_service_url = kernel_service_url;
+        this.kernel_host = kernel_host || "";
+
+        // trailing 's' in https will become wss for secure web sockets
+        if (kernel_host) {
+            this.ws_host = kernel_host.replace("http", "ws");
+        } else {
+            this.ws_host = location.protocol.replace('http', 'ws') + "//" + location.host;
+        }
         this.running = false;
         this.username = "username";
         this.session_id = utils.uuid();
@@ -93,9 +101,10 @@ var IPython = (function (IPython) {
         params = params || {};
         if (!this.running) {
             var qs = $.param(params);
-
-            $.post(utils.url_join_encode('/', this.kernel_service_url) + '?'
-                   + qs, $.proxy(this._kernel_started, this), 'json');
+            $.post(this.kernel_host + utils.url_join_encode(this.kernel_service_url) + '?' + qs,
+                $.proxy(this._kernel_started, this),
+                'json'
+            );
         }
     };
 
@@ -111,7 +120,7 @@ var IPython = (function (IPython) {
         $([IPython.events]).trigger('status_restarting.Kernel', {kernel: this});
         if (this.running) {
             this.stop_channels();
-            $.post(utils.url_join_encode(this.kernel_url, "restart"),
+            $.post(this.kernel_host + utils.url_join_encode(this.kernel_url, "restart"),
                 $.proxy(this._kernel_started, this),
                 'json'
             );
@@ -123,8 +132,6 @@ var IPython = (function (IPython) {
         console.log("Kernel started: ", json.id);
         this.running = true;
         this.kernel_id = json.id;
-        // trailing 's' in https will become wss for secure web sockets
-        this.ws_host = location.protocol.replace('http', 'ws') + "//" + location.host;
         this.kernel_url = utils.url_path_join(this.kernel_service_url, this.kernel_id);
         this.start_channels();
     };
@@ -384,7 +391,7 @@ var IPython = (function (IPython) {
     Kernel.prototype.interrupt = function () {
         if (this.running) {
             $([IPython.events]).trigger('status_interrupting.Kernel', {kernel: this});
-            $.post(utils.url_join_encode(this.kernel_url, "interrupt"));
+            $.post(this.kernel_host + utils.url_join_encode(this.kernel_url, "interrupt"));
         }
     };
 
@@ -397,7 +404,7 @@ var IPython = (function (IPython) {
                 type : "DELETE",
                 error : utils.log_ajax_error,
             };
-            $.ajax(utils.url_join_encode(this.kernel_url), settings);
+            $.ajax(this.kernel_host + utils.url_join_encode(this.kernel_url), settings);
         }
     };
 
