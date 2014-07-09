@@ -1,5 +1,5 @@
 {
-  "name": "Colaboratory Notebook",
+  "name": "coLaboratory Notebook",
   "version": "6",
   "manifest_version": 2,
   "description": "A Chrome App for running a port of IPython to PNaCl, in a notebook environment with Google Drive Integration.",
