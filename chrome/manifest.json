@@ -15,9 +15,8 @@
       ]
     }
   },
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2rQs+fa7vejgdPUjAA8mLJCgPL7lsRj4AumBwlREKfhN2NgufHxNNp2ruUBt/CcHaNWHA2zn8rVyoTmmUazN8FpDqCCuZeZqvf5sdiMgAXI3Ls/wyMbL2S6gSUx3Kfu5+mSpd2DCFGuDWdZ7K6AMOVwIAfvRiKbdq6be7aNnesiHjKvgYq3PxceqPADOdD5JDy7Tym81pf1NYD2EQyh2xFswrIosxfDNp1wdkuNClE/u8mFvgvLmrre0Q7cRFRcCkRJf87SEugAF+vKAQIg358hmAWBuTjoJw4b1chKRZ3ww1x+GCaC2W8dKlzWwkKF2A3L1ufqF3YuT1CnLdHJueQIDAQAB",
   "oauth2": {
-    "client_id": "911569945122-8t1sdq48rr7hg22tadd8amelo3tcsd3a.apps.googleusercontent.com",
+    "client_id": "911569945122-0tcrnl8lnu5b0ccgpp92al27pplahn5a.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/drive",
       "https://www.googleapis.com/auth/drive.install"
@@ -46,7 +45,7 @@
     ],
   "url_handlers": {
     "handle_drive_action": {
-      "matches": [ "http://iteractivenb.appspot.com/drive*" ],
+      "matches": [ "http://colaboratory.jupyter.org/drive*" ],
       "title": "Drive Action"
     }
   },
