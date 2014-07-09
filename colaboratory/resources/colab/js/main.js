@@ -166,6 +166,16 @@ colab.close = function(opt_cb) {
 colab.preferences = null;
 
 
+/**
+ * Generate default kernel url
+ * @return {string} The kernel url
+ */
+colab.getDefaultKernelUrl = function() {
+  var port = location.port || '8888';
+  return location.protocol + '//127.0.0.1:' + port;
+};
+
+
 /** gapi.drive.realtime.Document
  * Callback for window load.  Loads UI.
  */
@@ -217,7 +227,7 @@ window.addEventListener('load', function() {
 
       // load kernel (default to localhost, and store in cookie 'kernelUrl')
       if (!goog.net.cookies.containsKey('kernelUrl')) {
-        var kernelUrl = location.protocol + '//127.0.0.1:8888';
+        var kernelUrl = colab.getDefaultKernelUrl();
         if (colab.app.appMode) {
           // If in app mode, connect to in-browser kernel by default
           kernelUrl = colab.IN_BROWSER_KERNEL_URL;
@@ -524,8 +534,7 @@ colab.openKernelDialogBox = function() {
   goog.style.setWidth(urlInput, 300);
   urlInput.value = colab.globalSession ?
       colab.globalSession.kernel_host :
-      goog.net.cookies.get('kernelUrl',
-        location.protocol + '//127.0.0.1:8888');
+      goog.net.cookies.get('kernelUrl', colab.getDefaultKernelUrl());
   goog.dom.appendChild(contentDiv, urlInput);
 
   dialog.setTitle('Connect to Kernel');
