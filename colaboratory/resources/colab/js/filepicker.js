@@ -28,7 +28,7 @@ colab.filepicker.PUBLIC_DEVELOPER_KEY =
  * @const
  */
 colab.filepicker.CHROME_APP_KEY =
-    '8t1sdq48rr7hg22tadd8amelo3tcsd3a';
+    '0tcrnl8lnu5b0ccgpp92al27pplahn5a';
 
 /**
  * Upon successful file selection calls callback with
