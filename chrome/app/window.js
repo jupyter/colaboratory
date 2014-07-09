@@ -12,6 +12,13 @@ webview.addMessageListener('launch', function(messageType, params) {
   launchNotebookWindow(params);
 });
 
+webview.addMessageListener('launch_browser_tab', function(messageType, params) {
+  var a =  document.createElement('a')
+  a.href = params['url'];
+  a.target = "_blank";
+  a.click();
+});
+
 webview.addMessageListener('download_ipynb', function(messageType, params) {
   var data = params['data'];
   var suggestedName = params['suggestedName'];
