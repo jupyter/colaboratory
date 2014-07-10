@@ -53,7 +53,7 @@ Navigate to ```http://127.0.0.1:8888/static/colab/welcome.html``` in your browse
 ## Installing the CoLaboratory Chrome App
 Run
 ```
-python colaboratory/install_chrome.py
+python colaboratory/bundle_static.py
 ```
 This creates an unpacked Chrome App, in the ```build_chrome/``` directory.
 
