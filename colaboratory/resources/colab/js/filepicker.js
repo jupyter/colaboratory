@@ -19,6 +19,17 @@ goog.require('colab.app');
 colab.filepicker.PUBLIC_DEVELOPER_KEY =
     'AIzaSyCoDfWuxLxqqLWfKVNqfHy7DIWudoPTeuk';
 
+
+/**
+ * App ID for Web App (this is a substring of the client ID).
+ *
+ * @type {string}
+ * @const
+ */
+colab.filepicker.WEB_APP_KEY =
+    'q0d0ap400g3mescci580rj5449tg2iq9';
+
+
 /**
  * App ID for Chrome App (this is a substring of the client ID.
  *
@@ -80,7 +91,7 @@ colab.filepicker.selectFile = function(cb) {
     if (colab.app.appMode) {
       picker.setAppId(colab.filepicker.CHROME_APP_KEY);
     } else {
-      picker.setDeveloperKey(colab.filepicker.PUBLIC_DEVELOPER_KEY);
+      picker.setAppId(colab.filepicker.WEB_APP_KEY);
     }
 
     var dlg = picker.build();
@@ -109,7 +120,7 @@ colab.filepicker.selectDir = function(cb) {
     if (colab.app.appMode) {
       picker.setAppId(colab.filepicker.CHROME_APP_KEY);
     } else {
-      picker.setDeveloperKey(colab.filepicker.PUBLIC_DEVELOPER_KEY);
+      picker.setAppId(colab.filepicker.WEB_APP_KEY);
     }
 
     var dlg = picker.build();
