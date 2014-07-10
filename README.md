@@ -47,15 +47,11 @@ Navigate to ```http://127.0.0.1:8888/static/colab/welcome.html``` in your browse
 ## Installing the CoLaboratory Chrome App
 Run
 ```
-cd colaboratory
-./install_chrome.sh
+python colaboratory/install_chrome.py
 ```
 This creates an unpacked Chrome App, in the ```build_chrome/``` directory.
 
-NOTE: this script must be run from the colaboratory directory, e.g. running ```colaboratory/install_chrome.sh```
-will not work.
-
-NOTE: The PNaCl kernel files are not yet uploaded to naclports, and so the Chrome App is currently not able to build.  These should be up by the end of today (July 10, 2014).
+NOTE: The PNaCl kernel files are not yet uploaded to naclports, and so the Chrome App will not be able to run the PNaCl kernel.  It can only edit notebooks.  These should be up by the end of today (July 10, 2014).
 
 To install this app in Chrome, follow the instructions for installing an unpacked extension
 (extensions are apps for these purposes), at https://developer.chrome.com/extensions/getstarted#unpacked.
@@ -63,7 +59,7 @@ The extension is located in ```colaboratory/build_chrome/```.
 
 ## Caveats/Requirements
 ### Chrome PNaCl binaries
-The PNaCl kernel files are not yet uploaded to naclports, and so the Chrome App is currently not able to build.  These should be up by the end of today (July 10, 2014).
+The PNaCl kernel files are not yet uploaded to naclports, and so the Chrome App is currently not able to run the PNaCl kernel.  It can only edit notebooks.  These should be up by the end of today (July 10, 2014).
 
 ### Chrome Browser Version
 The Chrome App requires Chrome Beta (or Dev, Unstable or Canary), as it relies of bug fixes that are not available in the Stable channel yet.
