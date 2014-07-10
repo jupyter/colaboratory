@@ -53,3 +53,7 @@ cp -r "$COLAB_RESOURCES/ipython_patch/" "$DEST/ipython/"
 
 # stage closure from the submodule
 cp -r "$CLOSURE/" "$DEST/closure/"
+
+# move
+mkdir -p "$DEST/extern/mathjax"
+curl https://cdn.mathjax.org/mathjax/latest/MathJax.js > "$DEST/extern/mathjax/MathJax.js"
