@@ -171,6 +171,7 @@ class ColaboratoryWebApplication(web.Application):
     def init_handlers(self, settings):
         # Load the (URL pattern, handler) tuples for each component.
         here = os.path.dirname(__file__)
+        build = pjoin(here, os.pardir, 'build')
         colab = pjoin(RESOURCES, 'colab')
         handlers = [(r'/', web.RedirectHandler, {'url':'/welcome'}),
                     (r'/welcome(/?)', SingleStaticFileHandler,
@@ -180,7 +181,7 @@ class ColaboratoryWebApplication(web.Application):
                     (r'/colab/(.*)', web.StaticFileHandler,
                         {'path': colab}),
                     (r'/extern/(.*)', web.StaticFileHandler,
-                        {'path': pjoin(RESOURCES, 'extern')}),
+                        {'path': pjoin(build, 'extern')}),
                     (r'/closure/(.*)', web.StaticFileHandler,
                         {'path': pjoin(RESOURCES, 'closure-library', 'closure', 'goog')}),
                     (r'/ipython/(.*)', FileFindHandler,
