@@ -67,7 +67,10 @@ The extension is located in ```colaboratory/build_chrome/```.
 The Chrome App requires Chrome Beta (or Dev, Unstable or Canary), as it relies of bug fixes that are not available in the Stable channel yet.
 
 ### Loading Python Libraries
-Currently there is no way to install new apps in the PNaCl kernel.
+Currently there is no way to install new libraries in the PNaCl kernel.
+
+### Running from colaboratory.jupyter.org
+The website [colaboratory.jupyter.org](http://colaboratory.jupyter.org) can be used for interactive editing of notebooks, but cannot yet connect to a local kernel.  This is due to https issues that we are currently working on.  However, running the Classic frontend as described above already works, as the website runs on localhost.
 
 ### The Collaboration Model
 CoLaboratory's collaboration model is evolving. The current model is a single collaborative notebook with separate kernels. This can lead to a mismatch between a user's kernel state and the state of the notebook. 
