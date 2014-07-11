@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os
 import errno
 import IPython.html
@@ -69,5 +71,9 @@ def BundleStatic(colab_root, dest):
 
 
 if __name__ == '__main__':
-  BundleStatic(COLAB_ROOT_PATH, pjoin(COLAB_ROOT_PATH, 'build'))
-
+  import sys
+  if len(sys.argv) < 2:
+    dest = pjoin(COLAB_ROOT_PATH, 'build')
+  else:
+    dest = sys.argv[1]
+  BundleStatic(COLAB_ROOT_PATH, dest)
