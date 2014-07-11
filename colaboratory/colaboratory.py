@@ -8,7 +8,6 @@
 from __future__ import print_function
 
 import errno
-import io
 import json
 import logging
 import os
@@ -18,7 +17,6 @@ import signal
 import socket
 import sys
 import threading
-import time
 import webbrowser
 
 # check for pyzmq 2.1.11
@@ -50,33 +48,24 @@ from tornado import web
 from tornado.log import LogFormatter
 
 from IPython.html import DEFAULT_STATIC_FILES_PATH
-from IPython.html.base.handlers import Template404
 from IPython.html.log import log_request
 from IPython.html.services.kernels.kernelmanager import MappingKernelManager
-from IPython.html.services.notebooks.nbmanager import NotebookManager
-from IPython.html.services.sessions.sessionmanager import SessionManager
 
-from IPython.html.base.handlers import AuthenticatedFileHandler, FileFindHandler
+from IPython.html.base.handlers import FileFindHandler
 
-from IPython.config import Config
-from IPython.config.application import catch_config_error, boolean_flag
+from IPython.config.application import catch_config_error
 from IPython.core.application import (
     BaseIPythonApplication, base_flags, base_aliases,
 )
 from IPython.core.profiledir import ProfileDir
 from IPython.kernel import KernelManager
 from IPython.kernel.zmq.session import default_secure, Session
-from IPython.nbformat.sign import NotebookNotary
 from IPython.utils.importstring import import_item
 from IPython.utils import submodule
 from IPython.utils.traitlets import (
-    Dict, Unicode, Integer, List, Bool, Bytes, Instance,
-    DottedObjectName, TraitError,
+    Dict, Unicode, Integer, List, Bool, Bytes,
+    DottedObjectName,
 )
-from IPython.utils import py3compat
-from IPython.utils.path import filefind, get_ipython_dir
-
-from IPython.html.utils import url_path_join
 
 #-----------------------------------------------------------------------------
 # Module globals
@@ -239,7 +228,6 @@ class ColaboratoryApp(BaseIPythonApplication):
 
     classes = [
         KernelManager, ProfileDir, Session, MappingKernelManager,
-        NotebookManager, NotebookNotary,
     ]
     flags = Dict(flags)
     aliases = Dict(aliases)
