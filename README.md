@@ -38,7 +38,7 @@ To fix this, run `git submodule init && git submodule update`.
 
 Run
 ```
-python colaboratory/install_chrome.py
+python colaboratory/bundle_static.py
 ```
 This installs static files needed by the notebook server.
 
@@ -53,7 +53,7 @@ Navigate to ```http://127.0.0.1:8888/static/colab/welcome.html``` in your browse
 ## Installing the CoLaboratory Chrome App
 Run
 ```
-python colaboratory/bundle_static.py
+python colaboratory/install_chrome.py
 ```
 This creates an unpacked Chrome App, in the ```build_chrome/``` directory.
 
