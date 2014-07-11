@@ -6,8 +6,6 @@ import urllib
 
 COLAB_ROOT_PATH = os.path.dirname(os.path.realpath(__file__))
 
-MATHJAX_URL = "https://cdn.mathjax.org/mathjax/latest/MathJax.js"
-
 pjoin = os.path.join
 
 def MakeDirectoryIfNotExist(path):
@@ -69,12 +67,6 @@ def BundleStatic(colab_root, dest):
   # stage closure from the submodule
   CopyTreeRecursively(closure, pjoin(dest, 'closure'))
 
-  # Pull in MathJax JavaScript
-  mathjax_path = pjoin(dest, 'extern', 'mathjax')
-  mathjax_file = pjoin(mathjax_path, 'MathJax' + os.extsep + 'js')
-  MakeDirectoryIfNotExist(mathjax_path)
-  url_opener = urllib.URLopener()
-  url_opener.retrieve(MATHJAX_URL, mathjax_file)
 
 if __name__ == '__main__':
   BundleStatic(COLAB_ROOT_PATH, pjoin(COLAB_ROOT_PATH, 'build'))
