@@ -17,6 +17,11 @@ args = parser.parse_args()
 
 RELEASE_CLIENT_ID = "911569945122-0tcrnl8lnu5b0ccgpp92al27pplahn5a.apps.googleusercontent.com"
 
+NACL_PEXE_FILE_URL = "http://yt-project.org/upload/kernel.pexe"
+NACL_TAR_FILE_URL = "http://yt-project.org/upload/zeropy_20140520.tar.gz"
+
+
+
 def InstallChrome(release, colab_root, dest):
   """Installs the Chrome App.
 
@@ -35,7 +40,17 @@ def InstallChrome(release, colab_root, dest):
   CopyTreeRecursively(pjoin(colab_root, 'chrome'), dest)
   CopyTreeRecursively(pjoin(colab_root, 'chrome', 'pnacl'), dest)
 
-  # TODO: add colabtools module to PNaCl resources zip file.
+  # Download .pexe and .tar.gz files.  Later these will be pulled
+  # from the naclports continuous builder
+  pexe_file = pjoin(dest, 'pnacl', 'kernel.pexe')
+  tar_file = pjoin(dest, 'zeropy_20140520.tar.gz')
+  url_opener = urllib.URLopener()
+  if not os.path.isfile(pexe_file):
+    print 'Downloading ' + NACL_PEXE_FILE_URL
+    url_opener.retrieve(NACL_PEXE_FILE_URL, pexe_file)
+  if not os.path.isfile(tar_file):
+    print 'Downloading ' + NACL_TAR_FILE_URL
+    url_opener.retrieve(NACL_TAR_FILE_URL, tar_file)
 
   if release:
     # In release mode, we must change client IDS
