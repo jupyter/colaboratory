@@ -27,7 +27,7 @@ colab.filepicker.PUBLIC_DEVELOPER_KEY =
  * @const
  */
 colab.filepicker.WEB_APP_KEY =
-    'q0d0ap400g3mescci580rj5449tg2iq9';
+    'm2uip5p987oi948dikp8khomucgt1b5h';
 
 
 /**
