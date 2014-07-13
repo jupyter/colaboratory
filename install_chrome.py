@@ -11,6 +11,8 @@ from bundle_static import *
 
 parser = argparse.ArgumentParser(description='Installs the Chrome App.')
 parser.add_argument('--release',
+                    default=False,
+                    action='store_true',
                     help='Create release version')
 
 args = parser.parse_args()
