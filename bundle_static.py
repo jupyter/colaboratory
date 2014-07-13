@@ -24,6 +24,23 @@ def RemoveDirectoryIfExist(path):
     if exception.errno != errno.ENOENT:
       raise
 
+def RemoveFileIfExist(path):
+  try:
+    os.remove(path)
+  except OSError as exception:
+    if exception.errno != errno.ENOENT:
+      raise
+
+def RemoveFileOrDirectoryIfExist(path):
+  try:
+    RemoveDirectoryIfExist(path)
+  except OSError as exception:
+    if exception.errno == errno.ENOTDIR:
+      RemoveFileIfExist(path)
+    else:
+      raise
+
+
 def CopyTreeRecursively(src, dest):
   """Roughly equivalent to cp -r src/* dest"""
   MakeDirectoryIfNotExist(dest)
@@ -63,7 +80,7 @@ def BundleStatic(colab_root, dest):
 
   # stage IPython's static files, then clobber them with patched versions
   CopyTreeRecursively(ipython_static, pjoin(dest, 'ipython'))
-  RemoveDirectoryIfExist(pjoin(dest, 'ipython', 'components', '.git'))
+  RemoveFileOrDirectoryIfExist(pjoin(dest, 'ipython', 'components', '.git'))
   CopyTreeRecursively(pjoin(colab_resources, 'ipython_patch'), pjoin(dest, 'ipython'))
 
   # stage closure from the submodule
