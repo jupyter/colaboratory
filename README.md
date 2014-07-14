@@ -36,12 +36,6 @@ If you did not use the `--recursive` flag when cloning, you will get errors like
 ```
 To fix this, run `git submodule init && git submodule update`.
 
-Run
-```
-python colaboratory/bundle_static.py
-```
-This installs static files needed by the notebook server.
-
 Start IPython notebook:
 ```
 python -m colaboratory
