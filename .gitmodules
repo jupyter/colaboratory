@@ -4,4 +4,4 @@
 [submodule "colaboratory/resources/extern/mathjax"]
 	path = colaboratory/resources/extern/mathjax
 	url = git://github.com/mathjax/MathJax.git
-	branch = v2.4-lastest
+	branch = v2.4-latest
