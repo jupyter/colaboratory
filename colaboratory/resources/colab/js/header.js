@@ -36,14 +36,6 @@ goog.require('goog.ui.menuBarDecorator');
 
 
 /**
- * Minimum version of Chrome that allows for mounting local directories
- * in PNaCl.
- * @type {string}
- */
-colab.MOUNT_LOCAL_DIRECTORY_MIN_CHROME_VERSION = '38.0.2091.2';
-
-
-/**
  * Setup coLaboratory header.
  * @param {colab.drive.NotebookModel} notebook the current realtime document.
  */
@@ -159,16 +151,8 @@ colab.createMenubar = function(notebook) {
       case 'openlocalfs-menuitem':
         // Test if Chrome Versions is new enough for PNaCl to support
         // mounting local directories.
-        if (window.navigator.appVersion.match('Chrome\/(.*?) ')[1] <
-          colab.MOUNT_LOCAL_DIRECTORY_MIN_CHROME_VERSION) {
-          var text = 'Could not pick file/directory';
-          var reason = {
-            'message': ('Mounting local directories requires Chrome version ' + 
-              colab.MOUNT_LOCAL_DIRECTORY_MIN_CHROME_VERSION +
-              ' or newer.')
-          };
-          colab.dialog.displayError(text, reason);
-        } else {
+        if (colab.app.checkVersionAndWarnUser(
+          colab.app.MOUNT_LOCAL_DIRECTORY_MIN_CHROME_VERSION)) {
           colab.app.postMessage('pick_file');
         }
         break;
