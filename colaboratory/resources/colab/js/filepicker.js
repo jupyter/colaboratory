@@ -75,15 +75,11 @@ colab.filepicker.selectFile = function(cb) {
         google.picker.ViewId.RECENTLY_PICKED);
     recentlyPicked.setMimeTypes(mimeTypes);
 
-    // List sample notebooks
-    var upload = new google.picker.DocsUploadView();
-
     var picker = new google.picker.PickerBuilder()
         .addView(recentlyPicked)
         .addView(view)
         .addView(byMe)
         // .addView(samples)
-        .addView(upload)
         .setOAuthToken(gapi.auth.getToken().access_token)
         .setSelectableMimeTypes(mimeTypes)
         .setCallback(cb);
