@@ -10,7 +10,7 @@ colab.install.OAUTH_SCOPE = 'https://www.googleapis.com/auth/drive.install';
 
 
 /** @const */
-colab.install.FILE_SCOPE = 'https://www.googleapis.com/auth/drive';
+colab.install.FILE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly.metadata';
 
 
 /**
