@@ -97,4 +97,4 @@ colab.client_id.INSTALL_CLIENT_ID =
  * @type {string}
  */
 colab.client_id.DRIVE_CLIENT_ID =
-    '911569945122-hpps2slo3mri3uk7lpc032vfudausme9.apps.googleusercontent.com';
+    '911569945122-tlvi6ucbj137ifhitpqpdikf3qo1mh9d.apps.googleusercontent.com';
