@@ -11,6 +11,7 @@ goog.provide('colab.drive.NotebookModel');
 
 goog.require('colab.Error');
 goog.require('colab.app');
+goog.require('colab.client_id');
 goog.require('colab.error');
 goog.require('colab.filepicker');
 goog.require('colab.nbformat');
@@ -548,39 +549,6 @@ colab.drive.NEW_NOTEBOOK_MIMETYPE = 'application/colab';
  */
 colab.drive.NOTEBOOK_MIMETYPE = 'application/colab';
 
-/**
- * OAuth 2.0 scope for opening and creating files.
- * @const
- */
-colab.drive.FILE_SCOPE = 'https://www.googleapis.com/auth/drive';
-
-/**
- * This client is from the same project that is used by chromeapp
- * https://console.developers.google.com/project/apps~windy-ellipse-510/apiui/credential
- */
-colab.drive.NEW_CLIENT_ID = '911569945122-hpps2slo3mri3uk7lpc032vfudausme9' +
-    '.apps.googleusercontent.com';
-
-/**
- * Google cloud services client id. Found in the project console for CoLab
- * Sandbox.
- */
-colab.drive.INSTALL_CLIENT_ID = '26410270374-q0d0ap400g3mescci580rj5449tg2iq9' +
-    '.apps.googleusercontent.com';
-
-/**
- * Use this until we implement saving into binary format, or else, we will lose
- * all existing content. After saving is implemented, switch to use
- * NEW_CLIENT_ID.
- *
- * TODO(sandler): this will still lose data that was not accessed in the
- * interval
- * between saving and client_id switch happened. Perhaps we should have &recover
- * option to be able to switch to old client_id for a session.
- */
-colab.drive.CLIENT_ID = colab.params.getHashParams().legacyClient ?
-    colab.drive.INSTALL_CLIENT_ID : colab.drive.NEW_CLIENT_ID;
-
 
 /**
  * Google Drive SDK app id.
@@ -660,8 +628,8 @@ colab.drive.clientLoaded.then(function() {
 colab.drive.authorize = function(onSuccess, onFailure, opt_withPopup) {
   var doAuthorize = function() {
     gapi.auth.authorize({
-      'client_id': colab.drive.CLIENT_ID,
-      'scope': ['email', colab.drive.FILE_SCOPE],
+      'client_id': colab.client_id.DRIVE_CLIENT_ID,
+      'scope': ['email', colab.scope.FILE_SCOPE],
       'immediate': !opt_withPopup
     }, function(response) {
       if (!response || response['error']) {

@@ -1,26 +1,7 @@
 
 goog.provide('colab.install');
 
-
-/**
- * OAuth 2.0 scope for installing Drive Apps.
- * @const
- */
-colab.install.OAUTH_SCOPE = 'https://www.googleapis.com/auth/drive.install';
-
-
-/** @const */
-colab.install.FILE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly.metadata';
-
-
-/**
- * Google cloud services client id. Found in the project console for CoLab
- * Sandbox.
- *
- * @type {string}
- */
-colab.install.CLIENT_ID = '24495343215-m2uip5p987oi948dikp8khomucgt1b5h' +
-    '.apps.googleusercontent.com';
+goog.require('colab.client_id');
 
 
 /**
@@ -38,9 +19,9 @@ colab.install.install = function(immediate, callback) {
 
     // Otherwise, using standard OAuth flow.
     gapi.auth.authorize({
-      client_id: colab.install.CLIENT_ID,
-      scope: [colab.install.OAUTH_SCOPE,
-              colab.install.FILE_SCOPE],
+      client_id: colab.client_id.INSTALL_CLIENT_ID,
+      scope: [colab.scope.INSTALL_SCOPE,
+              colab.scope.FILEPICKER_SCOPE],
       immediate: immediate
     }, callback);
   });
