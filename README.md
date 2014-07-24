@@ -59,6 +59,9 @@ The extension is located in ```colaboratory/build_chrome/```.
 ### Chrome Browser Version
 The Chrome App requires Chrome Beta (or Dev, Unstable or Canary), as it relies of bug fixes that are not available in the Stable channel yet.
 
+### IPython Version
+If you already had IPython installed, and the version you had installed was not 2.x, then Colaboratory will not work.  You can either upgrade (or downgrade) to 2.x, or use virtual env.  To check the version of IPython you have installed, run ```ipython --verison```.
+
 ### Loading Python Libraries
 Currently there is no way to install new libraries in the PNaCl kernel.
 
