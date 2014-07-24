@@ -99,7 +99,6 @@ colab.Kernel.prototype.start_ = function() {
   addParam('TERM', 'xterm-256color');
   addParam('NACL_DATA_URL', '/');
   addParam('PNACL_PACKAGE', 'pnacl_data.tar.gz')
-  addParam('HTTPFS_OPTS', 'cache_content=true,
   addParam('HTTPFS_OPTS', 'cache_content=true,' + 
                           'cache_stat=true,' +
                           'allow_cross_origin_requests=true,' +
