@@ -254,7 +254,7 @@ class ColaboratoryApp(BaseIPythonApplication):
     def _ip_changed(self, name, old, new):
         if new == u'*': self.ip = u''
 
-    port = Integer(8888, config=True,
+    port = Integer(8844, config=True,
         help="The port the notebook server will listen on."
     )
     port_retries = Integer(50, config=True,
