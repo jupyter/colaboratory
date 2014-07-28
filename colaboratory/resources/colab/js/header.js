@@ -34,6 +34,7 @@ goog.require('goog.ui.ToolbarToggleButton');
 goog.require('goog.ui.menuBar');
 goog.require('goog.ui.menuBarDecorator');
 
+
 /**
  * Setup coLaboratory header.
  * @param {colab.drive.NotebookModel} notebook the current realtime document.
@@ -148,7 +149,12 @@ colab.createMenubar = function(notebook) {
         break;
 
       case 'openlocalfs-menuitem':
-        colab.app.postMessage('pick_file');
+        // Test if Chrome Versions is new enough for PNaCl to support
+        // mounting local directories.
+        if (colab.app.checkVersionAndWarnUser(
+          colab.app.MOUNT_LOCAL_DIRECTORY_MIN_CHROME_VERSION)) {
+          colab.app.postMessage('pick_file');
+        }
         break;
 
       case 'clear-outputs-menuitem':
