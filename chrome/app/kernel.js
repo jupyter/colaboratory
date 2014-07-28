@@ -98,7 +98,11 @@ colab.Kernel.prototype.start_ = function() {
   addParam('PS_EXIT_MESSAGE', 'exited');
   addParam('TERM', 'xterm-256color');
   addParam('NACL_DATA_URL', '/');
-  addParam('ZEROPY_PACKAGE', 'zeropy_20140520.tar.gz')
+  addParam('PNACL_PACKAGE', 'pnacl_data.tar.gz')
+  addParam('HTTPFS_OPTS', 'cache_content=true,' + 
+                          'cache_stat=true,' +
+                          'allow_cross_origin_requests=true,' +
+                          'allow_credentials=false');
 
   var eventTypes = {'message': ['data'],
                     'progress': ['loaded', 'total'],

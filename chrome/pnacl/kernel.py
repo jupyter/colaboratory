@@ -4,6 +4,11 @@
 
 """A simple shell that uses the IPython messaging system."""
 
+# Override platform information.
+import platform
+platform.system = lambda: "pnacl"
+platform.release = lambda: "chrome"
+
 import time
 import json
 import logging
