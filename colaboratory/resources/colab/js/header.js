@@ -141,7 +141,7 @@ colab.createMenubar = function(notebook) {
         break;
 
       case 'open-menuitem':
-        colab.filepicker.selectFileAndReload(true);
+        colab.filepicker.selectFileAndReload();
         break;
 
       case 'viewindrive-menuitem':
