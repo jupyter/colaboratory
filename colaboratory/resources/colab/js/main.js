@@ -46,42 +46,6 @@ colab.NACL_KERNEL_URL = 'nacl://';
 
 
 /**
- * Records custom analytics about this request
- * @param {colab.model.Notebook} notebook
- * @param {Error|Object=} opt_error an exception object, if available.
- */
-colab.recordAnalytics = function(notebook, opt_error) {
-  if (colab.params.getHashParams().mode == 'app') { return; }
-  var finishedLoading = new Date();
-  window.setTimeout(function() {
-    var document = notebook ? notebook.getDocument() : null;
-    var user = document ? document.getCollaborators().filter(
-        function(d) { return d.isMe }) : '';
-    var email = 'unknown';
-    var myInfo = colab.drive.ApiWrapper.getInstance().myInfo;
-    if (myInfo && myInfo.emails && myInfo.emails.length) {
-      email = myInfo.emails[0].value;
-    }
-    if (user) user = user[0];
-    var params = { 'loadingTime': finishedLoading - window['pageLoadStart'],
-                   'user': user ? user.displayName : 'unknown',
-                   'userId': user ? user.userId : 'unknown',
-                   'email': email,
-                   'title': notebook ? notebook.getTitle() : ''
-                 };
-    if (opt_error) {
-      params['errormessage'] = 'Error' +
-          (opt_error.message || JSON.stringify(opt_error));
-    }
-    var analyticsQuery = colab.params.encodeParamString(params);
-    var xhrRequest = new XMLHttpRequest();
-    xhrRequest.open('GET', '/analytics?' + analyticsQuery, true);
-    xhrRequest.send();
-  }, 1000);
-};
-
-
-/**
  * Close the connection to drive on unload
  */
 window.addEventListener('unload', function() {
@@ -143,7 +107,6 @@ window.addEventListener('load', function() {
     colab.dialog.displayError('Error creating/loading document.', error);
     colab.setupHeader(null);
     loading.clear();
-    colab.recordAnalytics(null, /** @type {Object} */ (error));
   };
 
   // Loads a notebook from Google Drive
@@ -294,7 +257,6 @@ colab.onLoadNotebookSuccess_ = function(notebook) {
     colab.setupHeader(null);
     console.log(err);
   }
-  colab.recordAnalytics(notebook, error);
 };
 
 
