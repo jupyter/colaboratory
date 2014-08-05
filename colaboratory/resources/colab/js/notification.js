@@ -4,17 +4,19 @@
  *
  */
 goog.provide('colab.Notification');
-
 goog.provide('colab.notification');
 
 goog.require('goog.dom');
 goog.require('goog.dom.classes');
+goog.require('goog.style');
+
 
 /**
  * @private
  * @type {number}
  */
 colab.notification.count_ = 0;
+
 
 /**
  * @param {string || Object} msg
@@ -27,23 +29,26 @@ colab.notification.showNotification = function(msg, opt_class, opt_timeout) {
   return new colab.Notification(msg, opt_class, opt_timeout);
 };
 
+
 /**
  * Clears primary notification;
  */
 colab.notification.clearPrimary = function() {
-   if (colab.notification.primary) {
-    colab.notification.primary.clear();
+  if (colab.notification.primary_) {
+    colab.notification.primary_.clear();
   }
 };
 
 
 /**
  * @param {string} msg
- * @param {number} opt_timeout
+ * @param {number=} opt_timeout
  */
 colab.notification.showPrimary = function(msg, opt_timeout) {
-  colab.notification.primary.change(msg, opt_timeout);
+  console.log(msg);
+  colab.notification.primary_.change(msg, opt_timeout);
 };
+
 
 
 // TODO(sandler): maybe make goog.ui.component out of it.
@@ -64,10 +69,11 @@ colab.Notification = function(msg, opt_class, opt_timeout, opt_hide) {
   }
 };
 
+
 /**
  * Changes the text for notification
  * @param {string|Object} msg
- * @param {number} opt_timeout
+ * @param {number=} opt_timeout
  */
 colab.Notification.prototype.change = function(msg, opt_timeout) {
   if (!this.el_) {
@@ -90,6 +96,7 @@ colab.Notification.prototype.change = function(msg, opt_timeout) {
     this.timer = setTimeout(function() { that.clear(); }, timeout);
   }
 };
+
 
 /**
  * Clears notification
@@ -114,7 +121,8 @@ colab.notification.createEmptyNotification = function(opt_class) {
   return new colab.Notification('', opt_class, undefined, true);
 };
 
+
 /**
- * @type {colab.Notification}
+ * @private {colab.Notification}
  */
-colab.notification.primary = colab.notification.createEmptyNotification();
+colab.notification.primary_ = colab.notification.createEmptyNotification();

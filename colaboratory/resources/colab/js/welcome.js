@@ -75,4 +75,3 @@ var onClientLoad = function() {
 };
 
 window.onload = colab.displayInitialScreen;
-

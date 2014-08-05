@@ -118,7 +118,7 @@ colab.app.postMessage = function(msgType, opt_content, opt_callback) {
  * scopes other than the full set of scopes granted to the App.
  *
  * @param {boolean} immediate  Whether to return immediately or show prompt
- * @param {Function} opt_callback Callback when authorization is complete
+ * @param {Function=} opt_callback Callback when authorization is complete
  */
 colab.app.authorize = function(immediate, opt_callback) {
   colab.app.postMessage('access_token', {'immediate': immediate});
@@ -161,7 +161,7 @@ colab.app.MOUNT_LOCAL_DIRECTORY_MIN_CHROME_VERSION = '38.0.2091.2';
 colab.app.checkVersionAndWarnUser = function(minVersion) {
   if (window.navigator.appVersion.match('Chrome\/(.*?) ')[1] < minVersion) {
     var message = ('This feature requires Chrome version ' + minVersion +
-      ' or higher.');
+        ' or higher.');
     colab.notification.showPrimary(message);
     return false;
   }

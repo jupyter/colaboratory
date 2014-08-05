@@ -1,42 +1,36 @@
-/**
- *
- * @fileoverview The class for coLaboratory text cells. Current implementation
- *     uses markdown.
- *
- */
-
 goog.provide('colab.cell.TextCell');
 
 goog.require('colab.cell.Cell');
 goog.require('colab.cell.Editor');
-goog.require('colab.drive.Permissions');
 goog.require('goog.dom');
-goog.require('goog.dom.classes');
-goog.require('goog.events');
-goog.require('goog.ui.ToolbarToggleButton');
+goog.require('goog.dom.classlist');
+goog.require('goog.events.EventType');
+
+
 
 /**
  * Constructor for code cell.
  *
  * @constructor
  * @param {gapi.drive.realtime.CollaborativeMap} realtimeCell The realtime cell
- * @param {colab.drive.Permissions} permissions Drive permissions
+ * @param {!colab.drive.Permissions} permissions Drive permissions
  * @extends {colab.cell.Cell}
  */
 colab.cell.TextCell = function(realtimeCell, permissions) {
   goog.base(this, realtimeCell, permissions);
-  /**
-   * Element that contains the markdown.
-   *
-   * @type {Element}
-   * @private
-   */
-  this.markdownDiv_ = null;
+
+  /** @private {!Element} */
+  this.topDiv_ = goog.dom.createDom('div', 'text-top-div');
+
+  /** @private {!Element} */
+  this.markdownDiv_ = goog.dom.createDom('div', 'markdown');
 };
 goog.inherits(colab.cell.TextCell, colab.cell.Cell);
 
+
 /** @private {string} css for edit */
 colab.cell.TextCell.EDIT_CSS_NAME_ = 'edit';
+
 
 /**
  * Update the markdown based on changes to the text.
@@ -66,6 +60,7 @@ colab.cell.TextCell.prototype.updateMarkdown_ = function() {
   }
 };
 
+
 /**
  * Refresh the cell dom.
  */
@@ -73,6 +68,7 @@ colab.cell.TextCell.prototype.refresh = function() {
   goog.base(this, 'refresh');
   this.editor_.refresh();
 };
+
 
 /**
  * Toggles cell selection.
@@ -88,12 +84,14 @@ colab.cell.TextCell.prototype.setSelected = function(value) {
   }
 };
 
-/** @inheritDoc */
+
+/** @override */
 colab.cell.TextCell.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
 
-  this.markdownDiv_ = goog.dom.createDom('div', 'markdown');
-  goog.dom.appendChild(this.mainContentDiv, this.markdownDiv_);
+  goog.dom.appendChild(this.mainContentDiv, this.topDiv_);
+  goog.dom.appendChild(this.topDiv_, this.markdownDiv_);
+  goog.dom.appendChild(this.topDiv_, this.toolbarDiv);
 
   // add editor
   this.editor_ = new colab.cell.Editor(this.realtimeCell.get('text'));
@@ -118,20 +116,21 @@ colab.cell.TextCell.prototype.enterDocument = function() {
           return;
         }
 
-        var editStatus = goog.dom.classes.has(textCell.getElement(),
-          colab.cell.TextCell.EDIT_CSS_NAME_);
+        var editStatus = goog.dom.classlist.contains(textCell.getElement(),
+            colab.cell.TextCell.EDIT_CSS_NAME_);
         textCell.setEditing(!editStatus);
       }, false);
   this.refresh();
 };
+
 
 /**
  * Sets the edit mode.
  * @param {boolean} value True if editing
  */
 colab.cell.TextCell.prototype.setEditing = function(value) {
-  var classAdded = goog.dom.classes.enable(this.getElement(),
-    colab.cell.TextCell.EDIT_CSS_NAME_, value);
+  var classAdded = goog.dom.classlist.enable(this.getElement(),
+      colab.cell.TextCell.EDIT_CSS_NAME_, value);
 
   this.refresh();
   if (value) {
@@ -139,7 +138,8 @@ colab.cell.TextCell.prototype.setEditing = function(value) {
   }
 };
 
-/** @inheritDoc */
+
+/** @override */
 colab.cell.TextCell.prototype.exitDocument = function() {
   goog.base(this, 'exitDocument');
 

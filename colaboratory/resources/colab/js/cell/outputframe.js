@@ -4,6 +4,7 @@
 
 var colab = window.colab || {};
 
+
 /**
  * Any common code can actually verify we are running in iframe.
  *
@@ -19,6 +20,7 @@ var sendMessageToNotebook = function(data) {
   window.parent.postMessage(data, '*');
 };
 
+
 /**
  * Namespace for output related utility functions
  */
@@ -30,6 +32,7 @@ colab.output = {};
  * @private
  */
 colab.output.customCss_ = null;
+
 
 /**
  * @return {CSSStyleSheet}  custom stylesheet for this area
@@ -57,6 +60,7 @@ colab.output.evalEphemeral = function(js, container) {
     }
   }
 };
+
 
 /**
  * Appends javascript.
@@ -101,6 +105,7 @@ colab.output.handlePyerr = function(traceback) {
   return outputDiv;
 };
 
+
 /**
  * @param {IPython.OutputArea} helper
  * @param {Object} output
@@ -125,7 +130,7 @@ colab.output.createOutput = function(helper, output) {
           outputDiv, true /** excute dynamic javascript */);
       break;
     case 'pyerr':
-        outputDiv.append(colab.output.handlePyerr(output['traceback']));
+      outputDiv.append(colab.output.handlePyerr(output['traceback']));
       break;
     default:
       outputDiv.text(goog.json.serialize(output));
@@ -133,6 +138,7 @@ colab.output.createOutput = function(helper, output) {
   }
   return outputDiv;
 };
+
 
 /** @type {boolean} if true, output will be auto resized on dom changes
  */
@@ -161,6 +167,7 @@ var resizeOutput = function() {
   colab.output.setOutputHeight(height, true /* keep resizing */);
 };
 
+
 /**
  * @param {number} height
  * @param {boolean} optAutoResize if true, the height might update automatically
@@ -177,6 +184,7 @@ colab.output.setOutputHeight = function(height, optAutoResize) {
   });
 };
 
+
 /**
  * @param {string} rule of the form cssselector {key: value; ...}
  */
@@ -191,20 +199,21 @@ colab.output.addCustomCssRule = function(rule) {
   setTimeout(resizeOutput, 1);
 };
 
+
 /**
  * @param {boolean} wordWrap If true, stream/pyout will be wrapped.
  */
 colab.output.setWordWrap = function(wordWrap) {
- var s = wordWrap ?
-     'pre { white-space : pre-wrap;  word-break: break-all; }' :
-     'pre { white-space: pre; word-break: initial;} ';
- colab.output.addCustomCssRule(s);
+  var s = wordWrap ?
+      'pre { white-space : pre-wrap;  word-break: break-all; }' :
+      'pre { white-space: pre; word-break: initial;} ';
+  colab.output.addCustomCssRule(s);
 };
 
 
 /**
  * @param {string} type one of ipython output types
- * (display_data, pyout, pyerr, stream)
+ *     (display_data, pyout, pyerr, stream)
  * @param {boolean} visible
  */
 colab.output.setOutputVisibility = function(type, visible) {
@@ -237,7 +246,7 @@ window.addEventListener('message', function(message) {
   var outputIndex = data.index;
 
   if (data.action == 'remove') {
-   for (var i = 0; i < data.num; i++) {
+    for (var i = 0; i < data.num; i++) {
       // Since the children will shift upwards, we just always
       // pick up e.index one to delete an element
       var toRemove = outputArea.children()[outputIndex];
@@ -269,4 +278,10 @@ window.addEventListener('message', function(message) {
       colab.output.allowEphemeralScripts = config.allowEphemeralScripts;
     }
   }
+});
+
+window.addEventListener('click', function(e) {
+  sendMessageToNotebook({
+    action: 'select_cell'
+  });
 });

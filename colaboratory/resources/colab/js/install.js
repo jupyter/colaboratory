@@ -2,6 +2,7 @@
 goog.provide('colab.install');
 
 goog.require('colab.client_id');
+goog.require('colab.scope');
 
 
 /**

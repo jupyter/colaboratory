@@ -6,8 +6,6 @@
 
 goog.provide('colab.params');
 
-goog.require('goog.Promise');
-goog.require('goog.style');
 
 /**
  * Decodes a set of key-value pairs encoded in a hash or search string
@@ -26,6 +24,7 @@ colab.params.decodeParamString = function(paramString) {
   return params;
 };
 
+
 /**
  * Encodes a set of key-value pairs as a hash or search string
  * @param {Object} params An object representation of the key-value pairs
@@ -41,6 +40,7 @@ colab.params.encodeParamString = function(params) {
   return pairs.join('&');
 };
 
+
 /**
  * Returns parsed search parameters
  * @return {Object} parsed search parameters
@@ -48,6 +48,7 @@ colab.params.encodeParamString = function(params) {
 colab.params.getSearchParams = function() {
   return colab.params.decodeParamString(window.location.search.slice(1));
 };
+
 
 /**
  * Returns parsed hash parameters
@@ -57,6 +58,7 @@ colab.params.getHashParams = function() {
   return /** @type {HashParams} */ (
       colab.params.decodeParamString(window.location.hash.slice(1)));
 };
+
 
 /**
  * Returns url for a given notebook.
@@ -68,6 +70,7 @@ colab.params.getNotebookUrl = function(params) {
   return '/notebook#' + colab.params.encodeParamString(params);
 };
 
+
 /**
  * Utility function to redirect to notebook load page with given hash
  * parameters.
@@ -77,6 +80,7 @@ colab.params.redirectToNotebook = function(params) {
   window.location.href = colab.params.getNotebookUrl(params);
 };
 
+
 /**
  * Returns a url that creates a new notebook
  * @return {string}
@@ -85,12 +89,14 @@ colab.params.getNewNotebookUrl = function() {
   return colab.params.getNotebookUrl({'create': true});
 };
 
+
 /**
  * @return {string} hash to create a new notebook
  */
 colab.params.newNotebookHash = function() {
   return '#create=true';
 };
+
 
 /**
  * @return {string} hash to create a new notebook

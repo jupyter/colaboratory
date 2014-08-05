@@ -5,6 +5,7 @@
 
 goog.require('colab.params');
 
+
 /**
  * Attempts to redirect based on query string.
  * @return {boolean} True on success

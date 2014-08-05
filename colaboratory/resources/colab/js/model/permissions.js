@@ -1,5 +1,7 @@
 goog.provide('colab.drive.Permissions');
 
+
+
 /**
  * Class representing permissions of a document
  *
@@ -15,12 +17,14 @@ colab.drive.Permissions = function(editable, commentable) {
   this.commentable_ = commentable;
 };
 
+
 /**
  * @return {boolean} true if notebook can be edited
  */
 colab.drive.Permissions.prototype.isEditable = function() {
   return this.editable_;
 };
+
 
 /**
  * @return {boolean} true if notebook can be commented on

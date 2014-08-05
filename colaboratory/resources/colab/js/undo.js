@@ -6,6 +6,8 @@
  */
 goog.provide('colab.Undo');
 
+
+
 /**
  * Maintains undo/redo stack for list operations (e.g.
  * insertion and deletion)
@@ -35,6 +37,7 @@ colab.Undo = function(cells) {
   this.redoStack = [];
 };
 
+
 /**
  * Different operations for which we support undo
  * @enum {string}
@@ -43,6 +46,7 @@ colab.Undo.OpType = {
   INSERT: 'insert',
   DELETE: 'delete'
 };
+
 
 /**
  * Returns cell which is immediately after 'cell'
@@ -57,6 +61,7 @@ colab.Undo.prototype.findNextCell = function(cell) {
 };
 
 
+
 /**
  * Maintains single undo operation.
  * thisCell contains cell which which is being manipulated
@@ -65,7 +70,7 @@ colab.Undo.prototype.findNextCell = function(cell) {
  * @param {colab.Undo.OpType} type
  * @param {Object|string} thisCell
  * @param {Object|string} nextCell
- * @param {number} opt_numCompounded if provided, this undo operation
+ * @param {number=} opt_numCompounded if provided, this undo operation
  * will compound that many elements on the stack.
  * Note: only the top's element on the stack compound matters, so
  * if the top element has nuMCompound = 2, and next has 10. Only 2 elements
@@ -77,6 +82,7 @@ colab.Undo.Operation = function(type, thisCell, nextCell, opt_numCompounded) {
   this.nextCell = nextCell;
   this.numCompounded = opt_numCompounded;
 };
+
 
 /**
  * Records undo action.
@@ -103,6 +109,7 @@ colab.Undo.prototype.record = function(type, cell, opt_position) {
   }
 };
 
+
 /**
  * Records cell move operation
  * as compounded delete and insert.
@@ -114,6 +121,7 @@ colab.Undo.prototype.recordMove = function(insertAfterRemovePosition, cell) {
   this.record(colab.Undo.OpType.INSERT, cell, insertAfterRemovePosition);
   this.compound(2);
 };
+
 
 /**
  * Records cell split, where cell in position, is replaced
@@ -131,6 +139,7 @@ colab.Undo.prototype.recordSplit = function(position, splitCell1, splitCell2) {
   this.compound(3);
 };
 
+
 /**
  * Records cell split, where cell in position, is replaced
  * by 2 cells, splitCell1 and splitCell2.
@@ -145,6 +154,7 @@ colab.Undo.prototype.recordReplacement = function(position, newCell) {
   this.compound(2);
 };
 
+
 /**
  * Records cell merge, where cell's at position/position+1
  * are merged into mergeCell
@@ -155,10 +165,24 @@ colab.Undo.prototype.recordMerge = function(position, mergeCell) {
   this.record(colab.Undo.OpType.DELETE,
       /** @type {Object} */ (this.cells.get(position)));
   this.record(colab.Undo.OpType.DELETE,
-       /** @type {Object} */ (this.cells.get(position)));
+      /** @type {Object} */ (this.cells.get(position)));
   this.record(colab.Undo.OpType.INSERT, mergeCell, position);
   this.compound(3);
 };
+
+
+/**
+ * Records clear all operation
+ */
+colab.Undo.prototype.recordClearAll = function() {
+  var numDeletions = this.cells.length;
+  for (var i = this.cells.length - 1; i >= 0; i--) {
+    this.record(colab.Undo.OpType.DELETE,
+        /** @type {?} */ (this.cells.get(i)));
+  }
+  this.compound(numDeletions);
+};
+
 
 /**
  * Records  insertion operation
@@ -169,6 +193,7 @@ colab.Undo.prototype.recordInsert = function(insertPosition, cell) {
   this.record(colab.Undo.OpType.INSERT, cell, insertPosition);
 };
 
+
 /**
  * Records deletion
  * @param {Object} cell
@@ -176,6 +201,7 @@ colab.Undo.prototype.recordInsert = function(insertPosition, cell) {
 colab.Undo.prototype.recordDelete = function(cell) {
   this.record(colab.Undo.OpType.DELETE, cell);
 };
+
 
 /**
  * Glues together last num operations to become monolothic.
@@ -190,6 +216,7 @@ colab.Undo.prototype.compound = function(num) {
   }
 };
 
+
 /**
  * Undos last action
  *
@@ -198,7 +225,7 @@ colab.Undo.prototype.compound = function(num) {
  * @param {Array.<colab.Undo.Operation>=} opt_stack -- undo stack
  * @param {Array.<colab.Undo.Operation>=} opt_redoStack  -- redo stack which
  *   will be updated with the last undo operation.
- * @param {boolean} opt_ignoreExtras -- if provided will treat compound
+ * @param {boolean=} opt_ignoreExtras -- if provided will treat compound
  * undo as individual.
  */
 colab.Undo.prototype.undo = function(opt_stack, opt_redoStack,
@@ -234,6 +261,7 @@ colab.Undo.prototype.undo = function(opt_stack, opt_redoStack,
   redo.push(new colab.Undo.Operation(redoAction,
       action.thisCell, action.nextCell, action.numCompounded));
 };
+
 
 /**
  * Redos the last undone action

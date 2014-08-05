@@ -1,29 +1,32 @@
-/**
- * @fileoverview Editor backed by a CollaborativeString.
- */
-
 goog.provide('colab.cell.Editor');
 
-goog.require('colab.tooltip');
-
+goog.require('colab.Global');
+goog.require('colab.notification');
+goog.require('colab.sharing');
+goog.require('colab.tooltip.Tooltip');
 goog.require('goog.dom');
-goog.require('goog.dom.classes');
-goog.require('goog.events');
-goog.require('goog.events.BrowserEvent.MouseButton');
+goog.require('goog.dom.classlist');
+goog.require('goog.events.BrowserEvent');
 goog.require('goog.events.EventType');
+goog.require('goog.style');
 goog.require('goog.ui.Component');
+
+
 
 /**
  * Wrapper for the code mirror editor. Backed by a collaborative string.
  *
  * @constructor
  * @param {gapi.drive.realtime.CollaborativeString} text Content of the editor
- * @param {boolean} opt_codeCompletion True if codeCompletion is enabled.
- * @extends goog.ui.Component
+ * @param {boolean=} opt_codeCompletion True if codeCompletion is enabled.
+ * @extends {goog.ui.Component}
  */
 colab.cell.Editor = function(text, opt_codeCompletion) {
   goog.base(this);
+
+  /** @private {colab.tooltip.Tooltip} */
   this.tooltip_ = colab.cell.Editor.tooltip;
+
   /** @private {gapi.drive.realtime.CollaborativeString} */
   this.text_ = text;
 
@@ -32,6 +35,7 @@ colab.cell.Editor = function(text, opt_codeCompletion) {
   this.codeCompletion_ = !!opt_codeCompletion;
 };
 goog.inherits(colab.cell.Editor, goog.ui.Component);
+
 
 /**
  * Get text. Return the value from the editor, rather than the collaborative
@@ -43,6 +47,7 @@ colab.cell.Editor.prototype.getText = function() {
   return this.editor_.getValue();
 };
 
+
 /**
  * blurs the editor
  */
@@ -50,14 +55,17 @@ colab.cell.Editor.prototype.blur = function() {
   this.editor_.getInputField().blur();
 };
 
+
 /**
  * @return {boolean} True is content in the content is local.
  */
 colab.cell.Editor.prototype.isTrustedContent = function() {
   return this.isLocalContent_ ||
-      !colab.drive.globalNotebook.isShared() || (colab.globalNotebook &&
-      !colab.globalSharingState.hasOtherWriters);
+      !colab.Global.getInstance().notebookModel.isShared() ||
+      (colab.Global.getInstance().notebook &&
+      !colab.Global.getInstance().sharingState.hasOtherWriters);
 };
+
 
 /**
  * @param {boolean} value local status of editor
@@ -67,9 +75,13 @@ colab.cell.Editor.prototype.setLocalContent = function(value) {
   this.refreshTrustedContent_();
 };
 
-/** @private Refresh editor coloring based on trusted content */
+
+/**
+ * Refresh editor coloring based on trusted content
+ * @private
+ */
 colab.cell.Editor.prototype.refreshTrustedContent_ = function() {
-  goog.dom.classes.enable(this.getElement(), 'non-trusted',
+  goog.dom.classlist.enable(this.getElement(), 'non-trusted',
       !this.isTrustedContent());
 
   var elem = goog.dom.getElementByClass('CodeMirror-gutter',
@@ -88,6 +100,7 @@ colab.cell.Editor.prototype.refreshTrustedContent_ = function() {
   }
 };
 
+
 /**
  * Set text.
  * @param {string} text Text to set for the colaborative string.
@@ -95,6 +108,7 @@ colab.cell.Editor.prototype.refreshTrustedContent_ = function() {
 colab.cell.Editor.prototype.setText = function(text) {
   this.text_.setText(text);
 };
+
 
 /**
  * Finds a function that user is currently trying to call. Returns nothing
@@ -136,10 +150,11 @@ colab.cell.Editor.prototype.findFunction = function(preCursor, filterRe) {
   return suffix.substr(p);
 };
 
+
 /**
  * Decide what to do with tooltip in the current context.
  *
- * @param {boolean} opt_keepOnInsideFunction if true, will keep the tooltip
+ * @param {boolean=} opt_keepOnInsideFunction if true, will keep the tooltip
  *   visible for as long as the cursor is inside function.
  *   If false, the tooltip will disappear unless, the cursor is
  *   is right after "," or "(".
@@ -176,7 +191,8 @@ colab.cell.Editor.prototype.handleTooltip = function(opt_keepOnInsideFunction) {
     return true;
   }
 
-  if (!colab.globalKernel || !colab.globalKernel.running) {
+  if (!colab.Global.getInstance().kernel ||
+      !colab.Global.getInstance().kernel.running) {
     colab.notification.showPrimary('Context help requires ' +
         'a live connection to python');
     return false;
@@ -215,7 +231,7 @@ colab.cell.Editor.prototype.handleTooltip = function(opt_keepOnInsideFunction) {
     that.tooltipFunc = functionToHelpWith;
   };
 
-  colab.globalKernel.object_info(functionToHelpWith, callback);
+  colab.Global.getInstance().kernel.object_info(functionToHelpWith, callback);
   return true;
 };
 
@@ -232,12 +248,18 @@ colab.cell.Editor.prototype.selectHighlightMode = function() {
   var highlighting = {
     '%%javascript': 'javascript',
     '%%html': 'htmlmixed',
-    '%%dremel_query': 'text/x-dremel',   // TODO(sandler): google specific
-    '%dremel_query': 'text/x-dremel'   // TODO(sandler): google specific
+    // TODO(sandler): google specific below. Factor out/generalize
+    '%%dremel_define_macro': 'text/x-dremel',
+    '%dremel_define_macro': 'text/x-dremel',
+    '%%dremel_query': 'text/x-dremel',
+    '%%dremel_inline_table': 'text/x-dremel',
+    '%dremel_query': 'text/x-dremel'
+    // END google specific
   };
   var highlightMode = highlighting[magic] || 'text/x-python';
   this.editor_.setOption('mode', highlightMode);
 };
+
 
 /**
  * Callback for CodeMirror key events for code completion.
@@ -271,7 +293,7 @@ colab.cell.Editor.prototype.handleTabForCodeHelp = function(editor) {
 
   var preCursor = editor.getRange(/** @type {!CodeMirror.CursorPosition} */
       ({line: cur.line, ch: 0}), cur);
-   /* Handle tooltip even if preCursor is empty, since, if there is
+  /* Handle tooltip even if preCursor is empty, since, if there is
      a function to help with, we might not have naything typed
      yet (on this line). Don't bother with indentation. Re-vist if needed */
   if (this.tooltip_.visible()) {
@@ -291,6 +313,7 @@ colab.cell.Editor.prototype.handleTabForCodeHelp = function(editor) {
   return true;
 };
 
+
 /**
  * Code completion
  */
@@ -302,7 +325,8 @@ colab.cell.Editor.prototype.handleCodeCompletion = function() {
    * @param {function(CodeMirror.Hints) | CodeMirror.HintsConfig} callback
    */
   var hintFunc = function(cm, callback) {
-    if (!colab.globalKernel || !colab.globalKernel.running) {
+    if (!colab.Global.getInstance().kernel ||
+    !colab.Global.getInstance().kernel.running) {
       colab.notification.showPrimary(
           'Autocomplete requires live connection to Python!');
       return;
@@ -362,7 +386,7 @@ colab.cell.Editor.prototype.handleCodeCompletion = function() {
     };
     var cursorPos = cm.getCursor().ch;
 
-    colab.globalKernel.complete(
+    colab.Global.getInstance().kernel.complete(
         cm.getLine(cm.getCursor().line) || '',
         cm.getCursor().ch || 0,
         finishResponse);
@@ -370,6 +394,7 @@ colab.cell.Editor.prototype.handleCodeCompletion = function() {
   CodeMirror.showHint(cm, hintFunc,
       /** @type {CodeMirror.HintsConfig} */ ({ async: true }));
 };
+
 
 /**
  * Update the Collaborative string based on changes to the editor.
@@ -380,6 +405,7 @@ colab.cell.Editor.prototype.updateCollaborativeText_ = function() {
   this.setText(this.editor_.getValue());
   this.updating_ = false;
 };
+
 
 /**
  * Update editor with the value in the realtime function. Used by the listener
@@ -399,6 +425,7 @@ colab.cell.Editor.prototype.updateEditor_ = function(e) {
   }
 };
 
+
 /**
  * Add handler for changes to editor.
  * @param {Function} f Callback function
@@ -406,6 +433,7 @@ colab.cell.Editor.prototype.updateEditor_ = function(e) {
 colab.cell.Editor.prototype.addOnChangeHandler = function(f) {
   this.editor_.on(goog.events.EventType.CHANGE, f);
 };
+
 
 /**
  * Add handler for focus on editor.
@@ -415,12 +443,14 @@ colab.cell.Editor.prototype.addOnFocusHandler = function(f) {
   this.editor_.on(goog.events.EventType.FOCUS, f);
 };
 
+
 /**
  * Set focus to editor.
  */
 colab.cell.Editor.prototype.focus = function() {
   this.editor_.focus();
 };
+
 
 /**
  * If either not provided, assume begin or end respectively
@@ -435,6 +465,7 @@ colab.cell.Editor.prototype.getRange = function(opt_begin, opt_end) {
   return this.editor_.getRange(begin, end);
 };
 
+
 /**
  * Returns cursor position
  * @return {CodeMirror.CursorPosition}
@@ -443,18 +474,21 @@ colab.cell.Editor.prototype.getCursor = function() {
   return this.editor_.getCursor();
 };
 
+
 /**
  * Refresh editor dom. Needed because CodeMirror doesn't know how
  * to size itself unless it's in the document. We can potentially
  * Render a CodeMirror object without it being in the document.
  */
 colab.cell.Editor.prototype.refresh = function() {
-  jQuery(this.getElement()).css('fontSize', colab.preferences.editorFontSize);
+  jQuery(this.getElement()).css('fontSize',
+      colab.Global.getInstance().preferences.editorFontSize);
   // Hack to workaround bug in code mirror where we wouldn't size
   // editor properly on initial focus.
   this.editor_.setSize('100%');
   this.editor_.refresh();
 };
+
 
 /**
  * Set parameters of the CodeMirror editor.
@@ -465,6 +499,7 @@ colab.cell.Editor.prototype.setOption = function(name, value) {
   this.editor_.setOption(name, value);
 };
 
+
 /**
  * Show/Hide editor.
  * @param {boolean} value If true show else hide
@@ -473,11 +508,13 @@ colab.cell.Editor.prototype.setVisible = function(value) {
   goog.style.setElementShown(this.getElement(), value);
 };
 
-/** @inheritDoc */
+
+/** @override */
 colab.cell.Editor.prototype.createDom = function() {
   var element = goog.dom.createDom('div', 'editor');
   this.setElementInternal(element);
 };
+
 
 /**
  * Global tooltip for editor to avoid multiple tooltips showing up
@@ -486,13 +523,14 @@ colab.cell.Editor.prototype.createDom = function() {
  */
 colab.cell.Editor.tooltip = new colab.tooltip.Tooltip();
 
+
 /**
  * @param {CodeMirror} cm
  * @return {?}
  */
 colab.cell.Editor.prototype.tabHandler = function(cm) {
   if (cm.doc.somethingSelected()) {
-      return CodeMirror.Pass;
+    return CodeMirror.Pass;
   }
   if (this.codeCompletion_ && this.handleTabForCodeHelp(cm)) {
     return false;
@@ -503,6 +541,7 @@ colab.cell.Editor.prototype.tabHandler = function(cm) {
   var spaces = Array(spacesToInsert + 1).join(' ');
   cm.replaceSelection(spaces, 'end', '+input');
 };
+
 
 /**
  * Handles up and down
@@ -523,33 +562,35 @@ colab.cell.Editor.prototype.handleUpDown = function(direction, cm) {
     // events to this handler, if it is, maybe we could use stopPropagation
     // instead.
     setTimeout(goog.bind(
-        colab.globalNotebook.changeSelectedCell, colab.globalNotebook,
+        colab.Global.getInstance().notebook.changeSelectedCell,
+        colab.Global.getInstance().notebook,
         direction), 1);
     return false;
   }
   return CodeMirror.Pass;
 };
 
-/** @inheritDoc */
+
+/** @override */
 colab.cell.Editor.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
   this.tooltip_.initialize();
   this.indentSize = 2;
   // set up editor parameters
   var editorParams =  /** @type {!CodeMirror.EditorConfig}*/ ({
-      lineNumbers: colab.preferences.showLineNumbers,
-      mode: 'text/x-python',
-      matchBrackets: true,
-      viewportMargin: 10,
-      tabSize: this.indentSize,
-      extraKeys: {
-        // Do our own tab handling. Use for code completion and replace
-        // tabs with spaces.
-        Tab: goog.bind(this.tabHandler, this),
-        'Ctrl-/': 'toggleComment',
-        'Up': goog.bind(this.handleUpDown, this, -1),
-        'Down': goog.bind(this.handleUpDown, this, 1)
-      }
+    lineNumbers: colab.Global.getInstance().preferences.showLineNumbers,
+    mode: 'text/x-python',
+    matchBrackets: true,
+    viewportMargin: 10,
+    tabSize: this.indentSize,
+    extraKeys: {
+      // Do our own tab handling. Use for code completion and replace
+      // tabs with spaces.
+      Tab: goog.bind(this.tabHandler, this),
+      'Ctrl-/': 'toggleComment',
+      'Up': goog.bind(this.handleUpDown, this, -1),
+      'Down': goog.bind(this.handleUpDown, this, 1)
+    }
   });
 
   var editorElement = /** @type {!Element} */(this.getElement());
@@ -577,7 +618,7 @@ colab.cell.Editor.prototype.enterDocument = function() {
   this.setLocalContent(this.editor_.getValue() === '');
 
   // update on changes to the sharing state
-  this.getHandler().listenWithScope(colab.globalSharingState,
+  this.getHandler().listenWithScope(colab.Global.getInstance().sharingState,
       colab.sharing.STATE_UPDATED, this.refreshTrustedContent_, false, this);
 
   // add event listeners for realtime string change
@@ -596,7 +637,8 @@ colab.cell.Editor.prototype.enterDocument = function() {
     }});
 };
 
-/** @inheritDoc */
+
+/** @override */
 colab.cell.Editor.prototype.exitDocument = function() {
   goog.base(this, 'exitDocument');
 
