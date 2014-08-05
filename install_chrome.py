@@ -19,7 +19,7 @@ args = parser.parse_args()
 
 RELEASE_CLIENT_ID = "911569945122-0tcrnl8lnu5b0ccgpp92al27pplahn5a.apps.googleusercontent.com"
 
-RELEASE = "20140722"
+RELEASE = "20140805"
 base_url = "http://yt-project.org/files/colaboratory/%s/" % RELEASE
 NACL_PEXE_FILE_URL = base_url + "kernel.pexe"
 NACL_TAR_FILE_URL = base_url + "pnacl_data.tar.gz"
