@@ -453,9 +453,9 @@ colab.cell.CodeCell.prototype.hasOutput = function() {
  */
 colab.cell.CodeCell.prototype.toggleOutput = function() {
   if (this.isOutputVisible()) {
-    this.toggleButton_.setImage('img/more-icon', 'Show output');
+    this.toggleButton_.setImage('/colab/img/more-icon', 'Show output');
   } else {
-    this.toggleButton_.setImage('img/less-icon', 'Hide output');
+    this.toggleButton_.setImage('/colab/img/less-icon', 'Hide output');
   }
   this.outputArea_.toggle();
 };
@@ -509,9 +509,9 @@ colab.cell.CodeCell.prototype.setRunning_ = function(value) {
   var old = this.isRunning_;
 
   if (old && !value) {
-    this.runInterruptButton_.setImage('img/run-icon', 'Run cell');
+    this.runInterruptButton_.setImage('/colab/img/run-icon', 'Run cell');
   } else if (!old && value) {
-    this.runInterruptButton_.setImage('img/interrupt-icon', 'Interrupt kernel');
+    this.runInterruptButton_.setImage('/colab/img/interrupt-icon', 'Interrupt kernel');
   }
 
   this.isRunning_ = value;
