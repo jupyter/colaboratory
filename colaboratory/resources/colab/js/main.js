@@ -603,7 +603,7 @@ colab.openKernelDialogBox = function() {
     // TODO(kayur): find right event type.
     if (e.key == 'ok') {
       var url = goog.dom.getElement('backend-url-input').value;
-      colab.loadKernelFromUrl(url, true /* authorize */);
+      colab.loadKernelFromUrl(url, false /* authorize */);
     }
   });
 
