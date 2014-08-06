@@ -129,10 +129,8 @@ colab.app.authorize = function(immediate, opt_callback) {
         opt_callback();
       }
       return;
-    }
-
-    if (content['token']) {
-      gapi.auth.setToken({'access_token': content['token']});
+    } else {
+      gapi.auth.setToken(content);
       if (opt_callback) {
         // TODO(kestert): figure out which args to pass to callback.
         opt_callback('success');

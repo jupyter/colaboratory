@@ -70,8 +70,8 @@ colab.drive.ApiWrapper = function() {
       // In app mode, set auth token that is passed in by postMessage
       var receivedToken = false;
       colab.app.addMessageListener('access_token', function(msgType, content) {
-        if (content.token) {
-          gapi.auth.setToken({'access_token': content.token});
+        if (content) {
+          gapi.auth.setToken(content);
           if (!receivedToken) {
             // TODO(kestert): Should this be reject?
             resolve(null);
