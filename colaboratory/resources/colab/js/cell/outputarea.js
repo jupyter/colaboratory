@@ -15,7 +15,7 @@ goog.require('goog.events');
 goog.require('goog.events.EventType');
 goog.require('goog.string');
 goog.require('goog.style');
-goog.require('goog.ui.AnimatedZippy');
+goog.require('goog.ui.Zippy');
 goog.require('goog.ui.Component');
 
 
@@ -181,7 +181,7 @@ colab.cell.OutputArea.prototype.enterDocument = function() {
   // TODO(jasnyder): use custom animation instead of zippy to reveal from top
   // as in quantum paper spec and to get rid of lingering border
   var header = goog.dom.getElementByClass('output-header', this.getElement());
-  this.zippy_ = new goog.ui.AnimatedZippy(header, this.outputPane_);
+  this.zippy_ = new goog.ui.Zippy(header, this.outputPane_);
 
   // create output
   this.realtimeUpdateHandler = goog.bind(this.outputsChanged_, this);
