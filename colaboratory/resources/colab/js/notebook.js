@@ -95,12 +95,6 @@ colab.Notebook.prototype.enterDocument = function() {
         rt_cell,
         this.permissions_);
 
-    // Previous version of the realtime model may not have the support for
-    // comments and collaborator. This patches old models to add that support.
-    if (this.permissions_.isEditable() && !rt_cell.has('commentsSentinel')) {
-      rt_cell.set('commentsSentinel', this.model.createString());
-    }
-
     if (this.permissions_.isEditable() && !rt_cell.has('collaborators')) {
       rt_cell.set('collaborators', this.model.createList());
     }
@@ -124,9 +118,6 @@ colab.Notebook.prototype.enterDocument = function() {
   this.realtimeCells_.addEventListener(
       gapi.drive.realtime.EventType.VALUES_SET,
       goog.bind(this.realtimeCellsSet_, this));
-
-  /** @private {colab.CommentsWidget} */
-  this.commentsWidget_ = new colab.CommentsWidget(this.driveNotebook_);
 
   window.addEventListener('message', goog.bind(this.receiveCellMessage, this));
   this.setupKeyHandler();
