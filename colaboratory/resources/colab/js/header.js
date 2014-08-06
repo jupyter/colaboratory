@@ -111,8 +111,8 @@ colab.setupHeader = function(notebook) {
     };
 
     // activate comments button
-    var commentsButton = goog.dom.getElement('comments');
-    goog.style.setElementShown(commentsButton, true);
+    //var commentsButton = goog.dom.getElement('comments');
+    //goog.style.setElementShown(commentsButton, true);
   }
 };
 
