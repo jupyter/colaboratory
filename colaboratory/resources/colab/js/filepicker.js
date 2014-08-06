@@ -45,10 +45,8 @@ colab.filepicker.CHROME_APP_KEY =
  * Upon successful file selection calls callback with
  * @param {function(Object)} cb Object is an instance of
  *     google.picker.Response
- * @param {boolean?} opt_upload Whether to display an "upload"
- *     tab in the filepicker (default false).
  */
-colab.filepicker.selectFile = function(cb, opt_upload) {
+colab.filepicker.selectFile = function(cb) {
   gapi.load('picker', function() {
     var view = new google.picker.DocsView();
     view.setMode(google.picker.DocsViewMode.LIST);
@@ -77,16 +75,19 @@ colab.filepicker.selectFile = function(cb, opt_upload) {
         google.picker.ViewId.RECENTLY_PICKED);
     recentlyPicked.setMimeTypes(mimeTypes);
 
+    var token = gapi.auth.getToken();
+
     var picker = new google.picker.PickerBuilder()
         .addView(recentlyPicked)
         .addView(view)
         .addView(byMe)
         // .addView(samples)
-        .setOAuthToken(gapi.auth.getToken().access_token)
+        .setOAuthToken(token.access_token)
         .setSelectableMimeTypes(mimeTypes)
         .setCallback(cb);
 
-    if (opt_upload) {
+    // Add upload tab if the OAuth scope allows uploading.
+    if (token.scope.split(' ').indexOf(colab.scope.FILE_SCOPE) != -1) {
         var upload = new google.picker.DocsUploadView();
         picker.addView(upload);
     }
@@ -133,10 +134,8 @@ colab.filepicker.selectDir = function(cb) {
 
 /**
  * Selects a file and reloads colab on success.
- * @param {boolean?} opt_upload Whether to display an "upload"
- *     tab in the filepicker (default false).
  */
-colab.filepicker.selectFileAndReload = function(opt_upload) {
+colab.filepicker.selectFileAndReload = function() {
   /** @param {Object} ev is json with fields listed in
    * google.picker.Response
   */
@@ -162,5 +161,5 @@ colab.filepicker.selectFileAndReload = function(opt_upload) {
       }
     }
   };
-  colab.filepicker.selectFile(cb, opt_upload);
+  colab.filepicker.selectFile(cb);
 };
