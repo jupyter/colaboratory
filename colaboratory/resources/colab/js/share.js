@@ -56,9 +56,7 @@ colab.share.validateSharingDialog_ = function(notebook) {
   var fileViewerUrl = notebook.fileDriveUrl();
   var failedHtml = (
       'Sorry, sharing from the app is unavailable at this time.<br/> <br/>' +
-      'If you are signed in under multiple accounts (eg personal and work), ' +
-      'it is likely that you are bitten by a Drive Api bug (' +
-      '<a href="https://b.corp.google.com/issue?id=13139246">b/13139246</a>).' +
+      'It is likely that you are bitten by a Drive Api bug.' +
       '<br/><br/>As a workaround use Drive Viewer (' +
       '<b><a href="' + fileViewerUrl + '" target=_blank>Click To Open</a></b>)'
       );
