@@ -45,6 +45,15 @@ colab.drive.ApiWrapper = function() {
 
   /** @type {goog.Promise} */
   this.clientLoaded = new goog.Promise(function(resolve, reject) {
+    // Don't fullfill promise (or reject) if Cookies are not enabled.
+    // instead, show error dialog.
+    if (!goog.net.cookies.isEnabled()) {
+      var dialog = new goog.ui.Dialog();
+      dialog.setTitle('Could not load notebook');
+      dialog.setContent('You must have cookies enabled to run coLaboratory');
+      dialog.setVisible(true);
+      return;
+    }
     that.gapiLoad1.promise.then(function() {
       gapi.load('auth:client,drive-realtime,drive-share', resolve);
     }, reject);
