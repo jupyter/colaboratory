@@ -232,9 +232,11 @@ colab.cell.AddCell.prototype.enterDocument = function() {
         goog.events.EventType.MOUSEDOWN, goog.events.EventType.MOUSEUP,
         goog.events.EventType.MOUSELEAVE];
 
-    [this.addCode, this.addText].forEach(function(button) {
-    handler.listenWithScope(button, mouseEvents, this.handleClickEvents_,
-        false, this)}, this);
+    [this.addCode, this.addText].forEach(
+      function(button) {
+        handler.listenWithScope(button, mouseEvents, this.handleClickEvents_,
+          false, this);
+    }, this);
   }
 };
 

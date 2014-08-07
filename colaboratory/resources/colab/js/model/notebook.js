@@ -398,7 +398,7 @@ colab.model.Notebook.prototype.load = function(onLoad, onError) {
       // If notebook has cells, this indicates that the realtime doc hasn't
       // been newly created or created as a result of invalidation.  Therefore
       // there is no need to load from the underlying file.
-      if (model.getRoot().get('cells') != null) {
+      if (model.getRoot().get('cells')) {
         colab.drive.createModelUUID(model, that.fileId_);
         that.setModelChangeListener_();
         onLoad();

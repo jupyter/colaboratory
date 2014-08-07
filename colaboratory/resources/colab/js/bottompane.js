@@ -159,7 +159,7 @@ colab.BottomPane.prototype.selectTab = function(name) {
  * or no animation if not specified
  */
 colab.BottomPane.prototype.setHeight = function(opt_height, opt_time) {
-  var height = opt_height != undefined ? opt_height : this.currentHeight_;
+  var height = opt_height !== undefined ? opt_height : this.currentHeight_;
 
   // Bounds checking on height (0 - bottom of top floater)
   var maxHeight = goog.dom.getViewportSize().height - this.handleHeight_ -
