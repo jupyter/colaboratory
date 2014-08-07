@@ -100,8 +100,8 @@ pre {
 }
 
 .code .editor {
-  border: 1px solid lightgrey;
-  background: #ededed;
+  border: 1px solid #ededed;
+  background: #f7f7f7;
   margin: 4px;
   padding: 4px;
 }
