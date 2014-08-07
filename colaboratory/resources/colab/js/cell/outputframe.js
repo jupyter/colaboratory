@@ -126,8 +126,10 @@ colab.output.createOutput = function(helper, output) {
     case 'stream':
     case 'display_data':
     case 'pyout':
-      helper.append_mime_type(output,
-          outputDiv, true /** excute dynamic javascript */);
+      // Note, this is different from the Gooogle version as
+      // IPython 2.0 and 2.1 use different signatures for
+      // the append_mime_type function.
+      helper.append_mime_type(output, outputDiv);
       break;
     case 'pyerr':
       outputDiv.append(colab.output.handlePyerr(output['traceback']));
