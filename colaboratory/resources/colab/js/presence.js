@@ -43,7 +43,7 @@ colab.presence.collaboratorLeft = function(ev) {
  */
 colab.presence.createCollaboratorImg_ = function(collaborator) {
   var imgSrc = collaborator.photoUrl == null ?
-      'img/anon.jpeg' : 'https:' + collaborator.photoUrl;
+      'img/anon.jpeg' : colab.drive.urlWithHttpsProtocol(collaborator.photoUrl);
 
   var isMe = collaborator.isMe &&
       collaborator.sessionId === colab.Global.getInstance().me.sessionId &&
