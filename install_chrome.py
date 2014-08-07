@@ -3,6 +3,7 @@ import errno
 import json
 import os
 import shutil
+import subprocess
 import sys
 
 import IPython.html
@@ -24,6 +25,37 @@ base_url = "http://yt-project.org/files/colaboratory/%s/" % RELEASE
 NACL_PEXE_FILE_URL = base_url + "kernel.pexe"
 NACL_TAR_FILE_URL = base_url + "pnacl_data.tar.gz"
 
+
+def UpdateTarFile(tar_file, colabtools_src_dir, tmp_dir):
+  """Updates the tar resources file.
+
+  Untar/zip's the resources file, adds colabtools to the site-packages,
+  and rezip/tar's the file.
+
+  args:
+    tar_file: the filename of the .tar.gz file
+    colabtools_src_dir: source directory of colabtools (should end in /colabtools)
+    tmp_dir: temporary directory to unzip tar file contents to.  Cleanup
+        of this directory is the responsibility of the caller.
+  """
+
+  with open(os.devnull, 'w') as devnull:
+    if subprocess.call(['tar', '-zxvf', tar_file, '-C', tmp_dir],
+      stdout=devnull, stderr=devnull):
+      raise RuntimeError('Failed to extract tar file')
+
+  # Copy colabtools directory to site-pacakges directory in
+  # tar'ed resources.
+  colabtools_dest_dir = pjoin(tmp_dir, 'lib', 'python2.7', 'site-packages', 'colabtools')
+  RemoveFileOrDirectoryIfExist(colabtools_dest_dir)
+  MakeDirectoryIfNotExist(colabtools_dest_dir)
+  CopyTreeRecursively(colabtools_src_dir, colabtools_dest_dir)
+
+  # Overwrite original tar file
+  with open(os.devnull, 'w') as devnull:
+    if subprocess.call(['tar', '-zcvf', tar_file, '-C', tmp_dir, '.'],
+      stdout=devnull, stderr=devnull):
+      raise RuntimeError('Failed to update tar file')
 
 
 def InstallChrome(release, colab_root, dest):
@@ -55,6 +87,13 @@ def InstallChrome(release, colab_root, dest):
   if not os.path.isfile(tar_file):
     print 'Downloading ' + NACL_TAR_FILE_URL
     url_opener.retrieve(NACL_TAR_FILE_URL, tar_file)
+
+  tmp_resources_dir = pjoin(dest, 'tmp_pnacl_resources')
+  colabtools_src_dir = pjoin(colab_root, 'colabtools')
+  MakeDirectoryIfNotExist(tmp_resources_dir)
+  UpdateTarFile(tar_file, colabtools_src_dir, tmp_resources_dir)
+  RemoveFileOrDirectoryIfExist(tmp_resources_dir)
+
 
   if release:
     # In release mode, we must change client IDS
