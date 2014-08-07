@@ -134,7 +134,7 @@ pre {
 
 .main-content > .paper-shadow-bottom,
 .main-content > .paper-shadow-top {
-  bottom: 24px;
+  bottom: 16px;
 }
 
 .cell-collaborators > .paper-shadow-bottom,
@@ -185,7 +185,8 @@ pre {
 
 .CodeMirror {
   height: auto;
-  overflow-x: hidden
+  overflow-x: hidden;
+  line-height: 1.08;
 }
 
 .CodeMirror-scroll {
@@ -256,7 +257,7 @@ div.formview-title > .goog-button:hover {
 
 .add-cell {
   width: 100%;
-  height: 24px;
+  height: 16px;
   z-index: 20;
 }
 
@@ -265,7 +266,7 @@ div.formview-title > .goog-button:hover {
 }
 
 .add-cell > hr {
-  margin: 11px auto 0 auto;
+  margin: 7px auto 0 auto;
   width: 144px;
   border-style: solid;
   border-top: none;
@@ -279,7 +280,7 @@ div.formview-title > .goog-button:hover {
 }
 
 .notebook-content > .add-cell > hr {
-  padding-top: 12px;
+  padding-top: 8px;
   border-left: none;
   border-right: none;
 }

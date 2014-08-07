@@ -320,7 +320,7 @@ colab.cell.CodeCell.prototype.setDragging = function(value)  {
 colab.cell.CodeCell.prototype.clearOutput = function()  {
   // hide the output area while dragging
   this.outputArea_.clearOutput();
-  this.toggleButton_.setImage('img/less-icon', 'Hide output');
+  this.toggleButton_.setImage('/colab/img/less-icon', 'Hide output');
   this.refresh();
 };
 
