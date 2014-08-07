@@ -48,10 +48,10 @@ def UpdateTarFile(tar_file, colabtools_src_dir, tmp_dir):
   packages_dest_dir = pjoin(tmp_dir, 'lib', 'python2.7', 'site-packages');
 
   def InstallPackageToChromeApp(package_src, package_path):
-    dest = colabtools_dest_dir = pjoin(packages_dest_dir, package_path)
+    dest = pjoin(packages_dest_dir, package_path)
     RemoveFileOrDirectoryIfExist(dest)
     MakeDirectoryIfNotExist(dest)
-    CopyTreeRecursively(colabtools_src_dir, dest)
+    CopyTreeRecursively(package_src, dest)
 
   def PathForPackage(package_name):
     package = pkgutil.get_loader(package_name)
@@ -59,8 +59,9 @@ def UpdateTarFile(tar_file, colabtools_src_dir, tmp_dir):
 
   packages = [
     (colabtools_src_dir, 'colabtools'),
+    (PathForPackage('httplib2'), 'httplib2'),
     (PathForPackage('apiclient'), 'apiclient'),
-    (PathForPackage('oauth2client'), 'apiclient')
+    (PathForPackage('oauth2client'), 'oauth2client')
   ]
 
   for package_src, package_path in packages:
