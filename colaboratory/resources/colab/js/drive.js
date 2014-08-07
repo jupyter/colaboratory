@@ -12,6 +12,7 @@ goog.require('colab.drive.ApiWrapper');
 goog.require('colab.error.GapiError');
 goog.require('colab.nbformat');
 goog.require('goog.array');
+goog.require('goog.Uri');
 
 
 /**
@@ -276,4 +277,16 @@ colab.drive.checkModelUUID = function(model, fileId, onFoundUUIDs, onError) {
 
     onFoundUUIDs(response.value == uuid);
   });
+};
+
+
+/**
+ * Utility function to set https as the protocol for URLs that are missing
+ * the protocol.  Otherwise, for the Chrome App, it will incorrectly
+ * implicitly use the protocol 'chrome-extension'.
+ * @param {string} url the URL to add the https protocol to.
+ * @return {string} The modified URL
+ */
+colab.drive.urlWithHttpsProtocol = function(url) {
+  return goog.Uri.parse(url).setScheme('https').toString();
 };

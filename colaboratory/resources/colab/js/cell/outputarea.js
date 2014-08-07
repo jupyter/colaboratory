@@ -95,7 +95,7 @@ colab.cell.OutputArea.prototype.setHeaderContent = function(executionInfo) {
         var imgSrc = '/colab/img/output-icon.svg';
         goog.dom.classes.enable(this.infoImg_, 'collaborator-img-me', true);
       } else {
-        var imgSrc = 'https:' + user.photoUrl;
+        var imgSrc = colab.drive.urlWithHttpsProtocol(user.photoUrl);
         goog.dom.classes.enable(this.infoImg_, 'collaborator-img-me', false);
       }
     }
