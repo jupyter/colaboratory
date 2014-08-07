@@ -34,13 +34,8 @@
 }
 
 .formview {
-  background-color: #cfcfcf;
-  padding: 5px 7px;
+  padding: 4px 8px;
   flex: 1;
-}
-
-.code.cell-has-formview .cell-toolbar {
-  background-color: #cfcfcf;
 }
 
 .formview-input {
@@ -80,7 +75,7 @@ pre {
   background-color: white;
   font-family: monospace;
   padding: 4px 0 0 4px;
-  margin-top: 4px;
+  margin-top: 7px;
 }
 
 .code.out-of-date * .output-info > .collaborator-img-me {
