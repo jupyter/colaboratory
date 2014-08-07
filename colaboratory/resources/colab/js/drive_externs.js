@@ -481,9 +481,9 @@ gapi.drive.realtime.Collaborator.prototype.isMe = false;
 
 /**
  * A url that points to the profile photo of the user.
- * @type {boolean}
+ * @type {string}
  */
-gapi.drive.realtime.Collaborator.prototype.photoUrl = false;
+gapi.drive.realtime.Collaborator.prototype.photoUrl = '';
 
 
 
