@@ -19,7 +19,6 @@ class Handler(object):
 
   def __init__(self):
     self.subscribers = {}
-    self.json_decoder = json.JSONDecoder()
 
   def Subscribers(self, tag_id):
     """Returns true if given tag_id has subscriber."""
@@ -64,7 +63,7 @@ class Handler(object):
     '''
     if origin_info is None:
       origin_info = {}
-    data = self.json_decoder.decode(json_data)
+    data = json.loads(json_data)
 
     for callback in self.subscribers.get(tag_id, ()):
       # TODO(sandler): what if callback fails, should we still call all others?
