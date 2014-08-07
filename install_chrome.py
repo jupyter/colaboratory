@@ -2,6 +2,7 @@ import argparse
 import errno
 import json
 import os
+import pkgutil
 import shutil
 import subprocess
 import sys
@@ -44,12 +45,26 @@ def UpdateTarFile(tar_file, colabtools_src_dir, tmp_dir):
       stdout=devnull, stderr=devnull):
       raise RuntimeError('Failed to extract tar file')
 
-  # Copy colabtools directory to site-pacakges directory in
-  # tar'ed resources.
-  colabtools_dest_dir = pjoin(tmp_dir, 'lib', 'python2.7', 'site-packages', 'colabtools')
-  RemoveFileOrDirectoryIfExist(colabtools_dest_dir)
-  MakeDirectoryIfNotExist(colabtools_dest_dir)
-  CopyTreeRecursively(colabtools_src_dir, colabtools_dest_dir)
+  packages_dest_dir = pjoin(tmp_dir, 'lib', 'python2.7', 'site-packages');
+
+  def InstallPackageToChromeApp(package_src, package_path):
+    dest = colabtools_dest_dir = pjoin(packages_dest_dir, package_path)
+    RemoveFileOrDirectoryIfExist(dest)
+    MakeDirectoryIfNotExist(dest)
+    CopyTreeRecursively(colabtools_src_dir, dest)
+
+  def PathForPackage(package_name):
+    package = pkgutil.get_loader(package_name)
+    return package.filename
+
+  packages = [
+    (colabtools_src_dir, 'colabtools'),
+    (PathForPackage('apiclient'), 'apiclient'),
+    (PathForPackage('oauth2client'), 'apiclient')
+  ]
+
+  for package_src, package_path in packages:
+    InstallPackageToChromeApp(package_src, package_path)
 
   # Overwrite original tar file
   with open(os.devnull, 'w') as devnull:
