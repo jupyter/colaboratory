@@ -91,7 +91,9 @@ colab.cell.TextCell.prototype.enterDocument = function() {
 
   goog.dom.appendChild(this.mainContentDiv, this.topDiv_);
   goog.dom.appendChild(this.topDiv_, this.markdownDiv_);
-  goog.dom.appendChild(this.topDiv_, this.toolbarDiv);
+  if (this.toolbarDiv) {
+    goog.dom.appendChild(this.topDiv_, this.toolbarDiv);
+  }
 
   // add editor
   this.editor_ = new colab.cell.Editor(this.realtimeCell.get('text'));
