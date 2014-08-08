@@ -1,34 +1,43 @@
-/**
- *
- * @fileoverview Contains the main Notebook class.
- *
- */
 goog.provide('colab.CellDragger');
+goog.provide('colab.KeyboardShortcut');
 goog.provide('colab.Notebook');
 
 goog.require('colab.BottomPane');
 goog.require('colab.CommentsWidget');
-goog.require('colab.Preferences');
+goog.require('colab.Global');
 goog.require('colab.Undo');
-goog.require('colab.cell');
+goog.require('colab.cell.AddCell');
+goog.require('colab.cell.AddCellEventType');
 goog.require('colab.cell.Cell');
-goog.require('colab.drive.Permissions');
+goog.require('colab.cell.CellType');
+goog.require('colab.cell.factory');
+goog.require('colab.dialog');
+goog.require('colab.filepicker');
+goog.require('colab.header');
+goog.require('colab.notification');
 goog.require('goog.array');
 goog.require('goog.dom');
-goog.require('goog.dom.classes');
+goog.require('goog.dom.classlist');
+goog.require('goog.events');
+goog.require('goog.events.KeyCodes');
+goog.require('goog.events.KeyHandler');
 goog.require('goog.fx.DragListDirection');
 goog.require('goog.fx.DragListGroup');
+goog.require('goog.fx.Dragger');
+goog.require('goog.fx.Transition');
 goog.require('goog.fx.dom.FadeInAndShow');
 goog.require('goog.fx.dom.FadeOutAndHide');
-goog.require('goog.json');
+goog.require('goog.style');
 goog.require('goog.ui.Component');
+goog.require('goog.ui.Dialog');
+
 
 
 /**
  * Creates a new Notebook object. A Notebook is a collection of Cell objects.
  *
- * @param {colab.drive.NotebookModel} notebook The Realtime notebook object.
- * @extends goog.ui.Component
+ * @param {colab.model.Notebook} notebook The Realtime notebook object.
+ * @extends {goog.ui.Component}
  * @constructor
  */
 colab.Notebook = function(notebook) {
@@ -46,42 +55,62 @@ colab.Notebook = function(notebook) {
   /** @private */
   this.history_ = new colab.Undo(this.realtimeCells_);
 
-  /** @private {colab.drive.Permissions} */
+  /** @private {!colab.drive.Permissions} */
   this.permissions_ = notebook.getPermissions();
 
   /** @private */
   this.listeners_ = {};
 
-  /** @private {colab.drive.NotebookModel} */
-  this.driveNotebook_ = notebook;
+  /** @const @type {colab.model.Notebook} */
+  this.notebookModel = notebook;
+
+  // on start, restart, or unexpected disconnect reset notebook status
+  jQuery([IPython.events]).on(
+      'status_restarting.Kernel status_dead.Kernel websocket_closed.Kernel',
+      goog.bind(this.reset, this));
+
 };
 goog.inherits(colab.Notebook, goog.ui.Component);
 
 
 /**
+ * @param {string} tabname name of tab to add content to
  * @param {Element} content
  */
-colab.Notebook.prototype.setBottomPaneContent = function(content) {
-  var el = this.bottomPane_.getContentElement();
-  el.innerHTML = '';
-  goog.dom.appendChild(el, content);
+colab.Notebook.prototype.setBottomPaneContent = function(tabname, content) {
+  if (!this.bottomPane_.hasTab(tabname)) {
+    this.bottomPane_.addTab(tabname);
+  }
+  this.bottomPane_.setTabContent(tabname, content);
+  this.bottomPane_.selectTab(tabname);
   this.bottomPane_.restore();
 };
+
 
 /** @inheritDoc */
 colab.Notebook.prototype.createDom = function() {
   var element = goog.dom.createDom('div', 'notebook-container');
 
-  /** @private Content Element */
+  /** @private {Element} */
   this.contentElement_ = goog.dom.createDom('div', 'notebook-content');
   goog.dom.appendChild(element, this.contentElement_);
+
+  /** @private {Element} */
+  this.cellListElement_ = goog.dom.createDom('div', 'notebook-cell-list');
+  goog.dom.appendChild(this.contentElement_, this.cellListElement_);
 
   this.setElementInternal(element);
 };
 
+
 /** @inheritDoc */
 colab.Notebook.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
+
+  /** @private {colab.cell.AddCell} */
+  this.firstAddCell_ = new colab.cell.AddCell(this.permissions_);
+  this.addChild(this.firstAddCell_, false);
+  this.firstAddCell_.renderBefore(this.cellListElement_);
 
   /** @private {colab.BottomPane} */
   this.bottomPane_ = new colab.BottomPane();
@@ -91,16 +120,15 @@ colab.Notebook.prototype.enterDocument = function() {
     var rt_cell = /** @type {gapi.drive.realtime.CollaborativeMap} */
         (this.realtimeCells_.get(i));
 
-    var cell = colab.cell.cellFromRealtime(
-        rt_cell,
-        this.permissions_);
+    var cell = colab.cell.factory.fromRealtime(rt_cell, this.permissions_);
 
     if (this.permissions_.isEditable() && !rt_cell.has('collaborators')) {
       rt_cell.set('collaborators', this.model.createList());
     }
 
     this.cells_.push(cell);
-    cell.render(this.contentElement_);
+    this.addChild(cell);
+    cell.render(this.cellListElement_);
   }
 
   // make the cells drag droppable
@@ -119,9 +147,58 @@ colab.Notebook.prototype.enterDocument = function() {
       gapi.drive.realtime.EventType.VALUES_SET,
       goog.bind(this.realtimeCellsSet_, this));
 
+  var addEvents = [colab.cell.AddCellEventType.CODE,
+      colab.cell.AddCellEventType.TEXT];
+  this.getHandler().listen(this, addEvents, this.handleAddCell_);
+
   window.addEventListener('message', goog.bind(this.receiveCellMessage, this));
   this.setupKeyHandler();
+
+  var vsm = new goog.dom.ViewportSizeMonitor();
+  this.getHandler().listenWithScope(vsm, goog.events.EventType.RESIZE,
+      this.handleWindowResize_, false, this);
+  this.handleWindowResize_();
 };
+
+
+/**
+ * Change parameters of absolutely positioned / window size-dependent elements
+ * to match new window size.
+ * @private @param {Event=} opt_e
+ */
+colab.Notebook.prototype.handleWindowResize_ = function(opt_e) {
+  // Adjust cell buttons (absolutely positioned)
+  this.firstAddCell_.onWindowResize();
+  this.cells_.forEach(function(cell) { cell.onWindowResize(); });
+
+  // Adjust relative size of bottom pane and notebook container
+  this.bottomPane_.onWindowResize();
+};
+
+
+/**
+ * Add a cell to the notebook based on an event generated by an "add cell"
+ * button or similar
+ * @private @param { {target: colab.cell.AddCell, type: colab.cell.CellType} } e
+ */
+colab.Notebook.prototype.handleAddCell_ = function(e) {
+  var cellId = e.target.getCellId();
+
+  if (e.type === colab.cell.AddCellEventType.CODE) {
+    var cellType = colab.cell.CellType.CODE;
+  } else if (e.type === colab.cell.AddCellEventType.TEXT) {
+    var cellType = colab.cell.CellType.TEXT;
+  } else {
+    var cellType = colab.cell.CellType.CODE; // default to code
+  }
+
+  if (cellId !== undefined) {
+    this.insertCellAt(cellId, cellType, true /*after*/);
+  } else {
+    this.addNewCell(cellType, 0 /*as first*/);
+  }
+};
+
 
 /**
  * Returns the unique ID of the notebook. Currently set to the id of the
@@ -133,8 +210,10 @@ colab.Notebook.prototype.getId = function() {
   return this.realtimeCells_.id;
 };
 
+
 /** @private {number} duration of animations in milliseconds */
 colab.Notebook.ANIMATION_DURATION_ = 400;
+
 
 /**
  * Add new cell to the end of the document.
@@ -145,14 +224,14 @@ colab.Notebook.ANIMATION_DURATION_ = 400;
  * everything needs to be sync, for example selected index.
  *
  * @param {string} type Type of the cell.
- * @param {number} opt_position Position of the cell
+ * @param {number=} opt_position Position of the cell
  */
 colab.Notebook.prototype.addNewCell = function(type, opt_position) {
   if (!this.permissions_.isEditable()) {
     return;
   }
 
-  var realtimeCell = colab.cell.newRealtimeCell(this.model, type);
+  var realtimeCell = colab.cell.factory.newRealtimeCell(this.model, type);
 
   var position = opt_position === undefined ?
       this.realtimeCells_.length : opt_position;
@@ -161,12 +240,14 @@ colab.Notebook.prototype.addNewCell = function(type, opt_position) {
   //this.realtimeCells_.insert(position, realtimeCell);
 };
 
+
 /**
  * @return {boolean}
  */
 colab.Notebook.prototype.isEditable = function() {
   return this.permissions_.isEditable();
 };
+
 
 /**
  * Gets the position of a cell in the list of cells.
@@ -180,6 +261,7 @@ colab.Notebook.prototype.getCellIndex = function(id) {
   });
 };
 
+
 /**
  * Finds a cell by its cellId.
  * @param {string} cellId
@@ -188,6 +270,7 @@ colab.Notebook.prototype.getCellIndex = function(id) {
 colab.Notebook.prototype.findCellByCellId = function(cellId) {
   return colab.cell.Cell.idToCellMap[cellId];
 };
+
 
 /**
 * Checks that a cell has the right to send/receive messages
@@ -202,6 +285,7 @@ colab.Notebook.prototype.kernelAccessAllowed = function(cell) {
 
   return cell.getOutputArea().isLocalContent();
 };
+
 
 /**
  * Handles messages coming from cells (which run in their own iframes)
@@ -240,7 +324,7 @@ colab.Notebook.prototype.receiveCellMessage = function(message) {
     }
     colabtools.sendMessageToKernel(
         data.tag, data.payload,
-        function(code) { colab.globalKernel.execute(code); });
+        function(code) { colab.Global.getInstance().kernel.execute(code); });
     return;
   }
   if (data.action == 'execute_cell') {
@@ -253,6 +337,9 @@ colab.Notebook.prototype.receiveCellMessage = function(message) {
 
     // execute cell and mark the execution as automatic
     cell.execute(false /* auto */);
+  }
+  if (data.action == 'select_cell') {
+    this.selectCell(data.cellId);
   }
   if (data.action == 'register_listener') {
     var listenerId = data.listenerId;
@@ -288,25 +375,28 @@ colab.Notebook.prototype.receiveCellMessage = function(message) {
   }
 };
 
+
 /**
  * Move cell up.
  *
- * @param {gapi.drive.realtime.CollaborativeObject?} opt_realtimeCell
+ * @param {gapi.drive.realtime.CollaborativeObject?=} opt_realtimeCell
  *   Cell being moved
  */
 colab.Notebook.prototype.moveCellUp = function(opt_realtimeCell) {
   this.moveCell(-1, opt_realtimeCell);
 };
 
+
 /**
  * Move cell down.
  *
- * @param {gapi.drive.realtime.CollaborativeObject?} opt_realtimeCell
+ * @param {gapi.drive.realtime.CollaborativeObject?=} opt_realtimeCell
  *   cell being moved
  */
 colab.Notebook.prototype.moveCellDown = function(opt_realtimeCell) {
   this.moveCell(1, opt_realtimeCell);
 };
+
 
 /**
  * Moves cell in a given direction
@@ -346,6 +436,7 @@ colab.Notebook.prototype.moveCell = function(direction, opt_realtimeCell) {
   }
 };
 
+
 /**
  * Records in realtime api the fact that cell has been moved.
  * @param {gapi.drive.realtime.CollaborativeObject} realtimeCell
@@ -356,6 +447,7 @@ colab.Notebook.prototype.recordCellMove = function(realtimeCell, newIndex) {
   this.history_.recordMove(newIndex, realtimeCell);
   this.model.endCompoundOperation();
 };
+
 
 /**
  * @param {gapi.drive.realtime.CollaborativeObject=} opt_realtimeCell
@@ -376,6 +468,7 @@ colab.Notebook.prototype.removeCell = function(opt_realtimeCell) {
   this.selectCell(this.realtimeCells_.get(index).id);
 };
 
+
 /**
  * Changes selected cell 'delta' cells up or down
  * @param {number} delta
@@ -390,12 +483,14 @@ colab.Notebook.prototype.changeSelectedCell = function(delta) {
   this.selectCell(this.realtimeCells_.get(newIndex).id);
 };
 
+
 /**
  * Undo last notebook-level action (cell change)
  */
 colab.Notebook.prototype.undo = function() {
   this.history_.undo();
 };
+
 
 /**
  * Redo last notebook-level action (cell change)
@@ -404,13 +499,14 @@ colab.Notebook.prototype.redo = function() {
   this.history_.redo();
 };
 
+
 /**
  * Saves notebook with notification on the screen
  */
 colab.Notebook.prototype.saveNotebook = function() {
   var n = colab.notification.showNotification(
       'Saving...', '', -1);
-  colab.drive.globalNotebook.save(
+  colab.Global.getInstance().notebookModel.save(
       function() { n.change('Saved successfully!', 5000); },
       function(err) {
         n.clear();
@@ -419,16 +515,19 @@ colab.Notebook.prototype.saveNotebook = function() {
       {'pinned': true });
 };
 
+
 /**
  * Commands that get executed after ctrl-M is pressed
  * @type {Object}
  */
 colab.Notebook.prototype.magicCommands = null;
 
+
 /**
  * Commands that get executed on ctrl pressed.
  */
 colab.Notebook.prototype.ctrlCommands = null;
+
 
 /**
  * @param {boolean} after
@@ -436,6 +535,7 @@ colab.Notebook.prototype.ctrlCommands = null;
 colab.Notebook.prototype.insertCellAtSelection = function(after) {
   this.insertCellAt(this.selectedCellId_, colab.cell.CellType.CODE, after);
 };
+
 
 /**
  * @param {string} realtimeId
@@ -448,6 +548,36 @@ colab.Notebook.prototype.insertCellAt = function(realtimeId, cellType, after) {
   this.addNewCell(cellType, index);
 };
 
+
+/**
+ * @param {Array.<colab.KeyboardShortcut>|Object.<?, colab.KeyboardShortcut>}
+ *    shortcuts
+ * @param {string} shortcutPrefix
+ * @private
+ */
+colab.Notebook.prototype.updateMenuShortcuts_ = function(shortcuts,
+    shortcutPrefix) {
+  for (var each in shortcuts) {
+    var sc = shortcuts[each];
+    if (!sc.menuid) continue;
+    colab.header.updateMenuItemShortcut(sc.menuid,
+        shortcutPrefix + colab.Notebook.toCharacter(sc.shortcut));
+  }
+};
+
+
+/**
+ * updates menu with shortcuts from this notebook.
+ */
+colab.Notebook.prototype.updateMenuShortcuts = function() {
+  this.updateMenuShortcuts_(this.magicCommands, 'Ctrl-M Ctrl-');
+  this.updateMenuShortcuts_(this.ctrlCommands, 'Ctrl-');
+  // Manually override those, since they are handled specially
+  colab.header.updateMenuItemShortcut('undo-menuitem', 'Ctrl-Z');
+  colab.header.updateMenuItemShortcut('redo-menuitem', 'Ctrl-Shit-Z');
+};
+
+
 /**
  * Setups magic commands for this notebook
  */
@@ -458,19 +588,19 @@ colab.Notebook.prototype.setupMagicCommands = function() {
    * @param {number} sc keyboard keycode
    * @param {function(?)} f
    * @param {string} help
+   * @param {string?=} opt_menuid
    * @return {colab.KeyboardShortcut}
    */
-  var shortcut = function(sc, f, help) {
-    return { shortcut: sc, help: help,
-             func: goog.bind(f, notebook),
-             notimplemented: f == notebook.NotImplemented
-           };
+  var shortcut = function(sc, f, help, opt_menuid) {
+    return {
+      shortcut: sc, help: help,
+      func: goog.bind(f, notebook),
+      notimplemented: f == notebook.NotImplemented,
+      menuid: opt_menuid || null
+    };
   };
 
   var codes = goog.events.KeyCodes;
-  /**
-   * Object
-   */
   var commands = [
     shortcut(codes.X, this.NotImplemented, 'Cut Cell'),
     shortcut(codes.C, this.NotImplemented, 'Copy Cell'),
@@ -478,7 +608,8 @@ colab.Notebook.prototype.setupMagicCommands = function() {
 
     shortcut(codes.D, function() { this.removeCell(); }, 'Delete Cell'),
 
-    shortcut(codes.Z, this.undo, 'Undo Last Cell Op'),
+    shortcut(codes.Z, this.handleMenuAction, 'Undo Last Cell Op',
+             'undo-menuitem'),
 
     shortcut(codes.DASH, this.splitSelectedCellAtCursor, 'Split At Cursor'),
 
@@ -493,14 +624,15 @@ colab.Notebook.prototype.setupMagicCommands = function() {
     shortcut(codes.L, this.toggleLineNumbers, 'Toggle line numbers'),
 
     shortcut(codes.NINE,
-       goog.bind(this.changeEditorFontSize, this, -1),
-       'Editor Font Size--'),
+        goog.bind(this.changeEditorFontSize, this, -1),
+        'Editor Font Size--'),
 
     shortcut(codes.ZERO,
-       goog.bind(this.changeEditorFontSize, this, 1),
-       'Editor Font Size++'),
+        goog.bind(this.changeEditorFontSize, this, 1),
+        'Editor Font Size++'),
 
-    shortcut(codes.S, this.saveNotebook, 'Save and Checkpoint'),
+    shortcut(codes.S, this.handleMenuAction, 'Save and Checkpoint',
+             'save-menuitem'),
 
     shortcut(codes.J, this.moveCellDown, 'Move Cell Down'),
     shortcut(codes.K, this.moveCellUp, 'Move Cell Up'),
@@ -509,27 +641,27 @@ colab.Notebook.prototype.setupMagicCommands = function() {
              'Previous Cell'),
     shortcut(codes.N, goog.bind(this.changeSelectedCell, this, 1),
              'Next Cell'),
-    shortcut(codes.I, function() { colab.globalKernel.interrupt(); },
-             'Interrupt Kernel'),
-    shortcut(codes.PERIOD, function() { colab.globalKernel.restart(); },
-             'Restart Kernel'),
+    shortcut(codes.I, this.handleMenuAction,
+             'Interrupt Kernel', 'interrupt-menuitem'),
+    shortcut(codes.PERIOD, this.handleMenuAction,
+             'Restart Kernel', 'restart-menuitem'),
     shortcut(codes.H, this.displayShortcutHelp,
-             'Show Keyboard Shortcuts'),
+             'Show Keyboard Shortcuts', 'shortcuts-menuitem'),
 
     shortcut(
-      codes.Y,
-      goog.bind(this.convertSelectedCell, this, colab.cell.CellType.CODE),
-      'Convert to Code Cell'),
+        codes.Y,
+        goog.bind(this.convertSelectedCell, this, colab.cell.CellType.CODE),
+        'Convert to Code Cell'),
 
     shortcut(
-      codes.M,
-      goog.bind(this.convertSelectedCell, this, colab.cell.CellType.TEXT),
-      'Convert to Markdown Cell')
+        codes.M,
+        goog.bind(this.convertSelectedCell, this, colab.cell.CellType.TEXT),
+        'Convert to Markdown Cell')
   ];
 
   var ctrlCommands = [
-    shortcut(codes.S, this.saveNotebook, 'Save Notebook'),
-    shortcut(codes.O, this.openNotebook, 'Open Notebook'),
+    shortcut(codes.S, this.handleMenuAction, 'Save Notebook', 'save-menuitem'),
+    shortcut(codes.O, this.handleMenuAction, 'Open Notebook', 'open-menuitem'),
     shortcut(codes.M, this.enterMagicMode, 'Magic Shortcut Mode')
   ];
   this.ctrlCommands = {};
@@ -538,6 +670,7 @@ colab.Notebook.prototype.setupMagicCommands = function() {
   for (var i = 0; i < commands.length; i++) {
     this.magicCommands[commands[i].shortcut] = commands[i];
   }
+
   for (var i = 0; i < ctrlCommands.length; i++) {
     this.ctrlCommands[ctrlCommands[i].shortcut] = ctrlCommands[i];
   }
@@ -549,6 +682,7 @@ colab.Notebook.prototype.setupMagicCommands = function() {
 colab.Notebook.prototype.openNotebook = function() {
   colab.filepicker.selectFileAndReload();
 };
+
 
 /**
  * Converts selected cell to markdown cell
@@ -562,9 +696,10 @@ colab.Notebook.prototype.convertSelectedCell = function(newType) {
   var ed = cell.getEditor();
   if (!ed) return;
   var text = ed.getText();
-  var newcell = colab.cell.newRealtimeCell(this.model, newType, text);
+  var newcell = colab.cell.factory.newRealtimeCell(this.model, newType, text);
   this.history_.recordReplacement(index, newcell);
 };
+
 
 /**
  * Toggles output of currently selected cell, if it has output
@@ -575,6 +710,23 @@ colab.Notebook.prototype.toggleOutput = function() {
   cell.toggleOutput();
 };
 
+
+/**
+ *
+ * Converts character code into human readable string.
+ *
+ * @param {number} code
+ * @return {string}
+ */
+colab.Notebook.toCharacter = function(code) {
+  switch (code) {
+    case goog.events.KeyCodes.PERIOD: return '.';
+    case goog.events.KeyCodes.DASH: return '-';
+    default: return String.fromCharCode(code);
+  }
+};
+
+
 /**
  * Shows help on shortcuts
  */
@@ -582,13 +734,6 @@ colab.Notebook.prototype.displayShortcutHelp = function() {
   var dialog = new goog.ui.Dialog();
   var msg = '<h3>Notebook</h3><br/><table>';
   var c = 0;
-  var toChar = function(code) {
-     switch (code) {
-       case goog.events.KeyCodes.PERIOD: return '.';
-       case goog.events.KeyCodes.DASH: return '-';
-       default: return String.fromCharCode(code);
-     }
-  };
 
   /**
    * @param {string} shortcut
@@ -607,7 +752,7 @@ colab.Notebook.prototype.displayShortcutHelp = function() {
   for (var i in this.magicCommands) {
     var sc = this.magicCommands[i];
     if (c % 2 == 0) msg += '<tr>';
-    msg += shortcutText('Ctrl-M ' + toChar(sc.shortcut),
+    msg += shortcutText('Ctrl-M ' + colab.Notebook.toCharacter(sc.shortcut),
         sc.help, sc.notimplemented);
     if (c % 2 == 1) {msg += '</tr>'} else { msg += '<td>&nbsp;</td>' }
     c++;
@@ -626,27 +771,40 @@ colab.Notebook.prototype.displayShortcutHelp = function() {
   dialog.setVisible(true);
 };
 
+
 /**
  * Splits cell at cursor
  */
 colab.Notebook.prototype.splitSelectedCellAtCursor = function() {
   var cell = this.getSelectedCell();
-  var index = this.getCellIndex(this.selectedCellId_);
 
   if (!cell) return;
-  var realtimeCells = cell.splitAtCursor();
-  if (!realtimeCells || realtimeCells.length < 2) return;
-  this.history_.recordSplit(index, realtimeCells[0], realtimeCells[1]);
+  var splitContent = cell.splitAtCursor();
+
+  if (!splitContent || splitContent.length < 2) return;
+
+  var cell1 = colab.cell.factory.newRealtimeCell(
+      this.model, cell.getType(), splitContent[0]);
+  var cell2 = colab.cell.factory.newRealtimeCell(
+      this.model, cell.getType(), splitContent[1]);
+
+  var index = this.getCellIndex(this.selectedCellId_);
+  this.history_.recordSplit(index, cell1, cell2);
 };
+
 
 /**
  * @typedef  {{
  *   shortcut: number,
  *   help: string,
- *   func: (function(colab.KeyboardShortcut, KeyboardEvent): boolean)
+ *   notimplemented: boolean,
+ *   menuid: (string?),
+ *   func: ((function(colab.KeyboardShortcut, KeyboardEvent): boolean) |
+ *           function(?):?)
  * }}
  */
 colab.KeyboardShortcut;
+
 
 /**
  * @param {KeyboardEvent} ev
@@ -665,15 +823,17 @@ colab.Notebook.prototype.handleShortcuts = function(ev, shortcuts) {
   return false;
 };
 
+
 /**
  * Toggles line numbers
  */
 colab.Notebook.prototype.toggleLineNumbers = function() {
-  colab.preferences.showLineNumbers ^= true;
+  colab.Global.getInstance().preferences.showLineNumbers ^= true;
   for (var i = 0; i < this.cells_.length; i++) {
     this.cells_[i].refresh();
   }
 };
+
 
 /**
  * Changes font size by delta
@@ -681,11 +841,13 @@ colab.Notebook.prototype.toggleLineNumbers = function() {
  * @param {number} delta
  */
 colab.Notebook.prototype.changeEditorFontSize = function(delta) {
-  colab.preferences.fontSize += delta;
+  colab.Global.getInstance().preferences.fontSize += delta;
   for (var i = 0; i < this.cells_.length; i++) {
     setTimeout(goog.bind(this.cells_[i].refresh, this.cells_[i]), 1);
   }
 };
+
+
 /**
  * @param {colab.KeyboardShortcut} shortcut
  */
@@ -694,6 +856,23 @@ colab.Notebook.prototype.NotImplemented = function(shortcut) {
       ' is not implemented yet.');
 };
 
+
+/**
+ * Handles menu action associated with given shortcut
+ * @param {colab.KeyboardShortcut} shortcut
+ */
+colab.Notebook.prototype.handleMenuAction = function(shortcut) {
+
+  var mi = colab.header.findMenuItem(shortcut.menuid || '');
+  if (!mi) {
+    colab.notification.showPrimary('No menu action exists for "' +
+        shortcut.help + '"');
+    return;
+  }
+  mi.dispatchEvent(goog.ui.Component.EventType.ACTION);
+};
+
+
 /**
  * Magic mode for shortcuts
  */
@@ -701,6 +880,7 @@ colab.Notebook.prototype.enterMagicMode = function() {
   /** @type {boolean} */
   this.magicMode = true;
 };
+
 
 /**
  * Sets up document keyhandler, which handles global key presses.
@@ -713,7 +893,7 @@ colab.Notebook.prototype.setupKeyHandler = function() {
 
   goog.events.listen(docKh, 'key', function(e) {
     if ((e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) &&
-         e.keyCode == goog.events.KeyCodes.ENTER) {
+        e.keyCode == goog.events.KeyCodes.ENTER) {
       var nextCell = e.shiftKey || e.altKey;
       var create = e.altKey;
       notebook.runSelectedCell(nextCell, create);
@@ -731,7 +911,7 @@ colab.Notebook.prototype.setupKeyHandler = function() {
     notebook.magicMode = false;
 
     if ((e.ctrlKey || e.metaKey) &&
-         notebook.handleShortcuts(e, notebook.ctrlCommands)) {
+        notebook.handleShortcuts(e, notebook.ctrlCommands)) {
       e.stopPropagation();
       e.preventDefault();
       return;
@@ -747,7 +927,7 @@ colab.Notebook.prototype.setupKeyHandler = function() {
     if (document.activeElement.tagName == 'TEXTAREA') return;
 
     if ((e.metaKey || e.ctrlKey) &&
-               e.shiftKey && e.keyCode == goog.events.KeyCodes.Z) {
+        e.shiftKey && e.keyCode == goog.events.KeyCodes.Z) {
       notebook.redo();
       e.stopPropagation();
       e.preventDefault();
@@ -760,10 +940,12 @@ colab.Notebook.prototype.setupKeyHandler = function() {
 
     if (e.keyCode == goog.events.KeyCodes.UP) {
       notebook.changeSelectedCell(-1);
+      e.preventDefault();
     }
 
     if (e.keyCode == goog.events.KeyCodes.DOWN) {
       notebook.changeSelectedCell(1);
+      e.preventDefault();
     }
 
     if (e.keyCode == goog.events.KeyCodes.ENTER) {
@@ -792,7 +974,8 @@ colab.Notebook.prototype.realtimeCellsAdded_ = function(e) {
   var values = e.values;
 
   // Update DOM element content and its parallel structure this.cells_
-  var content = this.contentElement_;
+  // TODO(kayur,jasnyder); change content to cell list
+  var content = this.cellListElement_;
 
   // Find the "corrected" index, which is index or index - 1 depending
   // on whether the order of elements has been shifted by a local drag
@@ -802,7 +985,7 @@ colab.Notebook.prototype.realtimeCellsAdded_ = function(e) {
     correctedIndex = index;
   } else {
     var elementAbove = this.cells_[index - 1].getElement();
-    if (goog.dom.classes.has(elementAbove, 'dragged')) {
+    if (goog.dom.classlist.contains(elementAbove, 'dragged')) {
       correctedIndex = jQuery(elementAbove).index() + 1;
     } else {
       var elementBelow = this.cells_[index].getElement();
@@ -814,10 +997,15 @@ colab.Notebook.prototype.realtimeCellsAdded_ = function(e) {
   }
 
   for (var i = 0; i < values.length; i++) {
-    var cell = colab.cell.cellFromRealtime(values[i], this.permissions_);
+    var cell = colab.cell.factory.fromRealtime(values[i], this.permissions_);
+    this.addChild(cell);
+    goog.array.insertAt(this.cells_, cell, index + i);
+
+    // Here we render the cell, remove it, and add it again in the right
+    // location with an animation.
+    // TODO(kayur): use standard closure rendering actions.
     cell.render(content);
     goog.dom.removeNode(cell.getElement());
-    goog.array.insertAt(this.cells_, cell, index + i);
     goog.style.setElementShown(cell.getElement(), false);
     goog.dom.insertChildAt(content, cell.getElement(), correctedIndex + i);
     var anim = new goog.fx.dom.FadeInAndShow(cell.getElement(),
@@ -835,6 +1023,7 @@ colab.Notebook.prototype.realtimeCellsAdded_ = function(e) {
   }
 };
 
+
 /**
  * Handle VALUES_REMOVED event for the list of cells.
  *
@@ -847,20 +1036,22 @@ colab.Notebook.prototype.realtimeCellsRemoved_ = function(e) {
   for (var i = 0; i < values.length; i++) {
     // Note content adjusts immediately.
     var cellElem = this.cells_[index].getElement();
+    var cell = this.cells_[index];
+    this.removeChild(cell);
     goog.array.removeAt(this.cells_, index);
 
     if (e.isLocal) {
       goog.dom.removeNode(cellElem);
     } else {
       // NOTE: this animation strategy could be dangerous because the element
-      // is nore removed until after the animation is finished. That might lead
-      // strage behavior if the user tries to interact with the element or move
+      // is node removed until after the animation is finished. That might lead
+      // strange behavior if the user tries to interact with the element or move
       // the element when it is animating out. It might also lead to strange
       // behavior if the element is being added right after this element is
       // being deleted. Also for local changes it creates strange behavior on
       // drag and drop. For that reason we only animate on remote deletions.
       var anim = new goog.fx.dom.FadeOutAndHide(cellElem,
-        colab.Notebook.ANIMATION_DURATION_);
+          colab.Notebook.ANIMATION_DURATION_);
       goog.events.listen(anim, goog.fx.Transition.EventType.END, function() {
         goog.dom.removeNode(cellElem);
       });
@@ -874,6 +1065,7 @@ colab.Notebook.prototype.realtimeCellsRemoved_ = function(e) {
   }
 };
 
+
 /**
  * Handle VALUES_SET event for the list of cells.
  *
@@ -886,10 +1078,11 @@ colab.Notebook.prototype.realtimeCellsSet_ = function(e) {
    * @type {Array.<gapi.drive.realtime.CollaborativeMap>}
    */
   var values = e.newValues; // The values to add
-  var content = this.contentElement_;
+  // TODO(kayur,jasnyder); change content to cell list
+  var content = this.cellListElement_;
   var children = goog.dom.getChildren(content);
   for (var i = 0; i < values.length; i++) {
-    var cell = colab.cell.cellFromRealtime(values[i], this.permissions_);
+    var cell = colab.cell.factory.fromRealtime(values[i], this.permissions_);
 
     // TODO(sandler,kayur): remove this hack once colab.Notebook is also a
     // goog.component subclass.
@@ -912,6 +1105,7 @@ colab.Notebook.prototype.realtimeCellsSet_ = function(e) {
 };
 
 
+
 /**
  * Custom dragger for cells
  * @constructor
@@ -921,6 +1115,7 @@ colab.CellDragger = function() {
   goog.base(this);
 };
 goog.inherits(colab.CellDragger, goog.fx.DragListGroup);
+
 
 /**
  * @inheritDoc
@@ -945,7 +1140,7 @@ colab.CellDragger.prototype.createDragElementInternal = function(sourceEl) {
 colab.Notebook.prototype.makeDraggable_ = function() {
   // make cells draggable
   var dlg = new colab.CellDragger();
-  dlg.addDragList(this.contentElement_,
+  dlg.addDragList(this.cellListElement_,
       goog.fx.DragListDirection.DOWN, true);
   dlg.setDragItemHoverClass('dragged');
   dlg.setCurrDragItemClass('dragitem');
@@ -954,7 +1149,7 @@ colab.Notebook.prototype.makeDraggable_ = function() {
 
   goog.events.listen(dlg, goog.fx.DragListGroup.EventType.BEFOREDRAGSTART,
       goog.bind(function(e) {
-        if (!goog.dom.classes.has(e.event.target, 'cell-handle')) {
+        if (!goog.dom.classlist.contains(e.event.target, 'cell-handle')) {
           e.preventDefault();
           return;
         }
@@ -984,8 +1179,9 @@ colab.Notebook.prototype.makeDraggable_ = function() {
         } else {
           this.cells_[insertIndex].refresh();
         }
-    }, this));
+      }, this));
 };
+
 
 /**
  *
@@ -996,6 +1192,7 @@ colab.Notebook.prototype.makeDraggable_ = function() {
  */
 colab.Notebook.prototype.selectedCell_ = null;
 
+
 /**
  * Reutrns currently selected cell
  * @return {colab.cell.Cell}
@@ -1003,6 +1200,7 @@ colab.Notebook.prototype.selectedCell_ = null;
 colab.Notebook.prototype.getSelectedCell = function()  {
   return this.selectedCell_;
 };
+
 
 /**
  * Select a cell. Unselect previously selected cell.
@@ -1026,29 +1224,13 @@ colab.Notebook.prototype.selectCell = function(id) {
     return;
   }
 
-  // the refresh for OSX screws up the scoll position, so we
-  // store previous scroll position to reset it later.
-  var prevScrollY = window.scrollY;
-
-  // unselect all other cells
+  // unselect all other cells and select targeted cell
   goog.array.forEach(this.cells_, function(cell) {
     cell.setSelected(false);
   });
-
-  // reset scroll position
-  window.scrollTo(window.scrollX, prevScrollY);
-
-  // selecte cell, show cell, and focus on the editor if it's a code cell
   selectedCell.setSelected(true);
-
-  selectedCell.scrollIntoView();
-
-  // TODO(kayur): this logic should be moved into cell itself
-  if (selectedCell.getType() == colab.cell.CellType.CODE &&
-      prevSelectedId != this.selectedCellId_) {
-    selectedCell.focusOnEditor();
-  }
 };
+
 
 /**
  * Runs range of of cells [startCell, endCell)
@@ -1083,12 +1265,14 @@ colab.Notebook.prototype.runRange = function(startCell, endCell) {
   }
 };
 
+
 /**
  * Runs all the cells starting from the top.
  */
 colab.Notebook.prototype.runAll = function() {
   this.runRange(0, this.cells_.length);
 };
+
 
 /**
  * Runs all cells up to the selected one
@@ -1100,7 +1284,8 @@ colab.Notebook.prototype.runBefore = function() {
   }
 };
 
- /**
+
+/**
  * Runs all cells after selected
  */
 colab.Notebook.prototype.runAfter = function() {
@@ -1110,6 +1295,7 @@ colab.Notebook.prototype.runAfter = function() {
   }
 };
 
+
 /**
  * Run selected cell. Repeats the beahvior of IPython notebook. Running a text
  * cell doesn't do anything. Running a code cell will execute the code.
@@ -1117,8 +1303,8 @@ colab.Notebook.prototype.runAfter = function() {
  * There is also an option to move to the next cell. If there is no next cell,
  * it will create a new code cell.
  *
- * @param {boolean} opt_nextCell Move to next cell if true
- * @param {boolean} opt_insert if true, will insert the empty cell
+ * @param {boolean=} opt_nextCell Move to next cell if true
+ * @param {boolean=} opt_insert if true, will insert the empty cell
  *   (if opt_nextCell)
  */
 colab.Notebook.prototype.runSelectedCell = function(opt_nextCell, opt_insert) {
@@ -1157,15 +1343,31 @@ colab.Notebook.prototype.runSelectedCell = function(opt_nextCell, opt_insert) {
   }
 };
 
+
+/**
+ * resizes notebook height to fit between bottom pane and top floater
+ */
+colab.Notebook.prototype.resize = function() {
+  var floaterHeight = goog.dom.getElement('top-floater').offsetHeight;
+  var bottomHeight = this.bottomPane_.getElement().offsetHeight;
+  goog.style.setHeight(this.getElement(),
+      goog.dom.getViewportSize().height - floaterHeight - bottomHeight);
+};
+
+
 /**
  * Clears all data from notebook and dom.
  */
 colab.Notebook.prototype.clear = function() {
   if (!this.permissions_.isEditable()) {
+    colab.notification.showPrimary('You don\'t have permission to' +
+        'edit this notebook');
     return;
   }
-  this.realtimeCells_.clear();
+  this.history_.recordClearAll();
+  colab.notification.showPrimary('Notebook cleared! Use Edit->Undo to undo.');
 };
+
 
 /**
  * removes the collaborator

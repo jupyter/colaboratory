@@ -92,38 +92,49 @@
     margin-right: 20px;
 }
 
-.collaborator-img {
-  margin-right: 5px;
+.collaborator {
   height: 25px;
   padding-bottom: 5px;
-  margin-top: 0px;
   vertical-align: middle;
 }
 
+.collaborator-img {
+  margin-right: 5px;
+  margin-top: 0px;
+}
+
 .collaborator-overflow {
- height: 25px;
  line-height: 25px;
  width: 25px;
- padding-bottom: 5px;
  text-align: center;
  background: black;
  color: white;
  font-weight: bold;
  font-size: 10pt;
  display: inline-block;
- vertical-align: middle;
 }
 
-
-.cell-collaborators > .collaborator-img,
-.cell-collaborators > .collaborator-overflow {
+.cell-collaborators .collaborator,
+.output-info .collaborator {
   height: 20px;
   width: 20px;
   line-height: 20px;
   margin-right: 4px;
+}
+
+.cell-collaborators .collaborator {
   padding-bottom: 4px;
 }
 
+.output-info .collaborator {
+  padding-bottom: 0;
+  border-radius: 100%;
+}
+
+.output-info .collaborator {
+  display: inline-block;
+  margin: 0 auto;
+}
 
 .collaborator-overflow > span {
  text-align: center;

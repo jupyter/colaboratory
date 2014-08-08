@@ -7,11 +7,18 @@
 
 goog.provide('colab.cell.OutputArea');
 
+goog.require('colab.Global');
+goog.require('colab.params');
+goog.require('goog.date.DateTime');
 goog.require('goog.dom');
-goog.require('goog.ui.AnimatedZippy');
-goog.require('goog.ui.Component');
+goog.require('goog.events');
+goog.require('goog.events.EventType');
+goog.require('goog.string');
+goog.require('goog.style');
 goog.require('goog.ui.Zippy');
-goog.require('goog.ui.ZippyEvent');
+goog.require('goog.ui.Component');
+
+
 
 /**
  * Constructor for output area
@@ -19,10 +26,12 @@ goog.require('goog.ui.ZippyEvent');
  * @constructor
  * @param {gapi.drive.realtime.CollaborativeList} outputs The realtime
  *     list of outputs.
- * @param {String} opt_cellId a session-unique cell identifier.
+ * @param {String=} opt_cellId a session-unique cell identifier.
  * @extends {goog.ui.Component}
  */
 colab.cell.OutputArea = function(outputs, opt_cellId) {
+  goog.base(this);
+
   /** @private {gapi.drive.realtime.CollaborativeList} */
   this.outputs_ = outputs;
 
@@ -50,78 +59,129 @@ colab.cell.OutputArea = function(outputs, opt_cellId) {
   // this.outputs_.
   /** @private {boolean} */
   this.localContent_ = outputs.length == 0;
+
+  /** @private @type {Element} */
+  this.outputPane_ = null;
+
+  /** @private @type {Element} */
+  this.infoImg_ = null;
+
+  /** @private @type {number|undefined} */
+  this.lastExecTime_ = undefined;
+
+  /** @private @type {string} */
+  this.lastExecUser_ = 'Unknown';
 };
 goog.inherits(colab.cell.OutputArea, goog.ui.Component);
+
 
 /** @param {Object} executionInfo New Header Info */
 colab.cell.OutputArea.prototype.setHeaderContent = function(executionInfo) {
   if (executionInfo) {
-    var headerContent = goog.dom.getElementByClass('output-header-content',
-        this.getElement());
-    // These two strings are used for code which was run with earlier formats
-    var dateString = executionInfo['date'] || '';
-    var timeString = executionInfo['time'] || '';
 
-    if (executionInfo['timestamp']) {
-      var ts = goog.date.DateTime.fromTimestamp(executionInfo['timestamp']);
-      dateString = goog.string.format('(%s GMT) %s',
-        ts.getTimezoneOffsetString(),
-        ts.date.toDateString());
-      timeString = ts.toIsoTimeString();
+    // No longer compatible with execution time stored as .date, .time
+    this.lastExecTime_ = executionInfo['timestamp'];
+
+    // backwards compatibility with .user == "First Last" instead of me object
+    var user = executionInfo['user'];
+    if (typeof(user) == 'string') {
+      this.lastExecUser_ = user;
+      var imgSrc = '/colab/img/anon.jpeg';
+      goog.dom.classes.enable(this.infoImg_, 'collaborator-img-me', false);
+    } else {
+      this.lastExecUser_ = user.displayName;
+      if (user.userId === colab.Global.getInstance().me.userId) {
+        this.lastExecUser_ += ' (Me)';
+        var imgSrc = '/colab/img/output-icon.svg';
+        goog.dom.classes.enable(this.infoImg_, 'collaborator-img-me', true);
+      } else {
+        var imgSrc = colab.drive.urlWithHttpsProtocol(user.photoUrl);
+        goog.dom.classes.enable(this.infoImg_, 'collaborator-img-me', false);
+      }
     }
-    var timeElem = goog.dom.createDom('span', 'output-header-content-time',
-        timeString);
-    var dateElem = goog.dom.createDom('span', 'output-header-content-dateuser',
-        dateString + ' by ' + executionInfo['user']);
-
-    goog.dom.removeChildren(headerContent);
-    goog.dom.appendChild(headerContent, timeElem);
-    goog.dom.appendChild(headerContent, dateElem);
+    goog.dom.setProperties(this.infoImg_, {
+        'src': imgSrc
+    });
+    this.updateImageTitle();
   }
 };
+
+
+/**
+ * Update the relative time since last execution on output info image.
+ */
+colab.cell.OutputArea.prototype.updateImageTitle = function() {
+  var userString = this.lastExecUser_ || 'Unknown';
+  var timeString = this.lastExecTime_ ?
+      goog.date.relative.getDateString(
+          goog.date.DateTime.fromTimestamp(this.lastExecTime_)) :
+      'Unknown Time';
+  goog.dom.setProperties(this.infoImg_, {
+      'title': 'executed by ' + userString + '\n' + timeString,
+      'alt': userString
+  });
+};
+
 
 /** @inheritDoc */
 colab.cell.OutputArea.prototype.createDom = function() {
   var element = goog.dom.createDom('div', 'output');
 
   // create header
-  var expandDiv = goog.dom.createDom('div', 'output-image');
-  var hContent = goog.dom.createDom('div', 'output-header-content');
   var header = goog.dom.createDom('div', 'output-header');
-  goog.dom.appendChild(header, expandDiv);
-  goog.dom.append(header, 'Output:');
-  goog.dom.appendChild(header, hContent);
   goog.dom.appendChild(element, header);
 
   // create content div
-  var content = goog.dom.createDom('div', 'output-content');
-  goog.dom.appendChild(element, content);
+  this.outputPane_ = goog.dom.createDom('div', 'output-content');
+  goog.dom.appendChild(element, this.outputPane_);
+
+  var info = goog.dom.createDom('div', 'output-info');
+  goog.dom.appendChild(this.outputPane_, info);
+  this.infoImg_ = goog.dom.createDom('img', {
+      'class': 'collaborator collaborator-img',
+      'src': '/colab/img/anon.jpeg'
+    });
+  this.updateImageTitle();
+  goog.dom.appendChild(info, this.infoImg_);
+
+  var container = goog.dom.createDom('div', 'output-iframe-container');
+  goog.dom.appendChild(this.outputPane_, container);
 
   this.setElementInternal(element);
 };
 
+
 /** @inheritDoc */
 colab.cell.OutputArea.prototype.getContentElement = function() {
-  return goog.dom.getElementByClass('output-content', this.getElement());
+  return goog.dom.getElementByClass('output-iframe-container',
+      this.getElement());
 };
+
+/**
+ * Check whether this has any outputs in its internal realtime list.
+ * @return {boolean}
+ */
+colab.cell.OutputArea.prototype.hasOutput = function() {
+  return (this.outputs_.length != 0);
+};
+
 
 /**
  * Toggles output
  */
 colab.cell.OutputArea.prototype.toggle = function() {
-  this.zippy_.toggle();
+  this.setVisible(!this.isOutputVisible());
 };
+
 
 /** @inheritDoc */
 colab.cell.OutputArea.prototype.enterDocument = function() {
   goog.base(this, 'enterDocument');
 
-  // show element if there are no outputs
-  goog.style.setElementShown(this.getElement(), this.outputs_.length != 0);
-
+  // TODO(jasnyder): use custom animation instead of zippy to reveal from top
+  // as in quantum paper spec and to get rid of lingering border
   var header = goog.dom.getElementByClass('output-header', this.getElement());
-  this.zippy_ = new goog.ui.AnimatedZippy(header,
-      this.getContentElement(), true);
+  this.zippy_ = new goog.ui.Zippy(header, this.outputPane_);
 
   // create output
   this.realtimeUpdateHandler = goog.bind(this.outputsChanged_, this);
@@ -130,22 +190,33 @@ colab.cell.OutputArea.prototype.enterDocument = function() {
 
   // NOTE: these are not currently removed at any point.
   this.outputs_.addEventListener(gapi.drive.realtime.EventType.VALUES_ADDED,
-    this.realtimeUpdateHandler);
+      this.realtimeUpdateHandler);
   this.outputs_.addEventListener(gapi.drive.realtime.EventType.VALUES_REMOVED,
-    this.realtimeOutputsRemovedHandler);
+      this.realtimeOutputsRemovedHandler);
   this.outputs_.addEventListener(gapi.drive.realtime.EventType.VALUES_SET,
-    this.realtimeUpdateHandler);
+      this.realtimeUpdateHandler);
+
+  this.getHandler().listenWithScope(this.infoImg_,
+      goog.events.EventType.MOUSEOVER, this.updateImageTitle, false, this);
+
+  this.setVisible(true /* only if output */);
 };
 
+
 /**
- * Set output area visible. Visible is inputted value is true and there
- * is outputs are not empty.
+ * Set output area visible if both given value and output exists.
  * @param {boolean} value True if visible
  */
 colab.cell.OutputArea.prototype.setVisible = function(value) {
- goog.style.setElementShown(this.getElement(),
-     value && this.outputs_.length != 0);
+  this.zippy_.setExpanded(value && this.hasOutput());
 };
+
+
+/** @return {boolean} */
+colab.cell.OutputArea.prototype.isOutputVisible = function() {
+  return this.zippy_.isExpanded();
+};
+
 
 /**
  * Clear the output area.
@@ -153,6 +224,7 @@ colab.cell.OutputArea.prototype.setVisible = function(value) {
 colab.cell.OutputArea.prototype.clearOutput = function() {
   this.outputs_.clear();
 };
+
 
 /**
  * NOTE: this should be in sync with outputarea.html, which is a backup.
@@ -190,12 +262,13 @@ colab.cell.OutputArea.html = '<head>' +
     '</div>' +
     '</body>';
 
+
 /**
  * Creates iframe output.
  * Can be called after removeOutput() was called
  */
 colab.cell.OutputArea.prototype.createOutput = function() {
-  if (colab.hashParams.nodisplayOutput) { return; }
+  if (colab.params.getHashParams().nodisplayOutput) { return; }
   if (this.outputIframe) {
     this.outputIframe.remove();
   }
@@ -206,7 +279,7 @@ colab.cell.OutputArea.prototype.createOutput = function() {
     // support sandbox at all, we should be serving this from a
     // different domain, otherwise it is a security hole if browser
     // ignores sandbox attribute.
-    //  src: '/ipython/v2/outputframe.html',
+    //  src: '/ipython/outputframe.html',
     height: '20px',
     srcdoc: colab.cell.OutputArea.html,
     sandbox: 'allow-forms allow-scripts'
@@ -229,7 +302,7 @@ colab.cell.OutputArea.prototype.createOutput = function() {
     cell.postUpdate({
       action: 'config',
       value: { 'cellId': cell.cellId,
-               'allowEphemeralScripts': cell.allowEphemeralScripts_ }
+        'allowEphemeralScripts': cell.allowEphemeralScripts_ }
     });
     // populate outputIframe with initial value of outputs_
     for (var i = 0; i < cell.outputs_.length; i++) {
@@ -242,6 +315,7 @@ colab.cell.OutputArea.prototype.createOutput = function() {
   };
 };
 
+
 /**
  * Removes iframe output
  */
@@ -252,6 +326,7 @@ colab.cell.OutputArea.prototype.removeOutput = function() {
   this.outputIframe = null;
 };
 
+
 /**
  * Resizes output, desiredHeight is used as hint
  * but no guarantee is made.
@@ -259,8 +334,9 @@ colab.cell.OutputArea.prototype.removeOutput = function() {
  * @param {number=} desiredHeight - the new desired height.
  */
 colab.cell.OutputArea.prototype.resizeOutput = function(desiredHeight) {
-   /** @const */
-  var maxHeight = 2 * window.innerHeight / 3;
+  var container = goog.dom.getElementByClass('notebook-container');
+
+  var maxHeight = 2 * goog.style.getSize(container).height / 3;
   desiredHeight = Math.min(desiredHeight, maxHeight);
 
   if (this.height == desiredHeight) return;
@@ -273,9 +349,10 @@ colab.cell.OutputArea.prototype.resizeOutput = function(desiredHeight) {
 
   // Find scrolling point that we want to keep still, if selected cell is
   // on the screen and visible, use its top, otherwise, use window.topY
-  var refScroll = window.scrollY;
-  var scrollCell = colab.globalNotebook ?
-      colab.globalNotebook.getSelectedCell() : null;
+  var refScroll = container.scrollTop;
+
+  var scrollCell = colab.Global.getInstance().notebook ?
+      colab.Global.getInstance().notebook.getSelectedCell() : null;
   var resizingCurrentCell = false;
   if (scrollCell && scrollCell.isVisible()) {
     // Use selected cell as reference.
@@ -291,14 +368,15 @@ colab.cell.OutputArea.prototype.resizeOutput = function(desiredHeight) {
   // Change happened above, so we need to scroll to keep the reference
   // point in the right place.
   if (this_bounds.top <= refScroll) {
-    jQuery('html, body').animate(
-        {'scrollTop': (window.scrollY + heightIncrease)});
+    jQuery(container).animate(
+        {'scrollTop': (container.scrollTop + heightIncrease)}, 100);
   } else if (resizingCurrentCell) {
     // If selected cell is the one being resized, reposition it so that
     // it is fits the screen
     scrollCell.scrollIntoView();
   }
 };
+
 
 /**
  * Posts data message to the content iframe
@@ -311,6 +389,7 @@ colab.cell.OutputArea.prototype.postUpdate = function(data) {
   this.outputIframe.contentWindow.postMessage(data, '*');
 };
 
+
 /**
  * Allows execution of ephemeral scripts
  */
@@ -318,12 +397,14 @@ colab.cell.OutputArea.prototype.allowEphemeralScripts = function() {
   this.allowEphemeralScripts_ = true;
 };
 
+
 /**
  * Clear output area.
  */
 colab.cell.OutputArea.prototype.clear = function() {
   this.outputs_.clear();
 };
+
 
 /**
  * Add add output from IPython kernel.
@@ -334,13 +415,11 @@ colab.cell.OutputArea.prototype.clear = function() {
 colab.cell.OutputArea.prototype.handleKernelOutputMessage =
     function(msgType, content) {
   var output = this.convertKernelOutput_(msgType, content);
-  var lastOutput = null;
-  var lastEl = this.outputs_.length - 1;
-  if (lastEl >= 0) {
-    lastOutput = this.outputs_.get(lastEl);
-  }
+  var lastOutIdx = this.outputs_.length - 1;
+  var lastOutput = this.hasOutput() ?
+      this.outputs_.get(lastOutIdx) : null;
   if (this.tryMerge(/** @type {Object} */ (lastOutput), output)) {
-    this.outputs_.set(lastEl, output);
+    this.outputs_.set(lastOutIdx, output);
   } else {
     this.outputs_.push(output);
   }
@@ -376,18 +455,19 @@ colab.cell.OutputArea.prototype.tryMerge = function(prevOut, nextOut) {
  * @private
  */
 colab.cell.OutputArea.prototype.outputsRemoved_ = function(e) {
-  // only show the output area if there is output to show.
-  goog.style.setElementShown(this.getElement(), this.outputs_.length != 0);
-  if (this.outputs_.length == 0) {
+  this.setVisible(true /* only if output */);
+
+  if (!this.hasOutput()) {
     this.createOutput();
     this.localContent_ = true;
+    this.dispatchEvent(goog.ui.Component.EventType.CHANGE);
   } else {
     // If this event comes from another client, then mark the content of
     // this output area as not all local.
     this.localContent_ = this.localContent_ && e.isLocal;
     if (this.iframeLoaded) {
       this.postUpdate({action: 'remove', index: e.index,
-                       num: e.values.length });
+        num: e.values.length });
     }
   }
 };
@@ -400,8 +480,8 @@ colab.cell.OutputArea.prototype.outputsRemoved_ = function(e) {
  * @private
  */
 colab.cell.OutputArea.prototype.outputsChanged_ = function(e) {
-  // only show the output area if there is output to show.
-  goog.style.setElementShown(this.getElement(), this.outputs_.length != 0);
+  this.setVisible(true /* only if output */);
+  this.dispatchEvent(goog.ui.Component.EventType.CHANGE);
 
   // If this event comes from another client, then mark the content of
   // this output area as not all local.
@@ -528,8 +608,8 @@ colab.cell.OutputArea.prototype.updateOutput_ = function(outputIndex) {
   }
   var rt_output = this.outputs_.get(outputIndex);
   this.postUpdate({action: 'update', index: outputIndex,
-                   value: rt_output});
- };
+    value: rt_output});
+};
 
 
 

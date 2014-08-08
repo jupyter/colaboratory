@@ -4,8 +4,9 @@
  * TODO(kayur): turn this into a component.
  */
 
-goog.provide('colab.Presence');
+goog.provide('colab.presence');
 
+goog.require('colab.Global');
 goog.require('goog.array');
 goog.require('goog.dom');
 
@@ -13,23 +14,26 @@ goog.require('goog.dom');
 /**
  * Update collaborators list.
  */
-colab.updateCollaborators = function() {
+colab.presence.updateCollaborators = function() {
   var collaboratorsDiv = goog.dom.getElement('collaborators');
-  var collaboratorsList = colab.drive.globalNotebook.getDocument()
+  var collaboratorsList = colab.Global.getInstance().notebookModel.getDocument()
       .getCollaborators();
 
-  colab.populateCollaboratorsDiv(collaboratorsDiv, collaboratorsList, 4);
+  colab.presence.populateCollaboratorsDiv(collaboratorsDiv,
+      collaboratorsList, 4);
 };
+
 
 /**
  * Update collaborators list.
  * @param {gapi.drive.realtime.BaseModelEvent} ev
  */
-colab.collaboratorLeft = function(ev) {
+colab.presence.collaboratorLeft = function(ev) {
   var event = /** @type {gapi.drive.realtime.CollaboratorLeftEvent} */ (ev);
-  colab.updateCollaborators();
-  colab.globalNotebook.removeCollaborator(event.collaborator);
+  colab.presence.updateCollaborators();
+  colab.Global.getInstance().notebook.removeCollaborator(event.collaborator);
 };
+
 
 /**
  * Create the portrait for a collaborator.
@@ -37,16 +41,16 @@ colab.collaboratorLeft = function(ev) {
  * @return {Element} Img element for the collaborator
  * @private
  */
-colab.createCollaboratorImg_ = function(collaborator) {
+colab.presence.createCollaboratorImg_ = function(collaborator) {
   var imgSrc = collaborator.photoUrl == null ?
-      'img/anon.jpeg' : 'https:' + collaborator.photoUrl;
+      'img/anon.jpeg' : colab.drive.urlWithHttpsProtocol(collaborator.photoUrl);
 
   var isMe = collaborator.isMe &&
-      collaborator.sessionId === colab.globalMe.sessionId &&
-      collaborator.userId === colab.globalMe.userId;
+      collaborator.sessionId === colab.Global.getInstance().me.sessionId &&
+      collaborator.userId === colab.Global.getInstance().me.userId;
 
   var collaboratorImg = goog.dom.createDom('img', {
-    'class': 'collaborator-img',
+    'class': 'collaborator collaborator-img',
     'style': 'background-color:' + collaborator.color,
     'src': imgSrc,
     'title': collaborator.displayName + (isMe ? ' (Me)' : ''),
@@ -56,6 +60,7 @@ colab.createCollaboratorImg_ = function(collaborator) {
   return collaboratorImg;
 };
 
+
 /**
  * Create div with the list of collaborators. If there are more than the
  * number that can be shown. We show n-1 portraits, and collapse the rest into
@@ -63,9 +68,9 @@ colab.createCollaboratorImg_ = function(collaborator) {
  *
  * @param {Element} collaboratorsDiv Container for collaborators
  * @param {Array.<gapi.drive.realtime.Collaborator>} collaborators
- * @param {number} opt_numShown Maximum collaborators shown. Default 2.
+ * @param {number=} opt_numShown Maximum collaborators shown. Default 2.
  */
-colab.populateCollaboratorsDiv = function(collaboratorsDiv,
+colab.presence.populateCollaboratorsDiv = function(collaboratorsDiv,
     collaborators, opt_numShown) {
   var numShown = opt_numShown || 2;
 
@@ -81,9 +86,9 @@ colab.populateCollaboratorsDiv = function(collaboratorsDiv,
     if (numShown < collaborators.length && index >= (numShown - 1)) {
       overflowCollaborators.push(collaborator.displayName);
     } else {
-      var collaboratorImg = colab.createCollaboratorImg_(collaborator);
+      var collaboratorImg = colab.presence.createCollaboratorImg_(collaborator);
       goog.dom.appendChild(collaboratorsDiv, collaboratorImg);
-  }
+    }
   });
 
   // add overflow collaborators
@@ -91,7 +96,7 @@ colab.populateCollaboratorsDiv = function(collaboratorsDiv,
     var overflowText = '+' + (collaborators.length - numShown + 1).toString();
     var overflowDiv = goog.dom.createDom('div',
         {
-          'class': 'collaborator-overflow',
+          'class': 'collaborator collaborator-overflow',
           'title': overflowCollaborators.join('\n')
         },
         goog.dom.createDom('span', 'overflow-text', overflowText));

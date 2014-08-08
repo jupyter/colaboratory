@@ -36,15 +36,18 @@
       IPython.CommManager = function() {}
       IPython.WidgetManager = function() {}
     </script>
+
     <script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-      delayStartupUntil: "configured"
-    });
+      MathJax.Hub.Config({
+        delayStartupUntil: "configured"
+      });
     </script>
+
     <script type="text/x-mathjax-config"
             src="/extern/mathjax/config/TeX-AMS_HTML-full.js"
             charset="utf-8">
     </script>
+
     <script type="text/javascript"
             src="/extern/mathjax/MathJax.js"
             charset="utf-8">
@@ -59,27 +62,37 @@
             charset="utf-8">
     </script>
 
+     <script src="/colab/js/colabdeps.js"></script>
      <script src="/colab/js/client_id.js"></script>
-     <script src="/colab/js/preferences.js"></script>
+     <script src="/colab/js/model/preferences.js"></script>
+     <script src="/colab/js/notification.js"></script>
+     <script src="/colab/js/params.js"></script>
+     <script src="/colab/js/global.js"></script>
      <script src="/colab/js/undo.js"></script>
      <script src="/colab/js/dialog.js"></script>
-     <script src="/colab/js/colabdeps.js"></script>
      <script src="/colab/js/error.js"></script>
-     <script src="/colab/js/params.js"></script>
-     <script src="/colab/js/notification.js"></script>
      <script src="/colab/js/app.js"></script>
      <script src="/colab/js/pnacl_kernel.js"></script>
      <script src="/colab/js/nbformat.js"></script>
+     <script src="/colab/js/api_wrapper.js"></script>
      <script src="/colab/js/filepicker.js"></script>
-     <script src="/colab/js/permissions.js"></script>
+     <script src="/colab/js/model/permissions.js"></script>
      <script src="/colab/js/drive.js"></script>
+     <script src="/colab/js/model/notebook.js"></script>
+     <script src="/colab/js/shadow.js"></script>
      <script src="/colab/js/share.js"></script>
-     <script src="/colab/js/sharingstate.js"></script>
+     <script src="/colab/js/model/sharingstate.js"></script>
      <script src="/colab/js/services.js"></script>
+     <script src="/colab/js/svgbutton.js"></script>
      <script src="/colab/js/presence.js"></script>
+     <script src="/colab/js/cell/addcell.js"></script>
      <script src="/colab/js/cell/cell.js"></script>
      <script src="/colab/js/cell/tooltip.js"></script>
      <script src="/colab/js/cell/editor.js"></script>
+     <script src="/colab/js/cell/sliderwidget.js"></script>
+     <script src="/colab/js/cell/textfieldwidget.js"></script>
+     <script src="/colab/js/cell/combowidget.js"></script>
+     <script src="/colab/js/cell/titlewidget.js"></script>
      <script src="/colab/js/cell/formview.js"></script>
      <script src="/colab/js/cell/outputarea.js"></script>
      <script src="/colab/js/cell/codecell.js"></script>
@@ -87,8 +100,8 @@
      <script src="/colab/js/cell/cellfactory.js"></script>
      <script src="/colab/js/comments.js"></script>
      <script src="/colab/js/bottompane.js"></script>
-     <script src="/colab/js/notebook.js"></script>
      <script src="/colab/js/header.js"></script>
+     <script src="/colab/js/notebook.js"></script>
      <script src="/colab/js/main.js"></script>
 
     <!-- Load the Markdown libraries. -->
@@ -98,6 +111,7 @@
 
     <!-- Load bootstrapping code for interactive notebooks -->
     <script src="/colab/js/colabtools.js"></script>
+    <link rel="stylesheet" href="/extern/polymer/paper-shadow/paper-shadow.css">
     <link rel="stylesheet" href="/closure/css/common.css">
     <link rel="stylesheet" href="/closure/css/menu.css">
     <link rel="stylesheet" href="/closure/css/menubar.css">
@@ -107,8 +121,11 @@
     <link rel="stylesheet" href="/closure/css/toolbar.css">
     <link rel="stylesheet" href="/closure/css/combobox.css">
     <link rel="stylesheet" href="/closure/css/dialog.css">
+    <link rel="stylesheet" href="/closure/css/tab.css">
+    <link rel="stylesheet" href="/closure/css/tabbar.css">
     <link rel="stylesheet" href="/colab/css/main.css"/>
     <link rel="stylesheet" href="/colab/css/cell.css"/>
+    <link rel="stylesheet" href="/colab/css/celltoolbar.css"/>
     <link rel="stylesheet" href="/colab/css/ansi.css"/>
     <link rel="stylesheet" href="/colab/css/header.css"/>
     <link rel="stylesheet" href="/colab/css/form.css"/>
@@ -124,12 +141,13 @@
           <div id="header-doc-toolbar">
             <input id="doc-name" disabled>
             <span id="message-area"> </span>
+            <!-- note: all id, should much ids assigned to shortcuts in notebook.js -->
             <div id="top-menubar" class="goog-menubar format-lightborder" style="display: none;">
               <div id="file-button" class="goog-menu-button" title="File">
                 File
                 <div id="file-menu-button" class="goog-menu">
-                  <div class="goog-menuitem goog-menuitem" id="open-menuitem">Open...</div>
-                  <div class="goog-menuitem goog-menuitem" id="new-menuitem">New Notebook</div>
+                  <div class="goog-menuitem" id="open-menuitem">Open...</div>
+                  <div class="goog-menuitem" id="new-menuitem">New Notebook</div>
                   <div class="goog-menuseparator goog-menuitem-disabled"
                   id="openlocalfs-separator"></div>
                   <div class="goog-menuitem" id="openlocalfs-menuitem">Open Local Directory</div>
@@ -150,7 +168,6 @@
                   <div class="goog-menuitem" id="redo-menuitem">Redo</div>
                   <div class="goog-menuseparator"></div>
                   <div class="goog-menuitem" id="clear-outputs-menuitem">Clear Outputs</div>
-                  <div class="goog-menuitem" id="clear-notebook-menuitem">Clear Notebook</div>
                 </div>
               </div>
               <div id="run-menu-button" class="goog-menu-button" title="Edit">
@@ -208,7 +225,7 @@
       </div>
     </div>
 
-    <!-- Load the Realtime libraries.  This must come after loading colab/js/main.js -->
+    <!-- Load the Realtime libraries.  This must come after loading /colab/js/main.js -->
     <script type="text/javascript"
                src="https://apis.google.com/js/api.js?onload=onClientLoad"></script>
 

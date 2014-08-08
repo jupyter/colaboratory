@@ -1,20 +1,8 @@
-goog.provide('colab.cell');
-goog.provide('colab.cell.CellType');
+goog.provide('colab.cell.factory');
 
-goog.require('colab.cell.Cell');
+goog.require('colab.cell.CellType');
 goog.require('colab.cell.CodeCell');
 goog.require('colab.cell.TextCell');
-
-/**
- * Type of cells. Both colab types and IPython types.
- * @enum {string}
- */
-colab.cell.CellType = {
-  CODE: 'code', // used by both colab and IPython
-  TEXT: 'text', // only used by colab
-  HEADING: 'heading', // used only by IPython
-  MARKDOWN: 'markdown' //used only by IPython
-};
 
 
 /**
@@ -22,10 +10,10 @@ colab.cell.CellType = {
  *
  * @param {gapi.drive.realtime.CollaborativeMap} realtimeCell The realtime
  *     cell object.
- * @param {colab.drive.Permissions} permissions Edit permissions
+ * @param {!colab.drive.Permissions} permissions Edit permissions
  * @return {colab.cell.Cell} A cell object.
  */
-colab.cell.cellFromRealtime = function(realtimeCell, permissions) {
+colab.cell.factory.fromRealtime = function(realtimeCell, permissions) {
   if (realtimeCell.get('type') == colab.cell.CellType.CODE) {
     var cell = new colab.cell.CodeCell(realtimeCell, permissions);
   } else {
@@ -43,7 +31,7 @@ colab.cell.cellFromRealtime = function(realtimeCell, permissions) {
  * @param {string=} opt_text initial value of the cell.
  * @return {gapi.drive.realtime.CollaborativeMap} A realtime cell
  */
-colab.cell.newRealtimeCell = function(model, type, opt_text) {
+colab.cell.factory.newRealtimeCell = function(model, type, opt_text) {
   var realtimeCell = model.createMap();
   realtimeCell.set('text', model.createString(opt_text));
   realtimeCell.set('type', type);

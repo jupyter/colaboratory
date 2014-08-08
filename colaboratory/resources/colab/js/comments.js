@@ -8,16 +8,18 @@ goog.provide('colab.Comment');
 goog.provide('colab.CommentsWidget');
 goog.provide('colab.NewComment');
 
-goog.require('colab.drive');
-goog.require('colab.drive.Permissions');
+goog.require('goog.date');
+goog.require('goog.date.DateTime');
 goog.require('goog.date.relative');
 goog.require('goog.dom');
 goog.require('goog.dom.forms');
+goog.require('goog.style');
+
 
 
 /**
  * Creates a new comments widget object.
- * @param {colab.drive.NotebookModel} notebook The Realtime Notebook model.
+ * @param {colab.model.Notebook} notebook The Realtime Notebook model.
  * @constructor
  *
  * TODO (kestert): replace this with a more standard mechanism for listenining
@@ -64,6 +66,7 @@ colab.CommentsWidget = function(notebook) {
   commentsButton.onclick = goog.bind(this.toggle, this);
 };
 
+
 /**
  * Gets the list of comments from the Google Drive API server, and then
  * redraws the comments list GUI.
@@ -83,6 +86,7 @@ colab.CommentsWidget.prototype.getCommentsList = function() {
     that.redrawCommentsList(comments);
   });
 };
+
 
 /**
  * Redraws the comments list GUI.
@@ -108,6 +112,7 @@ colab.CommentsWidget.prototype.redrawCommentsList = function(comments) {
     goog.dom.appendChild(this.activityBox, comment.element);
   }
 };
+
 
 /**
  * Inserts a comment, then redraw the comments list UI once the comment
@@ -140,7 +145,7 @@ colab.CommentsWidget.prototype.insertComment = function(content) {
 
 colab.CommentsWidget.prototype.toggle = function() {
   goog.style.setElementShown(this.activityBox,
-                         !goog.style.isElementShown(this.activityBox));
+      !goog.style.isElementShown(this.activityBox));
 };
 
 /**
@@ -161,6 +166,8 @@ colab.CommentsWidget.prototype.touchCommentSentinel = function() {
 colab.CommentsWidget.prototype.commentsUpdated = function(timestamp) {
   this.getCommentsList();
 };
+
+
 
 /**
  * Creates a new comment object.
@@ -240,6 +247,7 @@ colab.NewComment = function(userImageUrl, onComment) {
   this.createElement(userImageUrl);
   this.onComment = onComment;
 };
+
 
 /**
  * Draws the UI element for the 'new comment' object.

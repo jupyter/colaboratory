@@ -26,8 +26,8 @@ function testTextFieldWidgetParsing() {
   assertEquals(formView.getChildCount() , 1);
 
   var widget = formView.getChildAt(0);
-  assertEquals(widget.name_, 'x');
-  assertEquals(widget.value_, '5');
+  assertEquals(widget.name, 'x');
+  assertEquals(widget.value, '5');
   assertEquals(widget.getElement().className, 'formview-textfield');
 }
 
@@ -36,8 +36,8 @@ function testSliderWidgetParsing() {
   assertEquals(formView.getChildCount() , 1);
 
   var widget = formView.getChildAt(0);
-  assertEquals(widget.name_, 'x');
-  assertEquals(widget.value_, '5');
+  assertEquals(widget.name, 'x');
+  assertEquals(widget.value, '5');
   assertEquals(widget.getElement().className, 'formview-slider');
 }
 
@@ -46,8 +46,8 @@ function testComboBoxWidgetParsing() {
   assertEquals(formView.getChildCount() , 1);
 
   var widget = formView.getChildAt(0);
-  assertEquals(widget.name_, 'x');
-  assertEquals(widget.value_, '"a"');
+  assertEquals(widget.name, 'x');
+  assertEquals(widget.value, '"a"');
   assertEquals(widget.getElement().className, 'formview-combobox');
 }
 

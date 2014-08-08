@@ -1,12 +1,8 @@
-/**
- *
- * @fileoverview Description of this file.
- *
- */
-
 goog.provide('colab.Preferences');
 
-goog.require('goog.net.Cookies');
+goog.require('goog.net.cookies');
+
+
 
 /**
  * Provides basic preference class. Default implementation maintains
@@ -44,6 +40,7 @@ colab.Preferences = function() {
   this.load();
 };
 
+
 /**
  * Saves preference into persistent strorage (cookies in this implementation)
  */
@@ -54,6 +51,7 @@ colab.Preferences.prototype.save = function() {
   }
   goog.net.cookies.set('colab_prefs', JSON.stringify(res));
 };
+
 
 /**
  * Loads prefernces from persistent storage

@@ -6,6 +6,10 @@
 
 goog.provide('colab.services');
 
+goog.require('colab.Global');
+goog.require('goog.events');
+goog.require('goog.ui.Dialog');
+
 
 /**
  * Message metadata key for message type
@@ -55,13 +59,14 @@ colab.services.handleKernelRequest = function(request) {
   if (!listener) {
     // If no handler was specified, return with error message
     var err = {'type': 'NO_HANDLER_ERROR',
-        'description': 'No handler was provided for the given request type'};
-    colab.globalKernel.send_input_reply(
+      'description': 'No handler was provided for the given request type'};
+    colab.Global.getInstance().kernel.send_input_reply(
         /** @type {JsonObject } */ ({ 'error': err }));
     return;
   }
-  listener(requestContent, goog.bind(colab.globalKernel.send_input_reply,
-      colab.globalKernel));
+  listener(requestContent, goog.bind(
+      colab.Global.getInstance().kernel.send_input_reply,
+      colab.Global.getInstance().kernel));
 };
 
 

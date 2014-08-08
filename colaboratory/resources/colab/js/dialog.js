@@ -5,6 +5,7 @@
 goog.provide('colab.dialog');
 goog.require('goog.ui.Dialog');
 
+
 /**
  * Displays an error dialog
  * @param {string} text Text to display.
@@ -29,6 +30,7 @@ colab.dialog.displayError = function(text, reason) {
   dialog.setDisposeOnHide(true);
   dialog.setVisible(true);
 };
+
 
 /**
  * Returns a simple error handler with given title

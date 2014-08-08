@@ -124,6 +124,18 @@ colab.Webview.prototype.postMessage = function(messageType, opt_content) {
   }, this.extensionOrigin_);
 }
 
+
+/**
+ * The scopes specified in the manifest.  Later versions of Chrome will
+ * allow requesting specific scopes, rather than all scopes listed in the
+ * manifest
+ * @type {Array.<string>}
+ */
+colab.Webview.SCOPES = [
+  "https://www.googleapis.com/auth/drive",
+  "https://www.googleapis.com/auth/drive.install"
+];
+
 /**
  * Provides a service where a webview can request an OAuth token created
  * using the Identity API.  For security reasons, this webview must
@@ -137,9 +149,15 @@ colab.Webview.prototype.provideIdentityApiAuth = function(onDemand) {
   var that = this;
   var obtainAndSendToken = function(interactive) {
     chrome.identity.getAuthToken(
-      {interactive: interactive}, function(token) {
-      var reply = token ? {'token': token} : null;
-      that.postMessage('access_token', reply);
+      {interactive: interactive}, function(tokenString) {
+      var token = null;
+      if (tokenString) {
+        token = {
+          'access_token': tokenString,
+          'scope': colab.Webview.SCOPES.join(' ')
+        };
+      }
+      that.postMessage('access_token', token);
     });
   }
 

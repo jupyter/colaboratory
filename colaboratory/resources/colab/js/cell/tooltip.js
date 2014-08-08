@@ -1,8 +1,8 @@
-goog.provide('colab.tooltip');
 goog.provide('colab.tooltip.Tooltip');
 
 goog.require('goog.dom');
 goog.require('goog.ui.Tooltip');
+
 
 
 /**
@@ -14,6 +14,7 @@ goog.require('goog.ui.Tooltip');
 colab.tooltip.Tooltip = function() {
   this.elementCreated_ = false;
 };
+
 
 /**
  * Creates dom for this tooltip
@@ -39,6 +40,7 @@ colab.tooltip.Tooltip.prototype.initialize = function() {
   this.shown_ = false;
 };
 
+
 /**
  * Shows tooltip with given text, at gixen x, y coordinate, with arrowPoint
  * in relative coordinates.
@@ -58,6 +60,7 @@ colab.tooltip.Tooltip.prototype.show = function(x, y, arrowPoint, text) {
   this.text.innerHTML = IPython.utils.fixConsole(text);
 };
 
+
 /**
  * Shows tooltip at the cursor coordinates of the COdeMirror editor
  * @param {CodeMirror} editor
@@ -69,8 +72,9 @@ colab.tooltip.Tooltip.prototype.showAtCursor = function(editor, text)  {
   var left = Math.max(lineCoords.left - 70, 30);
   this.left = left;
   this.show(left, charCoords.bottom + 10,
-       charCoords.left - left - 30, text);
+      charCoords.left - left - 30, text);
 };
+
 
 /**
  * @return {boolean} true iff the tooltip is currently shown.
@@ -78,6 +82,7 @@ colab.tooltip.Tooltip.prototype.showAtCursor = function(editor, text)  {
 colab.tooltip.Tooltip.prototype.visible = function() {
   return this.shown_;
 };
+
 
 /**
  * Starts tooltip continously following cursor in CodeMirror editor
@@ -90,8 +95,9 @@ colab.tooltip.Tooltip.prototype.startFollowingCursor = function(editor) {
     this.positionUpdateTask = null;
   }
   this.positionUpdateTask = setInterval(
-    goog.bind(this.followCursor, this, editor), 300);
+      goog.bind(this.followCursor, this, editor), 300);
 };
+
 
 /**
  * Realigns (in animated fashion) tooltip so that it is next to the current
@@ -121,6 +127,7 @@ colab.tooltip.Tooltip.prototype.followCursor = function(editor) {
     top: charCoords.bottom + 10 }, 200);
   jQuery(this.arrow).animate({'left' : newPos}, 200);
 };
+
 
 /**
  * Hides tooltip

@@ -5,6 +5,8 @@
  */
 
 goog.require('colab.drive');
+goog.require('colab.drive.ApiWrapper');
+goog.require('goog.array');
 goog.require('goog.events.EventTarget');
 
 goog.provide('colab.sharing');
@@ -23,7 +25,7 @@ colab.sharing.SharingState = function(fileId) {
   this.hasOtherWriters = true;
   this.fileId = fileId;
   var that = this;
-  colab.drive.clientLoaded.then(function() {
+  colab.drive.ApiWrapper.getInstance().clientLoaded.then(function() {
     that.update();
   });
 };

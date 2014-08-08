@@ -1,0 +1,10 @@
+<svg
+ preserveAspectRatio="xMinYMin meet"
+ viewBox="0 0 24 24"
+ xmlns="http://www.w3.org/2000/svg">
+ <g>
+  <title>Less</title>
+    <g><polygon class="icon" fill="black" points="12,8 6,14 7.4,15.4 12,10.8 16.6,15.4 18,14 "/></g>
+  <rect class="bg" fill="none" width="24" height="24"/>
+ </g>
+</svg>

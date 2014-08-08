@@ -2,6 +2,9 @@
 	path = colaboratory/resources/closure-library
 	url = git://github.com/google/closure-library.git
 [submodule "colaboratory/resources/extern/mathjax"]
-	path = colaboratory/resources/extern/mathjax
-	url = git://github.com/mathjax/MathJax.git
-	branch = v2.4-latest
+  path = colaboratory/resources/extern/mathjax
+  url = git://github.com/mathjax/MathJax.git
+  branch = v2.4-latest
+[submodule "colaboratory/resources/extern/polymer/paper-shadow"]
+	path = colaboratory/resources/extern/polymer/paper-shadow
+	url = git://github.com/Polymer/paper-shadow.git

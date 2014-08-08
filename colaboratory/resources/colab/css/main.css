@@ -37,12 +37,16 @@
  */
 .notebook-content {
   margin: 5px 60px;
-  padding: 30px 20px 200px 12px;
+  padding: 10px 16px 200px 16px;
   min-width: 600px;
-  background: white;
   min-height: 800px;
+  background: white;
   border: 1px solid #dadada;
   box-shadow: 0 0 4px rgba(0,0,0,0.1);
+}
+
+.notebook-container {
+  overflow-y: scroll;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -83,7 +87,7 @@ input.text_filter.search_init {
 }
 
 .bottompane-handle {
-  background: rgb(124, 124, 124);
+  background: #777;
   height: 5px;
   cursor: row-resize;
 }
@@ -91,12 +95,11 @@ input.text_filter.search_init {
 .bottompane-content {
   background: white;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .bottompane-toolbar {
   text-align: right;
-  background: white;
   padding-right: 10px;
   position: absolute;
   right: 0;
@@ -112,11 +115,47 @@ input.text_filter.search_init {
   border: solid black 1px;
 }
 
+.tab-content {
+  overflow-y: scroll;
+}
+
 .code-help {
   white-space: pre-wrap;
   margin: 15px;
 }
 
-body.bottompane-drag {
- cursor: row-resize;
+body.bottompane-drag, body.bottompane-drag * {
+ cursor: row-resize !important;
+}
+
+.goog-tab {
+  color: #666;
+  text-decoration: none;
+}
+
+.goog-tab-selected {
+  color: #222;
+  border: 1px solid #818181;
+}
+
+.goog-tab:hover {
+  color: #222;
+  text-decoration: none;
+  padding-bottom: 5px;
+  box-shadow: inset 0 1px 5px #ccc;
+  background: whitesmoke;
+}
+
+.goog-tab-bar {
+  background-color: whitesmoke;
+}
+
+.goog-tab-bar-top {
+  border-bottom: 1px solid #919191!important;
+}
+
+.goog-tab-bar-top .goog-tab {
+  margin: 1px 0 0 2px;
+  -moz-border-radius: 2px 2px 0 0;
+  border-radius: 2px 2px 0 0;
 }

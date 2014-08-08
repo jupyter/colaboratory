@@ -1,0 +1,53 @@
+.cell-toolbar {
+  display: none;
+  z-index: 21;
+}
+
+.cell-toolbar > .goog-toolbar {
+  background: transparent; /* otherwise overdraws add-cell */
+  padding: 0px;
+  text-align: end;
+  border: 0px;
+  height: 24px;
+  font: normal 12px 'Open Sans'
+}
+
+.cell-toolbar-visible,
+.cell.selected .cell-toolbar
+{
+  display: block;
+}
+
+.cell-toggle-button,
+.cell-clear-output-button
+{
+  display: none;
+}
+
+.code-has-output .cell-toggle-button,
+.code-has-output .cell-clear-output-button
+{
+  display: inline-block;
+}
+
+.cell-toolbar .goog-toolbar-button img {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.cell-toolbar .goog-toolbar-button:hover img {
+  border-color: #a1badf;
+}
+
+.cell-toolbar .goog-toolbar-button
+.goog-toolbar-button-inner-box,
+.cell-toolbar .goog-toolbar-button
+.goog-toolbar-button-outer-box {
+  padding: 0;
+  margin: 0;
+  border: none;
+}

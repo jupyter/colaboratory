@@ -1,0 +1,10 @@
+<svg
+ preserveAspectRatio="xMinYMin meet"
+ viewBox="0 0 24 24"
+ xmlns="http://www.w3.org/2000/svg">
+ <g>
+  <title>Clear</title>
+    <g><polygon class="icon" fill="black" points="19,6.4 17.6,5 12,10.6 6.4,5 5,6.4 10.6,12 5,17.6 6.4,19 12,13.4 17.6,19 19,17.6 13.4,12 "/></g>
+  <rect class="bg" fill="none" width="24" height="24"/>
+ </g>
+</svg>

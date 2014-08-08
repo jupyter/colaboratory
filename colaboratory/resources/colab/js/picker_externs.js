@@ -119,10 +119,12 @@ google.picker.Picker = function() {};
 google.picker.Picker.prototype.setVisible = function() {};
 
 
+
 /**
  * @constructor
  */
 google.picker.PickerEvent = function() {};
+
 
 /**
  * @type {string}
@@ -134,6 +136,7 @@ google.picker.PickerEvent.prototype.action = '';
  * @type {Array.<?>}
  */
 google.picker.PickerEvent.prototype.docs = null;
+
 
 
 /**
@@ -151,6 +154,7 @@ google.picker.View.prototype.setMimeTypes = function(mimetypes) {};
 google.picker.View.prototype.setMode = function(mimetypes) {};
 
 
+
 /** @constructor */
 google.picker.DocsUploadView = function() {};
 
@@ -165,14 +169,17 @@ google.picker.DocsUploadView.prototype.setIncludeFolders = function(b) {};
 /** @constructor */
 google.picker.DocsView = function() {};
 
+
 /**
  */
 google.picker.DocsViewMode = {};
+
 
 /**
  * @type {string}
  */
 google.picker.DocsViewMode.LIST = '';
+
 
 /**
  * @param {*} b
@@ -184,6 +191,8 @@ google.picker.DocsView.prototype.setIncludeFolders = function(b) {};
  * @param {boolean} b
  */
 google.picker.DocsView.prototype.setSelectFolderEnabled = function(b) {};
+
+
 
 /**
  * @param {*=} opt_a
@@ -260,6 +269,8 @@ google.picker.DocsView.prototype.setLabel = function(a) {
 google.picker.DocsView.prototype.setParent = function(a) {
   return null;
 };
+
+
 /**
  * @param {boolean} a
  * @return {google.picker.PickerBuilder}
@@ -267,6 +278,7 @@ google.picker.DocsView.prototype.setParent = function(a) {
 google.picker.DocsView.prototype.setOwnedByMe = function(a) {
   return null;
 };
+
 
 /**
  * @param {*} a
@@ -282,7 +294,7 @@ google.picker.PickerBuilder.prototype.setOAuthToken = function(a) {
  * @return {google.picker.PickerBuilder}
  */
 google.picker.PickerBuilder.prototype.setOrigin = function(a) {
-   return null;
+  return null;
 };
 
 
