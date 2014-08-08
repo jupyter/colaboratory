@@ -174,6 +174,7 @@ colab.drive.ApiWrapper.prototype.authorize = function(onSuccess, onFailure,
         } else {
           that.authorize(onSuccess, onFailure, true);
         }
+        return;
       }
 
       onSuccess();
@@ -190,9 +191,12 @@ colab.drive.ApiWrapper.prototype.authorize = function(onSuccess, onFailure,
   // to prevent popup blockers.
   var dialog = new goog.ui.Dialog();
   dialog.setDisposeOnHide(true);
-  dialog.setContent('Click OK to launch the authorization popup window.');
-  dialog.setTitle('Authorization Needed');
-  dialog.setButtonSet(goog.ui.Dialog.ButtonSet.createOk());
+  dialog.setContent('coLaboratory needs access to Google Drive.' +
+      ' Press the button below to continue.');
+  dialog.setTitle('Drive Authorization Needed');
+  dialog.setButtonSet(new goog.ui.Dialog.ButtonSet().addButton(
+      {key: 'Continue', caption: 'Continue >>'},
+      true, false));
 
   goog.events.listen(dialog, goog.ui.Dialog.EventType.SELECT, function(e) {
     doAuthorize();
