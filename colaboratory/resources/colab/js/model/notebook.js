@@ -171,11 +171,11 @@ colab.model.Notebook.prototype.initializeTitle = function() {
 
   // Add event listener
   title.addEventListener(
-      gapi.drive.realtime.EventType.OBJECT_CHANGED, function() {
+       gapi.drive.realtime.EventType.OBJECT_CHANGED, goog.bind(function() {
         this.title_ = title.getText();
         this.dispatchEvent(
             new colab.model.Notebook.TitleChangedEvent(this.title_));
-      });
+	   }, this));
 };
 
 
