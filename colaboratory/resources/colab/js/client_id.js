@@ -75,7 +75,7 @@ colab.scope.FILEPICKER_SCOPE =
  * @const
  * @type {string}
  */
-colab.scope.FILE_SCOPE = 'https://www.googleapis.com/auth/drive';
+colab.scope.FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
 
 /**
