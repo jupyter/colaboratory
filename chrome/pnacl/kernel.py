@@ -13,6 +13,15 @@ import time
 import json
 import logging
 import sys
+import Queue
+import thread
+
+stdin_input = Queue.Queue()
+shell_input = Queue.Queue()
+stdin_output = Queue.Queue()
+shell_output = Queue.Queue()
+iopub_output = Queue.Queue()
+
 sys_stdout = sys.stdout
 sys_stderr = sys.stderr
 
@@ -24,6 +33,8 @@ import IPython
 from IPython.core.interactiveshell import InteractiveShell, InteractiveShellABC
 from IPython.utils.traitlets import Type, Dict, Instance
 from IPython.core.displayhook import DisplayHook
+from IPython.utils import py3compat
+from IPython.utils.py3compat import builtin_mod
 from IPython.utils.jsonutil import json_clean, encode_images
 from IPython.core.displaypub import DisplayPublisher
 from IPython.config.configurable import Configurable
@@ -31,19 +42,17 @@ from IPython.config.configurable import Configurable
 # module defined in shell.cc for communicating via pepper API
 from pyppapi import nacl_instance
 
-def sendMessage(socket_name, msg_type, parent_header=None, content=None):
+def CreateMessage(msg_type, parent_header=None, content=None):
   if parent_header is None:
     parent_header = {}
   if content is None:
     content = {}
-  msg = {
+  return {
       'header': {'msg_type': msg_type},
       'parent_header': parent_header,
       'content': content,
       'msg_type': msg_type,
-      }
-  nacl_instance.send_raw_object({'stream': socket_name,
-                              'json': json.dumps(msg)})
+  }
 
 class MsgOutStream(object):
   """Class to overrides stderr and stdout."""
@@ -62,8 +71,8 @@ class MsgOutStream(object):
     pass
 
   def write(self, string):
-    sendMessage('iopub', 'stream', parent_header=self._parent_header,
-                content={'name': self._stream_name, 'data': string})
+    iopub_output.put(CreateMessage('stream', parent_header=self._parent_header,
+                content={'name': self._stream_name, 'data': string}))
 
   def writelines(self, sequence):
     for string in sequence:
@@ -96,8 +105,8 @@ class PepperShellDisplayHook(DisplayHook):
   def finish_displayhook(self):
     sys.stdout.flush()
     sys.stderr.flush()
-    sendMessage('iopub', 'pyout', parent_header=self.parent_header,
-                content=self.content)
+    iopub_output.put(CreateMessage('pyout', parent_header=self.parent_header,
+                content=self.content))
     self.content = None
 
 
@@ -121,8 +130,8 @@ class PepperDisplayPublisher(DisplayPublisher):
     content['source'] = source
     content['data'] = encode_images(data)
     content['metadata'] = metadata
-    sendMessage('iopub', 'display_data', content=json_clean(content),
-                parent_header=self.parent_header)
+    iopub_output.put(CreateMessage('display_data', content=json_clean(content),
+                parent_header=self.parent_header))
 
   def clear_output(self, stdout=True, stderr=True, other=True):
     content = dict(stdout=stdout, stderr=stderr, other=other)
@@ -133,8 +142,8 @@ class PepperDisplayPublisher(DisplayPublisher):
       sys.stderr.write('\r')
 
     self._flush_streams()
-    sendMessage('iopub', 'clear_output', content=content,
-                parent_header=self.parent_header)
+    iopub_output.put(CreateMessage('clear_output', content=content,
+                parent_header=self.parent_header))
 
 
 class PepperInteractiveShell(InteractiveShell):
@@ -163,8 +172,6 @@ import matplotlib
 import matplotlib.cbook
 """)
 
-execution_count = 1
-
 shell = PepperKernel().shell
 
 # Taken from IPython 2.x branch, IPython/kernel/zmq/ipykernel.py
@@ -182,100 +189,205 @@ def _complete(msg):
   return shell.complete(c['text'], c['line'], cpos)
 
 # Special message to indicate the NaCl kernel is ready.
-sendMessage('iopub', 'status', content={'execution_state': 'nacl_ready'})
+iopub_output.put(CreateMessage('status', content={'execution_state': 'nacl_ready'}))
+
+
+def _no_raw_input(self):
+  """Raise StdinNotImplentedError if active frontend doesn't support
+  stdin."""
+  raise StdinNotImplementedError("raw_input was called, but this "
+                                 "frontend does not support stdin.")
+
+def _raw_input(prompt, parent_header):
+    # Flush output before making the request.
+    sys.stderr.flush()
+    sys.stdout.flush()
+    # flush the stdin socket, to purge stale replies
+    while True:
+        try:
+            stdin_input.get_nowait()
+        except Queue.Empty:
+            break
+
+    # Send the input request.
+    content = json_clean(dict(prompt=prompt))
+    stdin_output.put(CreateMessage('input_request', content=content,
+      parent_header=parent_header))
+
+    # Await a response.
+    while True:
+        try:
+            reply = stdin_input.get()
+        except Exception:
+            print "Invalid Message"
+        except KeyboardInterrupt:
+            # re-raise KeyboardInterrupt, to truncate traceback
+            raise KeyboardInterrupt
+        else:
+            break
+    try:
+        value = py3compat.unicode_to_str(reply['content']['value'])
+    except:
+        print "Got bad raw_input reply: "
+        print reply
+        value = ''
+    if value == '\x04':
+        # EOF
+        raise EOFError
+    return value
+
+def main_loop():
+  execution_count = 1
+  while 1:
+    iopub_output.put(CreateMessage('status', content={'execution_state': 'idle'}))
+    msg = shell_input.get()
+    iopub_output.put(CreateMessage('status', content={'execution_state': 'busy'}))
+
+    if not 'header' in msg:
+      continue
+    request_header = msg['header']
+    if not 'msg_type' in request_header:
+      continue
+    msg_type = request_header['msg_type']
+    if msg_type == 'execute_request':
+      try:
+        content = msg[u'content']
+        code = content[u'code']
+        silent = content[u'silent']
+        store_history = content.get(u'store_history', not silent)
+      except:
+        self.log.error("Got bad msg: ")
+        self.log.error("%s", msg)
+        continue
+
+      # Replace raw_input. Note that is not sufficient to replace
+      # raw_input in the user namespace.
+      if content.get('allow_stdin', False):
+        raw_input = lambda prompt='': _raw_input(prompt, request_header)
+        input = lambda prompt='': eval(raw_input(prompt))
+      else:
+        raw_input = input = lambda prompt='' : _no_raw_input()
+
+      if py3compat.PY3:
+        _sys_raw_input = builtin_mod.input
+        builtin_mod.input = raw_input
+      else:
+        _sys_raw_input = builtin_mod.raw_input
+        _sys_eval_input = builtin_mod.input
+        builtin_mod.raw_input = raw_input
+        builtin_mod.input = input
+
+      # Let output streams know which message the output is for
+      stdout_stream.SetParentHeader(request_header)
+      stderr_stream.SetParentHeader(request_header)
+      shell.displayhook.set_parent_header(request_header)
+      shell.display_pub.set_parent_header(request_header)
+
+      status = 'ok'
+      content = {}
+      try:
+        shell.run_cell(msg['content']['code'],
+                       store_history=store_history,
+                       silent=silent)
+      except Exception, ex:
+        status = 'error'
+        logging.exception('Exception occured while running cell')
+      finally:
+        # Restore raw_input.
+        if py3compat.PY3:
+          builtin_mod.input = _sys_raw_input
+        else:
+          builtin_mod.raw_input = _sys_raw_input
+          builtin_mod.input = _sys_eval_input
+
+      content = {'status': status,
+               'execution_count': execution_count}
+
+      if status == 'ok':
+        content['payload'] = []
+        content['user_variables'] = {}
+        content['user_expressions'] = {}
+      elif status == 'error':
+        content['ename'] = type(ex).__name__
+        content['evalue'] = str(ex)
+        content['traceback'] = []
+
+      execution_count += 1
+      if status == 'error':
+        iopub_output.put(CreateMessage('pyerr', parent_header=request_header,
+                    content={
+                        'execution_count': execution_count,
+                        'ename': type(ex).__name__,
+                        'evalue': str(ex),
+                        'traceback': []
+                        }
+                    ))
+      shell_output.put(CreateMessage('execute_reply', parent_header=request_header,
+                  content=content))
+    elif msg_type == 'complete_request':
+      # Taken from IPython 2.x branch, IPython/kernel/zmq/ipykernel.py
+      txt, matches = _complete(msg)
+      matches = {'matches' : matches,
+                 'matched_text' : txt,
+                 'status' : 'ok'}
+      matches = json_clean(matches)
+      shell_output.put(CreateMessage('complete_reply',
+                  parent_header = request_header,
+                  content = matches))
+    elif msg_type == 'object_info_request':
+      # Taken from IPython 2.x branch, IPython/kernel/zmq/ipykernel.py
+      content = msg['content']
+      object_info = shell.object_inspect(content['oname'],
+                      detail_level = content.get('detail_level', 0))
+      # Before we send this object over, we scrub it for JSON usage
+      oinfo = json_clean(object_info)
+      shell_output.put(CreateMessage('object_info_reply',
+                  parent_header = request_header,
+                  content = oinfo))
+    elif msg_type == 'restart':
+      # break out of this loop, ending this program.
+      # The main event loop in shell.cc will then
+      # run this program again.
+      break
+    elif msg_type == 'kill':
+      # Raise an exception so that the function
+      # running this script will return -1, resulting
+      # in no restart of this script.
+      raise RuntimeError
+
+thread.start_new_thread(main_loop, ())
+
+def deal_message(msg):
+  channel = msg['stream']
+  content = json.loads(msg['json'])
+
+  queues = {'shell': shell_input, 'stdin': stdin_input}
+  queue = queues[channel]
+
+  queue.put(content)
+
+def send_message(stream, msg):
+  nacl_instance.send_raw_object({
+    'stream': stream,
+    'json': json.dumps(msg)
+  })
 
 while 1:
-  sendMessage('iopub', 'status', content={'execution_state': 'idle'})
-  msg = None
-  while msg is None:
-    msg = nacl_instance.wait_for_message()
-  msg = json.loads(msg['json'])
-  sendMessage('iopub', 'status', content={'execution_state': 'busy'})
+  msg = nacl_instance.wait_for_message(timeout=1, sleeptime=10000)
+  try:
+    deal_message(msg)
+  except:
+    pass
 
-  if not 'header' in msg:
-    continue
-  request_header = msg['header']
-  if not 'msg_type' in request_header:
-    continue
-  msg_type = request_header['msg_type']
-  if msg_type == 'execute_request':
+  output_streams = [
+    (stdin_output, 'stdin'),
+    (shell_output, 'shell'),
+    (iopub_output, 'iopub')
+  ]
+  for msg_queue, stream in output_streams:
+    msg = None
     try:
-      content = msg[u'content']
-      code = content[u'code']
-      silent = content[u'silent']
-      store_history = content.get(u'store_history', not silent)
-    except:
-      self.log.error("Got bad msg: ")
-      self.log.error("%s", msg)
-      continue
-
-    # Let output streams know which message the output is for
-    stdout_stream.SetParentHeader(request_header)
-    stderr_stream.SetParentHeader(request_header)
-    shell.displayhook.set_parent_header(request_header)
-    shell.display_pub.set_parent_header(request_header)
-
-    status = 'ok'
-    content = {}
-    try:
-      shell.run_cell(msg['content']['code'],
-                     store_history=store_history,
-                     silent=silent)
-    except Exception, ex:
-      status = 'error'
-      logging.exception('Exception occured while running cell')
-
-    content = {'status': status,
-             'execution_count': execution_count}
-
-    if status == 'ok':
-      content['payload'] = []
-      content['user_variables'] = {}
-      content['user_expressions'] = {}
-    elif status == 'error':
-      content['ename'] = type(ex).__name__
-      content['evalue'] = str(ex)
-      content['traceback'] = []
-
-    execution_count += 1
-    if status == 'error':
-      sendMessage('iopub', 'pyerr', parent_header=request_header,
-                  content={
-                      'execution_count': execution_count,
-                      'ename': type(ex).__name__,
-                      'evalue': str(ex),
-                      'traceback': []
-                      }
-                  )
-    sendMessage('shell', 'execute_reply', parent_header=request_header,
-                content=content)
-  elif msg_type == 'complete_request':
-    # Taken from IPython 2.x branch, IPython/kernel/zmq/ipykernel.py
-    txt, matches = _complete(msg)
-    matches = {'matches' : matches,
-               'matched_text' : txt,
-               'status' : 'ok'}
-    matches = json_clean(matches)
-    sendMessage('shell', 'complete_reply',
-                parent_header = request_header,
-                content = matches)
-  elif msg_type == 'object_info_request':
-    # Taken from IPython 2.x branch, IPython/kernel/zmq/ipykernel.py
-    content = msg['content']
-    object_info = shell.object_inspect(content['oname'],
-                    detail_level = content.get('detail_level', 0))
-    # Before we send this object over, we scrub it for JSON usage
-    oinfo = json_clean(object_info)
-    sendMessage('shell', 'object_info_reply',
-                parent_header = request_header,
-                content = oinfo)
-  elif msg_type == 'restart':
-    # break out of this loop, ending this program.
-    # The main event loop in shell.cc will then
-    # run this program again.
-    break
-  elif msg_type == 'kill':
-    # Raise an exception so that the function
-    # running this script will return -1, resulting
-    # in no restart of this script.
-    raise RuntimeError
+      msg = msg_queue.get_nowait()
+      send_message(stream, msg)
+    except Queue.Empty:
+      pass

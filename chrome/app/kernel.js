@@ -62,7 +62,7 @@ colab.Kernel.prototype.addWebviewListeners_ = function() {
 
   this.webview_.addMessageListener('kernel_message', function(msgType, content) {
     if (that.embed_) {
-      that.embed_.postMessage({json: content});
+      that.embed_.postMessage(content);
     }
   });
 
