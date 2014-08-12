@@ -427,6 +427,45 @@ colab.cell.OutputArea.prototype.handleKernelOutputMessage =
 
 
 /**
+ * Add a raw_input prompt below the output iframe
+ *
+ * @param {Object} message the message from the kernel
+ */
+colab.cell.OutputArea.prototype.handleRawInput = function(message) {
+  var content = message['content'] || {};
+  var prompt = content['prompt'] || '';
+
+  var element = this.getElement();
+
+  var rawInputContainer = goog.dom.createDom('div', 'raw-input-container');
+
+  var rawInputPrompt = goog.dom.createDom('div', 'raw-input-prompt');
+  goog.dom.setTextContent(rawInputPrompt, prompt);
+
+  var rawInput = goog.dom.createDom('input', {
+    'class': 'raw-input',
+    'type': 'text'
+  });
+
+
+  goog.dom.appendChild(element, rawInputContainer);
+  goog.dom.appendChild(rawInputContainer, rawInputPrompt);
+  goog.dom.appendChild(rawInputContainer, rawInput);
+
+  rawInput.addEventListener('keypress', function(e) {
+    if (e.keyCode == 13) {
+      var input = rawInput.value || '';
+      // When user presses enter, send raw_input reply and remove raw input
+      colab.Global.getInstance().kernel.send_input_reply(input);
+      element.removeChild(rawInputContainer);
+    }
+  });
+
+  rawInput.focus();
+};
+
+
+/**
  * Tries to merge old output with the new one
  * Merge is only possible if msgType is the same and the name
  * of the content is the same.

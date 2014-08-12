@@ -623,15 +623,7 @@ colab.cell.CodeCell.prototype.execute = function(opt_isManual) {
         console.log('set_next_input not implemented: ', content);
       }}
     },
-    'input' : goog.bind(function(message) {
-      var dialog = new goog.ui.Prompt('User Input Requested',
-          message['content']['prompt'],
-          function(input) {
-            colab.Global.getInstance().kernel.send_input_reply(input || '');
-          });
-      dialog.setDisposeOnHide(true);
-      dialog.setVisible(true);
-    }, this),
+    'input' : goog.bind(this.outputArea_.handleRawInput, this.outputArea_),
     'iopub' : {
       'clear_output': goog.bind(function() {
         this.outputArea_.clear();
