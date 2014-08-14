@@ -1,0 +1,32 @@
+FROM debian:wheezy
+
+#RUN apt-get update
+RUN sed -i '1i deb     http://gce_debian_mirror.storage.googleapis.com/ wheezy \
+    main' etc/apt/sources.list
+
+RUN apt-get update
+# Install libraries: pip, python dev, vitualenv, zmq, ...
+RUN apt-get install -y git python-pip python-dev liblapack-dev libatlas-base-dev gfortran libfreetype6-dev libpng12-dev libzmq-dev && \
+  easy_install -U distribute && \
+  pip install numpy scipy pandas matplotlib scikit-learn && \
+  pip install patsy && \
+  pip install statsmodels && \
+  pip install python-gflags google-api-python-client && \
+  pip install openpyxl && \
+  pip install pyzmq jinja2 tornado && \
+  pip install ipython[notebook] && \
+  git clone -b master --recursive https://github.com/jupyter/colaboratory.git && \
+  apt-get remove -y --purge python-dev liblapack-dev libatlas-base-dev gfortran libfreetype6-dev libpng12-dev libzmq-dev && \
+  apt-get autoremove -y && \
+  apt-get clean -y
+
+WORKDIR colaboratory
+
+# Install coLaboratory
+RUN pip install -r requirements.txt
+
+# Copy gce_service_account library
+ADD gce_service_account colaboratory/gce_service_account
+
+# Run
+CMD python -m colaboratory --ip='*'
