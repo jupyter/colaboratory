@@ -16,7 +16,7 @@ RUN apt-get install -y git python-pip python-dev liblapack-dev libatlas-base-dev
   pip install pyzmq jinja2 tornado && \
   pip install ipython[notebook] && \
   git clone -b master --recursive https://github.com/jupyter/colaboratory.git && \
-  apt-get remove -y --purge python-dev liblapack-dev libatlas-base-dev gfortran libfreetype6-dev libpng12-dev libzmq-dev && \
+  apt-get remove -y --purge python-dev liblapack-dev libatlas-base-dev gfortran libfreetype6-dev libpng12-dev && \
   apt-get autoremove -y && \
   apt-get clean -y
 
