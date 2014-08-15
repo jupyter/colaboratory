@@ -13,6 +13,7 @@ RUN apt-get install -y git python-pip python-dev liblapack-dev libatlas-base-dev
   pip install python-gflags google-api-python-client && \
   pip install openpyxl && \
   pip install pyzmq jinja2 tornado && \
+  pip install yt && \
   pip install bokeh && \
   pip install ipython[notebook] && \
   git clone -b master --recursive https://github.com/jupyter/colaboratory.git && \
