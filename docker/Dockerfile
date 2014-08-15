@@ -17,18 +17,16 @@ RUN apt-get install -y git python-pip python-dev liblapack-dev libatlas-base-dev
   pip install yt && \
   pip install bokeh && \
   pip install ipython[notebook] && \
-  git clone -b master --recursive https://github.com/jupyter/colaboratory.git && \
   apt-get remove -y --purge python-dev libatlas-base-dev gfortran libfreetype6-dev libpng12-dev && \
   apt-get autoremove -y --purge && \
   apt-get clean -y
+
+ADD / colaboratory
 
 WORKDIR colaboratory
 
 # Install coLaboratory
 RUN pip install -r requirements.txt
-
-# Copy gce_service_account library
-ADD gce_service_account colaboratory/gce_service_account
 
 # Run
 CMD python -m colaboratory --ip='*'
