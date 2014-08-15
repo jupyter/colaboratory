@@ -7,6 +7,7 @@ RUN apt-get update
 # Install libraries: pip, python dev, vitualenv, zmq, ...
 RUN apt-get install -y git python-pip python-dev liblapack-dev libatlas-base-dev gfortran libfreetype6-dev libpng12-dev libzmq-dev && \
   easy_install -U distribute && \
+  pip install -U Cython && \
   pip install numpy scipy pandas matplotlib scikit-learn && \
   pip install patsy && \
   pip install statsmodels && \
