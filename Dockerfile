@@ -21,9 +21,9 @@ RUN apt-get install -y git python-pip python-dev liblapack-dev libatlas-base-dev
   apt-get autoremove -y --purge && \
   apt-get clean -y
 
-ADD / colaboratory
+ADD / /colaboratory/
 
-WORKDIR colaboratory
+WORKDIR /colaboratory
 
 # Install coLaboratory
 RUN pip install -r requirements.txt
