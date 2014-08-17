@@ -251,9 +251,15 @@ div.formview-title > .goog-button:hover {
 }
 
 .add-cell {
-  width: 100%;
-  height: 8px;
+  height: 16px;
   z-index: 20;
+  margin-top: -4px;
+  margin-bottom: -4px;
+  margin-right: 4px;
+}
+
+.add-cell:hover {
+  background: #f9f9f9;
 }
 
 .notebook-content > .add-cell {
@@ -261,7 +267,7 @@ div.formview-title > .goog-button:hover {
 }
 
 .add-cell > hr {
-  margin: 3px auto 0 auto;
+  margin: 7px auto 0 auto;
   width: 144px;
   border-style: solid;
   border-top: none;
@@ -284,7 +290,7 @@ div.formview-title > .goog-button:hover {
   position: absolute;
   width: 32px;
   height: 32px;
-  margin-top: -4px;
+  margin-top: -8px;
   border-radius: 50%;
   background-color: white;
   text-align: center;
