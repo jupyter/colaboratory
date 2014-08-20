@@ -74,3 +74,9 @@ CoLaboratory's collaboration model is evolving. The current model is a single co
 To understand how a state mismatch can manifest, consider the scenario below. Bob and Sue are working on the same notebook at the same time. Both Bob and Sue will have their own kernel state. Bobs changes will change the notebook Sue sees, but Sue's state is unchanged. If sue tries to access the variable Bob created, she will get an error. 
 
 ![Collaboration Error](https://github.com/jupyter/colaboratory/raw/master/documentation/img/collaboration-error.png)
+
+## Development
+
+You can simply edit JavaScript code in place and these changes will be reflected automatically.  You may need to refresh the browser several times to clear the cache after making changes.
+
+If you add new files or add/remove goog.require statements at the start of JavaScript files, you need to run the script build_colab_deps.py in order to compile the list of dependencies.
