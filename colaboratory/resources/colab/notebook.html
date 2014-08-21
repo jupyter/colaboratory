@@ -51,10 +51,14 @@
             charset="utf-8">
     </script>
 
+    {% if raw == '1' %}
     <script type="text/javascript" src="/colab/js/colab.dep"></script>
     <script type="text/javascript">
-      goog.require('colab');
+        goog.require('colab');
     </script>
+    {% else %}
+    <script src="js/modules/js_compiled.js"></script>
+    {% endif %}
 
     <!-- Load the Markdown libraries. -->
     <script type="text/javascript" src="/extern/pagedown/Markdown.Converter.js"></script><style type="text/css"></style>

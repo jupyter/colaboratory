@@ -51,7 +51,7 @@ from IPython.html import DEFAULT_STATIC_FILES_PATH
 from IPython.html.log import log_request
 from IPython.html.services.kernels.kernelmanager import MappingKernelManager
 
-from IPython.html.base.handlers import FileFindHandler
+from IPython.html.base.handlers import (FileFindHandler, IPythonHandler)
 
 from IPython.config.application import catch_config_error
 from IPython.core.application import (
@@ -111,6 +111,12 @@ class SingleStaticFileHandler(web.StaticFileHandler):
         return p
 
 
+class NotebookHandler(IPythonHandler):
+    def get(self, path='', name=None):
+        self.write(self.render_template('notebook.html',
+            raw='1'))
+
+
 class ColaboratoryWebApplication(web.Application):
 
     def __init__(self, ipython_app, kernel_manager, notebook_manager,
@@ -129,7 +135,7 @@ class ColaboratoryWebApplication(web.Application):
                       session_manager,
                       log, settings_overrides,
                       jinja_env_options=None):
-        template_path = settings_overrides.get("template_path", os.path.join(os.path.dirname(__file__), "templates"))
+        template_path = settings_overrides.get("template_path", os.path.join(RESOURCES, "colab"))
         jenv_opt = jinja_env_options if jinja_env_options else {}
         env = Environment(loader=FileSystemLoader(template_path),**jenv_opt )
         settings = dict(
@@ -164,6 +170,7 @@ class ColaboratoryWebApplication(web.Application):
         handlers = [(r'/', web.RedirectHandler, {'url':'/welcome'}),
                     (r'/welcome(/?)', SingleStaticFileHandler,
                         {'path': colab, 'default_filename': 'welcome.html'}),
+                    (r'/notebook(/?)', NotebookHandler, {}),
                     (r'/notebook(/?)', SingleStaticFileHandler,
                         {'path': colab, 'default_filename': 'notebook.html'}),
                     (r'/colab/(.*)', web.StaticFileHandler,
