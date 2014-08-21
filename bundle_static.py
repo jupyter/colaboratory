@@ -6,6 +6,8 @@ import IPython.html
 import shutil
 import urllib
 
+from jinja2 import Template
+
 from install_lib import COLAB_ROOT_PATH
 from install_lib import pjoin
 from install_lib import CopyTreeRecursively
@@ -28,14 +30,6 @@ def BundleStatic(colab_root, dest):
 
   # TODO: run git submodule init && git submodule update in COLAB_ROOT_PATH
 
-  # stage the /, /welcome/, and /notebook/ URLs
-  CopyTreeRecursively(colab_static, pjoin(dest, 'static'))
-  for name in ['welcome', 'notebook']:
-    s = pjoin(colab_resources, 'colab', name + os.extsep + 'html');
-    d = pjoin(dest, name, 'index' + os.extsep + 'html');
-    MakeDirectoryIfNotExist(pjoin(dest, name))
-    shutil.copy(s, d)
-
   # stage the basic colab and extern directories
   CopyTreeRecursively(pjoin(colab_resources, 'colab'), pjoin(dest, 'colab'))
   CopyTreeRecursively(pjoin(colab_resources, 'extern'), pjoin(dest, 'extern'))
@@ -47,6 +41,19 @@ def BundleStatic(colab_root, dest):
 
   # stage closure from the submodule
   CopyTreeRecursively(closure, pjoin(dest, 'closure'))
+
+  # instantiate templates and stage the /, /welcome/, and /notebook/ URLs
+  CopyTreeRecursively(colab_static, pjoin(dest, 'static'))
+  for name in ['welcome', 'notebook']:
+    s = pjoin(colab_resources, 'colab', name + os.extsep + 'html');
+    with open(s) as f:
+      template = Template(f.read());
+
+    for d in [pjoin(dest, name, 'index' + os.extsep + 'html'), pjoin(dest, 'colab', name + os.extsep + 'html')]:
+      path, filename = os.path.split(d)
+      MakeDirectoryIfNotExist(path)
+      with open(d, 'w') as f:
+        f.write(template.render(raw='1'))
 
 
 if __name__ == '__main__':
