@@ -117,6 +117,12 @@ class NotebookHandler(IPythonHandler):
             raw='1',
             app_mode=False))
 
+class WelcomeHandler(IPythonHandler):
+    def get(self, path='', name=None):
+        self.write(self.render_template('welcome.html',
+            raw='1',
+            app_mode=False))
+
 
 class ColaboratoryWebApplication(web.Application):
 
@@ -169,11 +175,8 @@ class ColaboratoryWebApplication(web.Application):
         here = os.path.dirname(__file__)
         colab = pjoin(RESOURCES, 'colab')
         handlers = [(r'/', web.RedirectHandler, {'url':'/welcome'}),
-                    (r'/welcome(/?)', SingleStaticFileHandler,
-                        {'path': colab, 'default_filename': 'welcome.html'}),
+                    (r'/welcome(/?)', WelcomeHandler, {}),
                     (r'/notebook(/?)', NotebookHandler, {}),
-                    (r'/notebook(/?)', SingleStaticFileHandler,
-                        {'path': colab, 'default_filename': 'notebook.html'}),
                     (r'/colab/(.*)', web.StaticFileHandler,
                         {'path': colab}),
                     (r'/extern/(.*)', web.StaticFileHandler,
