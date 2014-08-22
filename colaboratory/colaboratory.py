@@ -114,7 +114,8 @@ class SingleStaticFileHandler(web.StaticFileHandler):
 class NotebookHandler(IPythonHandler):
     def get(self, path='', name=None):
         self.write(self.render_template('notebook.html',
-            raw='1'))
+            raw='1',
+            app_mode=False))
 
 
 class ColaboratoryWebApplication(web.Application):

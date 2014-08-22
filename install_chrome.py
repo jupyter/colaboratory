@@ -76,7 +76,10 @@ def InstallChrome(release, colab_root, dest):
   """
   
   # stage static files
-  BundleStatic(colab_root, dest)
+  extra_template_args={
+    'app_mode': True
+  }
+  BundleStatic(colab_root, dest, extra_template_args=extra_template_args)
 
   # copy chrome app files, putting pnacl files in root
   # as the folder structure is hard coded into the pnacl kernel code

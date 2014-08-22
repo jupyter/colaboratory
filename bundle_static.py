@@ -16,7 +16,15 @@ from install_lib import RemoveDirectoryIfExist
 from install_lib import RemoveFileIfExist
 from install_lib import RemoveFileOrDirectoryIfExist
 
-def BundleStatic(colab_root, dest):
+def BundleStatic(colab_root, dest, extra_template_args=None):
+  # Use the following default arguments for
+  template_args = {
+    'raw': '1',
+    'app_mode': False
+  }
+  if extra_template_args is not None:
+    template_args.update(extra_template_args)
+
   # prepare the destination directory
   MakeDirectoryIfNotExist(dest)
 
@@ -53,7 +61,7 @@ def BundleStatic(colab_root, dest):
       path, filename = os.path.split(d)
       MakeDirectoryIfNotExist(path)
       with open(d, 'w') as f:
-        f.write(template.render(raw='1'))
+        f.write(template.render(template_args))
 
 
 if __name__ == '__main__':
