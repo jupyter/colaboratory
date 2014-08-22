@@ -21,7 +21,7 @@ goog.require('goog.Promise');
  * Whether this webpage is being run inside a webview in a Chrome App.
  * @type {boolean}
  */
-colab.app.appMode = document.head.getAttribute('data-app-mode') == 'True';
+colab.app.appMode = document.body.getAttribute('data-app-mode') == 'True';
 
 
 /**
@@ -29,7 +29,7 @@ colab.app.appMode = document.head.getAttribute('data-app-mode') == 'True';
  * @type {string}
  * @private
  */
-colab.app.extensionOrigin_ = document.head.getAttribute('data-app-origin');
+colab.app.extensionOrigin_ = document.body.getAttribute('data-app-origin');
 
 
 /**

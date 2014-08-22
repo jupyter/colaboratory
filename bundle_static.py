@@ -6,7 +6,8 @@ import IPython.html
 import shutil
 import urllib
 
-from jinja2 import Template
+from jinja2 import Environment
+from jinja2 import FileSystemLoader
 
 from install_lib import COLAB_ROOT_PATH
 from install_lib import pjoin
@@ -51,11 +52,12 @@ def BundleStatic(colab_root, dest, extra_template_args=None):
   CopyTreeRecursively(closure, pjoin(dest, 'closure'))
 
   # instantiate templates and stage the /, /welcome/, and /notebook/ URLs
+  template_path = os.path.join(colab_resources, "colab")
+  env = Environment(loader=FileSystemLoader(template_path))
+
   CopyTreeRecursively(colab_static, pjoin(dest, 'static'))
   for name in ['welcome', 'notebook']:
-    s = pjoin(colab_resources, 'colab', name + os.extsep + 'html');
-    with open(s) as f:
-      template = Template(f.read());
+    template = env.get_template(name + os.extsep + 'html');
 
     for d in [pjoin(dest, name, 'index' + os.extsep + 'html'), pjoin(dest, 'colab', name + os.extsep + 'html')]:
       path, filename = os.path.split(d)
