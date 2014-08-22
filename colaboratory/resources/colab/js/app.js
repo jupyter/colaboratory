@@ -29,7 +29,7 @@ colab.app.appMode = document.head.getAttribute('data-app-mode') == 'True';
  * @type {string}
  * @private
  */
-colab.app.extensionOrigin_ = colab.params.getHashParams().extensionOrigin;
+colab.app.extensionOrigin_ = document.head.getAttribute('data-app-origin');
 
 
 /**

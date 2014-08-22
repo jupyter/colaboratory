@@ -132,13 +132,9 @@ window.addEventListener('load', function() {
     colab.drive.ApiWrapper.getInstance().driveApiReady.then(function() {
       colab.drive.createNewNotebook(function(response) {
         var fileId = response.id;
-        // Change hash param to correspond to newly created notebook, preserving
-        // all hash params except those used to create the file.
+        // Change hash param to correspond to newly created notebook
         // NOTE: this doesn't cause reload because we stay on same page
-        delete params.create;
-        delete params.folderId;
-        params.fileId = fileId;
-        window.location.hash = '#' + colab.params.encodeParamString(params);
+        window.location.hash = '#' + colab.params.encodeParamString({'fileId': fileId});
         loadNotebook(fileId);
       }, onLoadNotebookError, params.folderId);
     }, onLoadNotebookError);
