@@ -17,7 +17,7 @@ RUN apt-get install -y git python-pip python-dev liblapack-dev libatlas-base-dev
   pip install yt && \
   pip install bokeh && \
   pip install ipython[notebook] && \
-  apt-get remove -y --purge python-dev libatlas-base-dev gfortran libfreetype6-dev libpng12-dev && \
+  apt-get remove -y --purge python-dev libatlas-base-dev gfortran && \
   apt-get autoremove -y --purge && \
   apt-get clean -y
 
