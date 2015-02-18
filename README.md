@@ -14,6 +14,9 @@ while coLaboratory Classic executes code via local Jupyter kernels
 (such as the IPython kernel) that have complete access to the host
 system and files.
 
+* CoLaboratory is no longer being actively developed or maintained.  We will consider minor pull requests, but most of the CoLaboratory team's focus is
+now on [integration of Google Drive with IPython/Jupyter](https://github.com/jupyter/jupyter-drive).
+
 ## Setup
 First clone this repo:
 ```
