@@ -3,10 +3,11 @@ goog.provide('colab.cell.AddCellEventType');
 
 goog.require('colab.Shadow');
 goog.require('goog.dom');
-goog.require('goog.events');
+goog.require('goog.dom.TagName');
+goog.require('goog.dom.classlist');
+goog.require('goog.events.EventType');
 goog.require('goog.style');
 goog.require('goog.ui.Component');
-
 
 
 /**
@@ -24,7 +25,7 @@ colab.cell.AddCellEventType = {
  * a noteboook container.
  *
  * @param {!colab.drive.Permissions} permissions Drive permissions
- * @param {string} opt_cellId Id of cell that created the AddCell object. If
+ * @param {string=} opt_cellId Id of cell that created the AddCell object. If
  * undefined, then AddCell is directly owned by the notebook.
  * @final @constructor @extends {goog.ui.Component}
  */
@@ -47,7 +48,7 @@ colab.cell.AddCell = function(permissions, opt_cellId) {
   this.mouseOver_ = false;
 
   /** @private @type {number} */
-  this.SHOW_DELAY_ = 1000;
+  this.SHOW_DELAY_ = 250;
 
   /** @private @type {number} */
   this.FADE_TIME_ = 200;
@@ -82,16 +83,16 @@ colab.cell.AddCell.prototype.createDom = function() {
 
   if (!this.disabled) {
     this.addCode = goog.dom.createDom(goog.dom.TagName.DIV, {
-        'class': 'add-button add-code',
-        'title': 'Add code cell'
-      }, '+c;');
+      'class': 'add-button add-code',
+      'title': 'Add code cell'
+    }, '+c;');
     goog.dom.appendChild(element, this.addCode);
     goog.style.setElementShown(this.addCode, false);
 
     this.addText = goog.dom.createDom(goog.dom.TagName.DIV, {
-        'class': 'add-button add-text',
-        'title': 'Add text cell'
-      }, '+Tt');
+      'class': 'add-button add-text',
+      'title': 'Add text cell'
+    }, '+Tt');
     goog.dom.appendChild(element, this.addText);
     goog.style.setElementShown(this.addText, false);
 
@@ -111,9 +112,9 @@ colab.cell.AddCell.prototype.createDom = function() {
 /** @private @param {boolean} value */
 colab.cell.AddCell.prototype.setButtonsShown_ = function(value) {
   if (value) {
-     jQuery([this.addText, this.addCode]).fadeIn(this.FADE_TIME_);
+    jQuery([this.addText, this.addCode]).fadeIn(this.FADE_TIME_);
   } else {
-     jQuery([this.addText, this.addCode]).fadeOut(this.FADE_TIME_);
+    jQuery([this.addText, this.addCode]).fadeOut(this.FADE_TIME_);
   }
 };
 
@@ -228,15 +229,22 @@ colab.cell.AddCell.prototype.enterDocument = function() {
           this.setButtonsShown_(false);
         });
 
+    handler.listen(this.getElement(), goog.events.EventType.CLICK, function(e) {
+      if (e.shiftKey) {
+        this.dispatchEvent(colab.cell.AddCellEventType.TEXT);
+      } else if (e.metaKey || e.ctrlKey) {
+        this.dispatchEvent(colab.cell.AddCellEventType.CODE);
+      }
+    });
+
     var mouseEvents = [goog.events.EventType.CLICK,
-        goog.events.EventType.MOUSEDOWN, goog.events.EventType.MOUSEUP,
-        goog.events.EventType.MOUSELEAVE];
+      goog.events.EventType.MOUSEDOWN, goog.events.EventType.MOUSEUP,
+      goog.events.EventType.MOUSELEAVE];
 
     [this.addCode, this.addText].forEach(
-      function(button) {
-        handler.listenWithScope(button, mouseEvents, this.handleClickEvents_,
-          false, this);
-    }, this);
+        function(button) {
+          handler.listenWithScope(button, mouseEvents, this.handleClickEvents_,
+              false, this);
+        }, this);
   }
 };
-
