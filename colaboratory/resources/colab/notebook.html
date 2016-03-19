@@ -1,7 +1,6 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>coLaboratory</title>
+{% extends "page.html" %}
+
+{% block head %}
     <script type="text/javascript">
        var pageLoadStart = new Date().getTime();
     </script>
@@ -13,12 +12,31 @@
 
     <link rel="stylesheet" href="/ipython/components/codemirror/lib/codemirror.css"/>
     <link rel="stylesheet" href="/ipython/components/codemirror/addon/hint/show-hint.css"/>
-  </head>
-  <body>
 
+    <link rel="stylesheet" href="/extern/polymer/paper-shadow/paper-shadow.css">
+    <link rel="stylesheet" href="/closure/css/common.css">
+    <link rel="stylesheet" href="/closure/css/menu.css">
+    <link rel="stylesheet" href="/closure/css/menubar.css">
+    <link rel="stylesheet" href="/closure/css/menubutton.css">
+    <link rel="stylesheet" href="/closure/css/menuitem.css">
+    <link rel="stylesheet" href="/closure/css/menuseparator.css">
+    <link rel="stylesheet" href="/closure/css/toolbar.css">
+    <link rel="stylesheet" href="/closure/css/combobox.css">
+    <link rel="stylesheet" href="/closure/css/dialog.css">
+    <link rel="stylesheet" href="/closure/css/tab.css">
+    <link rel="stylesheet" href="/closure/css/tabbar.css">
+    <link rel="stylesheet" href="/colab/css/main.css"/>
+    <link rel="stylesheet" href="/colab/css/cell.css"/>
+    <link rel="stylesheet" href="/colab/css/celltoolbar.css"/>
+    <link rel="stylesheet" href="/colab/css/ansi.css"/>
+    <link rel="stylesheet" href="/colab/css/header.css"/>
+    <link rel="stylesheet" href="/colab/css/form.css"/>
+    <link rel="stylesheet" href="/colab/css/comments.css"/>
+    <link rel="stylesheet" href="/colab/css/ipython.css"/>
+{% endblock %}
+
+{% block js %}
     <script src="/ipython/components/jquery/jquery.min.js"></script>
-
-    <script src="/closure/base.js"></script>
 
     <!-- Load the CodeMirror libraries. -->
     <script src="/ipython/components/codemirror/lib/codemirror.js"></script>
@@ -51,38 +69,25 @@
             charset="utf-8">
     </script>
 
-    <script type="text/javascript" src="/colab/js/colab.dep"></script>
-    <script type="text/javascript">
-      goog.require('colab');
-    </script>
+
 
     <!-- Load the Markdown libraries. -->
     <script type="text/javascript" src="/extern/pagedown/Markdown.Converter.js"></script><style type="text/css"></style>
     <script type="text/javascript" src="/extern/pagedown/Markdown.Sanitizer.js"></script>
     <script type="text/javascript" src="/extern/pagedown/Markdown.Editor.js"></script>
 
+
+{% endblock %}
+
+{% block closure_entrypoint %}
+<script type="text/javascript">
+goog.require('colab');
+</script>
+{% endblock %}
+
+{% block html %}
     <!-- Load bootstrapping code for interactive notebooks -->
     <script src="/colab/js/colabtools.js"></script>
-    <link rel="stylesheet" href="/extern/polymer/paper-shadow/paper-shadow.css">
-    <link rel="stylesheet" href="/closure/css/common.css">
-    <link rel="stylesheet" href="/closure/css/menu.css">
-    <link rel="stylesheet" href="/closure/css/menubar.css">
-    <link rel="stylesheet" href="/closure/css/menubutton.css">
-    <link rel="stylesheet" href="/closure/css/menuitem.css">
-    <link rel="stylesheet" href="/closure/css/menuseparator.css">
-    <link rel="stylesheet" href="/closure/css/toolbar.css">
-    <link rel="stylesheet" href="/closure/css/combobox.css">
-    <link rel="stylesheet" href="/closure/css/dialog.css">
-    <link rel="stylesheet" href="/closure/css/tab.css">
-    <link rel="stylesheet" href="/closure/css/tabbar.css">
-    <link rel="stylesheet" href="/colab/css/main.css"/>
-    <link rel="stylesheet" href="/colab/css/cell.css"/>
-    <link rel="stylesheet" href="/colab/css/celltoolbar.css"/>
-    <link rel="stylesheet" href="/colab/css/ansi.css"/>
-    <link rel="stylesheet" href="/colab/css/header.css"/>
-    <link rel="stylesheet" href="/colab/css/form.css"/>
-    <link rel="stylesheet" href="/colab/css/comments.css"/>
-    <link rel="stylesheet" href="/colab/css/ipython.css"/>
 
     <div id="top-floater">
       <div id="header">
@@ -183,5 +188,4 @@
 
    <!-- Notebook will be inserted here at the end of the document.
         Don't add any html after this line -->
-  </body>
-</html>
+{% endblock %}

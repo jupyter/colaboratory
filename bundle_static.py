@@ -6,6 +6,9 @@ import IPython.html
 import shutil
 import urllib
 
+from jinja2 import Environment
+from jinja2 import FileSystemLoader
+
 from install_lib import COLAB_ROOT_PATH
 from install_lib import pjoin
 from install_lib import CopyTreeRecursively
@@ -14,7 +17,15 @@ from install_lib import RemoveDirectoryIfExist
 from install_lib import RemoveFileIfExist
 from install_lib import RemoveFileOrDirectoryIfExist
 
-def BundleStatic(colab_root, dest):
+def BundleStatic(colab_root, dest, extra_template_args=None):
+  # Use the following default arguments for
+  template_args = {
+    'raw': '1',
+    'app_mode': False
+  }
+  if extra_template_args is not None:
+    template_args.update(extra_template_args)
+
   # prepare the destination directory
   MakeDirectoryIfNotExist(dest)
 
@@ -28,14 +39,6 @@ def BundleStatic(colab_root, dest):
 
   # TODO: run git submodule init && git submodule update in COLAB_ROOT_PATH
 
-  # stage the /, /welcome/, and /notebook/ URLs
-  CopyTreeRecursively(colab_static, pjoin(dest, 'static'))
-  for name in ['welcome', 'notebook']:
-    s = pjoin(colab_resources, 'colab', name + os.extsep + 'html');
-    d = pjoin(dest, name, 'index' + os.extsep + 'html');
-    MakeDirectoryIfNotExist(pjoin(dest, name))
-    shutil.copy(s, d)
-
   # stage the basic colab and extern directories
   CopyTreeRecursively(pjoin(colab_resources, 'colab'), pjoin(dest, 'colab'))
   CopyTreeRecursively(pjoin(colab_resources, 'extern'), pjoin(dest, 'extern'))
@@ -47,6 +50,20 @@ def BundleStatic(colab_root, dest):
 
   # stage closure from the submodule
   CopyTreeRecursively(closure, pjoin(dest, 'closure'))
+
+  # instantiate templates and stage the /, /welcome/, and /notebook/ URLs
+  template_path = os.path.join(colab_resources, "colab")
+  env = Environment(loader=FileSystemLoader(template_path))
+
+  CopyTreeRecursively(colab_static, pjoin(dest, 'static'))
+  for name in ['welcome', 'notebook']:
+    template = env.get_template(name + os.extsep + 'html');
+
+    for d in [pjoin(dest, name, 'index' + os.extsep + 'html'), pjoin(dest, 'colab', name + os.extsep + 'html')]:
+      path, filename = os.path.split(d)
+      MakeDirectoryIfNotExist(path)
+      with open(d, 'w') as f:
+        f.write(template.render(template_args))
 
 
 if __name__ == '__main__':

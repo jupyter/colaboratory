@@ -63,8 +63,6 @@ colab.Webview = function(el, url, opt_hashParams) {
   });
 
   var hashParams = opt_hashParams || {};
-  hashParams['mode'] = 'app';
-  hashParams['extensionOrigin'] = this.extensionOrigin_;
 
   var fullUrl = url + '#' + colab.params.encodeParamString(hashParams);
   this.element_.setAttribute('partition', 'frontend');

@@ -1,32 +1,26 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>coLaboratory</title>
+{% extends "page.html" %}
 
-    <!-- Load the closure . -->
-    <!-- For compiled version use js/modules/lib_closure.js
-      TODO(kayur, sandler): When this becomes a template, we could
-       switch automatically based on url parameters or config.
-    -->
-    <script src="/closure/base.js"></script>
+{% block head %}
+<link rel="stylesheet" href="/closure/css/common.css">
+<link rel="stylesheet" href="/colab/css/header.css"/>
+<link rel="stylesheet" href="/colab/css/main.css"/>
+<link rel="stylesheet" href="/colab/css/welcome.css"/>
+{% endblock %}
 
+{% block js %}
     <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans:300,600">
 
     <!-- Fav icon -->
     <link rel="shortcut icon" href="/colab/img/colab-black.png">
+{% endblock %}
 
-    <script type="text/javascript" src="/colab/js/colab.dep"></script>
-    <script type="text/javascript">
-      goog.require('colab.welcome');
-    </script>
+{% block closure_entrypoint %}
+<script type="text/javascript">
+goog.require('colab.welcome');
+</script>
+{% endblock %}
 
-    <link rel="stylesheet" href="/closure/css/common.css">
-    <link rel="stylesheet" href="/colab/css/header.css"/>
-    <link rel="stylesheet" href="/colab/css/main.css"/>
-    <link rel="stylesheet" href="/colab/css/welcome.css"/>
-  </head>
-  <body>
-
+{% block html %}
     <div id="main-content">
       <div id="welcome-title">Welcome to coLaboratory</div>
       <div id="welcome-content">
@@ -105,5 +99,4 @@
         </div>
       </div>
     </div>
-  </body>
-</html>
+{% endblock %}

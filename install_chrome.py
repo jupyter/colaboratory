@@ -26,6 +26,11 @@ parser.add_argument('--release',
 
 args = parser.parse_args()
 
+# Chrome App IDs for release and debug versions.
+# These are used to determine allowed origins in JavaScript message passing
+DEBUG_APP_ID = 'dmaaimdkehikanjidckkheggnaecfgbg'
+RELEASE_APP_ID = 'pianggobfjcgeihlmfhfgkfalopndooo'
+
 RELEASE_CLIENT_ID = "911569945122-0tcrnl8lnu5b0ccgpp92al27pplahn5a.apps.googleusercontent.com"
 
 RELEASE = "20140805"
@@ -76,7 +81,14 @@ def InstallChrome(release, colab_root, dest):
   """
   
   # stage static files
-  BundleStatic(colab_root, dest)
+  app_id = DEBUG_APP_ID
+  if release:
+    app_id = RELEASE_APP_ID
+  extra_template_args={
+    'app_mode': True,
+    'app_origin': 'chrome-extension://' + app_id
+  }
+  BundleStatic(colab_root, dest, extra_template_args=extra_template_args)
 
   # copy chrome app files, putting pnacl files in root
   # as the folder structure is hard coded into the pnacl kernel code

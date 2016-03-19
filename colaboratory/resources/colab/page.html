@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+
+  <title>{% block title %}coLaboratory{% endblock %}</title>
+
+  {% block head %} {% endblock %}
+  </head>
+
+  <!-- Uses template variables to set data attributes -->
+  <body data-app-mode="{{app_mode}}" data-app-origin="{{app_origin}}"
+	{% block params %} {% endblock %}>
+
+	{% block js %} {% endblock %}
+
+    <script src="/closure/base.js"></script>
+
+    {% if raw == '1' %}
+    <!-- In raw mode, loads colab.dep for dependencies.  The closure-entrypoint
+    block allows extensions of this template to specify goog.require statements
+    that will load the specified namespace and their dependencies.
+	-->	
+    <script type="text/javascript" src="/colab/js/colab.dep"></script>
+    {% block closure_entrypoint %}
+    <!--
+	Extensions should override this block with something like
+    <script type="text/javascript">
+	goog.require('entrypoint.for.page');
+	entrypoint.for.page.run();
+    </script>
+    -->
+    {% endblock %}
+    {% else %}
+    <script src="js/modules/js_compiled.js"></script>
+    {% endif %}
+
+	{% block html %} {% endblock %}
+
+  </body>
+ </html>
