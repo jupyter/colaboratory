@@ -15,3 +15,6 @@ Some guidelines on contributing to coLaboratory:
 * Pull Requests should generally be made against master
 
 For more detailed information, see our [GitHub Workflow](https://github.com/ipython/ipython/wiki/Dev:-GitHub-workflow).
+
+Make sure to run build_colab_deps.py before creating a pull request, to ensure that
+the file colab.dep is up to date.

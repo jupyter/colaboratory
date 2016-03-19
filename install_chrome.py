@@ -5,10 +5,18 @@ import os
 import shutil
 import subprocess
 import sys
+import urllib
 
 import IPython.html
 
-from bundle_static import *
+from bundle_static import BundleStatic
+from install_lib import COLAB_ROOT_PATH
+from install_lib import pjoin
+from install_lib import CopyTreeRecursively
+from install_lib import MakeDirectoryIfNotExist
+from install_lib import RemoveDirectoryIfExist
+from install_lib import RemoveFileIfExist
+from install_lib import RemoveFileOrDirectoryIfExist
 
 parser = argparse.ArgumentParser(description='Installs the Chrome App.')
 parser.add_argument('--release',

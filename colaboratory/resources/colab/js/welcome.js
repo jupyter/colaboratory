@@ -1,3 +1,4 @@
+goog.provide('colab.welcome');
 
 goog.require('colab.filepicker');
 goog.require('colab.install');
