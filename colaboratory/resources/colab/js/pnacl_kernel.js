@@ -39,12 +39,22 @@ colab.PNaClKernel.prototype.start = function() {
   });
 
   // Create 'fake' shell channel that sends data using postmessage.
-  var fake_channel = /** @type {WebSocket} */ ({
-    'send': function(msg) {
-      colab.app.postMessage('kernel_message', msg);
-    }});
-  this.shell_channel = fake_channel;
-  this.stdin_channel = fake_channel;
+  /**
+   * @param name Name of channel
+   * @return {WebSocket} a fake websocket object
+   */
+  var create_channel = function(name) {
+    return /** @type {websocket} */ ({
+      'send': function(msg) {
+        colab.app.postMessage('kernel_message', {
+          'stream': name,
+          'json': msg
+        });
+      }
+    });
+  };
+  this.shell_channel = create_channel('shell');
+  this.stdin_channel = create_channel('stdin');
 };
 
 
@@ -94,6 +104,8 @@ colab.PNaClKernel.prototype.handleMessage_ = function(message) {
       that._handle_iopub_message({data: data.json});
     } else if (data.stream == 'shell') {
       that._handle_shell_reply({data: data.json});
+    } else if (data.stream == 'stdin') {
+      that._handle_input_request({data: data.json});
     }
   } else if (message.type === 'progress') {
     if (!that.running) {

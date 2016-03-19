@@ -118,6 +118,7 @@ colab.Webview.prototype.addMessageListener = function(messageType, callback) {
  */
 colab.Webview.prototype.postMessage = function(messageType, opt_content) {
   console.log('sending message of type: ' + messageType);
+  console.log(opt_content);
   this.element_.contentWindow.postMessage({
     'type': messageType,
     'content': opt_content
