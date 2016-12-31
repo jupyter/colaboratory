@@ -1,4 +1,5 @@
 # CoLaboratory
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/jupyter/colaboratory?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 **CoLaboratory is no longer being actively developed or maintained.  We will consider minor pull requests, but most of the CoLaboratory team's focus is
 now on [integration of Google Drive with IPython/Jupyter](https://github.com/jupyter/jupyter-drive).**
