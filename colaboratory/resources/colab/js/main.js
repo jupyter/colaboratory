@@ -599,6 +599,35 @@ colab.services.setKernelRequestListener('get_access_token',
 
 
 /**
+ * Registes a listener to do OAuth flow for the kernel
+ */
+colab.services.setKernelRequestListener('installed_app_oauth_flow',
+    function(content, callback) {
+      var dialog = new goog.ui.Dialog();
+      dialog.setDisposeOnHide(true);
+      dialog.setContent(
+        'The code running in this notebook has requested ' +
+        'opening a new browser tab to start OAuth 2.0 authentication. ' +
+        'Click "open link" to open the link in a new tab');
+      dialog.setTitle('Request for authentication');
+
+      dialog.setButtonSet(goog.ui.Dialog.ButtonSet.createYesNoCancel());
+
+      goog.events.listen(dialog, goog.ui.Dialog.EventType.SELECT, function(e) {
+        var reply = {'error': {'type': 'USER_DENIED_ERROR',
+          'description': 'The user refused to provide the' +
+              ' OAuth token'}};
+        if (e.key === goog.ui.Dialog.DefaultButtonKeys.YES) {
+          reply = gapi.auth.getToken()['access_token'];
+        }
+        callback(reply);
+      });
+
+      dialog.setVisible(true);
+    });
+
+
+/**
  * @type {number}
  */
 colab.userAlarmTimer = 0;
