@@ -1,6 +1,6 @@
 # CoLaboratory
 
-**This repository, jupyter/colaboratory is no longer being actively developed or maintained. For the latest in CoLaboratory, check out [colab from google research](colab.research.google.com). That site is an up to date version maintained by the Google CoLaboratory team.**
+**This repository, jupyter/colaboratory is no longer being actively developed or maintained. For the latest in Colaboratory, check out [Colab from google research](https://colab.research.google.com/). That site is an up to date version maintained by the Google Colaboratory team.**
 
 ----------------------
 
