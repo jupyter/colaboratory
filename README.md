@@ -1,8 +1,8 @@
 # CoLaboratory
 
-**CoLaboratory is no longer being actively developed or maintained.  We will consider minor pull requests, but most of the CoLaboratory team's focus is
-now on [integration of Google Drive with IPython/Jupyter](https://github.com/jupyter/jupyter-drive).**
+**This repository, jupyter/colaboratory is no longer being actively developed or maintained. For the latest in CoLaboratory, check out [colab from google research](colab.research.google.com). That site is an up to date version maintained by the Google CoLaboratory team.**
 
+----------------------
 
 This repo contains two related tools:
 
